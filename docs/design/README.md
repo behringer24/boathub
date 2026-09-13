@@ -26,6 +26,11 @@ supersedes the old one - that way it stays traceable why something on board is w
 | 000 | Design review and spec validation | all | Accepted | [000-design-review.md](000-design-review.md) |
 | 001 | Power supply and battery measurement | 1 | Draft | [001-power-supply.md](001-power-supply.md) |
 | 002 | DevKit, carrier board and antenna | 1 | Draft | [002-devkit-and-carrier.md](002-devkit-and-carrier.md) |
+| 003 | Bench setup on USB power | 1 | Draft | [003-bench-setup-usb.md](003-bench-setup-usb.md) |
+
+Documents are numbered in **creation order, not build order**. The build sequence lives in
+[../ROADMAP.md](../ROADMAP.md) - phase 1A starts with 003, and 001 is deliberately last in the
+bench phase.
 
 ## Planned documents
 
