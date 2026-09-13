@@ -252,7 +252,7 @@ brackish water.
 | M6 | PubSubClient's **default buffer is 256 bytes** and the example telemetry JSON is ~250. Call `setBufferSize()` or messages will be silently dropped as they grow. |
 | M7 | These are DS18B20 **clones**. Check the ROM family code is 0x28 and **verify the CRC on every read**, rejecting bad frames rather than trusting them. Also meter out the wire colours before connecting - red/black/yellow is common but not universal. |
 | M8 | Use a **single-point (star) ground** in the box. In particular the 100 Ω shunt's ground must return **directly** to the ADS1115 GND - any shared return current shows up as measurement error. |
-| M9 | Confirm the DevKit is the **WROOM-1U** variant (U.FL connector); the plain WROOM-1 has a PCB antenna and no connector. **Never transmit without the antenna fitted** - it stresses the PA. |
+| M9 | ~~Confirm the DevKit is the WROOM-1U variant.~~ **Superseded by M9a** - the board is neither variant. The rule that survives: **never transmit without an antenna fitted**, which becomes live only once the jumper is moved to the external position. |
 | M10 | For a permanent install, the DevKit's power LED and USB-UART bridge are wasted current (see B1) and can be removed. |
 | M11 | TLS certificate validation fails if the clock is wrong, so **NTP must sync before the first MQTT connect**. NTP over UDP needs no TLS, so there is no chicken-and-egg problem - just ordering. |
 
@@ -340,18 +340,28 @@ Answered 2026-09-13.
 | 1 | Is there shore power / a charger at the berth? | **Yes - the boat is permanently on shore power while unattended.** | B1 resolved: continuous operation, no duty cycling. But see B1a below - this changes what the battery voltage *means*. |
 | 2 | How far is the SHT31 mounting point from the enclosure? | Not fixed yet; it will sit **outside the box and outside the cabinet** that holds the S1. | Keep the I2C run to **2 m maximum** and stiffen the pull-up - see I1a below. Fix the exact point before the cable gland is drilled. |
 | 3 | Minimum supply voltage of the 4-20 mA probe? | Unknown - the probe is not bought yet. | Becomes a **purchase criterion**: pick a probe specified from 9-10 V up. Default to the **50 Ω shunt** regardless, which makes the question far less critical. |
-| 4 | Is the DevKit a WROOM-1**U** with a U.FL connector? | Unknown - the seller's title names only the SoC, not the module variant. | **Bench check, 30 seconds** - see below. |
+| 4 | Is the DevKit a WROOM-1**U** with a U.FL connector? | **Neither.** It is a third-party module (sparkleIoT XH-S3E) carrying **both** a PCB antenna and a U.FL socket, selected by a solder jumper - and it ships set to the PCB antenna. | Resolved in [002-devkit-and-carrier.md](002-devkit-and-carrier.md). The supplied external antenna **does nothing until the jumper is moved** - see M9a. |
 | 5 | Is the bilge probe's stainless sheath bonded to GND internally? | Unknown. | **Bench check with a multimeter** - see below. Now more urgent, see I8a. |
 
-### How to answer 4 and 5 on the bench
+### M9a - the external antenna is not connected as delivered (new, supersedes M9)
 
-**Q4 - module variant.** Read the label printed on the metal shield of the module soldered to the
-DevKit. It says either `ESP32-S3-WROOM-1` or `ESP32-S3-WROOM-1U`. Visually: the **-1** has a
-meandering PCB antenna trace at one end of the module; the **-1U** has a small U.FL/IPEX socket and
-no antenna trace. If an external antenna was in the box, it is almost certainly a -1U.
+The original M9 assumed the board is either a WROOM-1 (PCB antenna only) or a WROOM-1U (U.FL only),
+and that a bundled external antenna implied a -1U. **Both assumptions were wrong.**
 
-This matters because the whole antenna plan - external antenna mounted high in the compartment -
-only exists on the -1U. On a -1 there is nowhere to connect it.
+The delivered module has a PCB antenna *and* a U.FL socket, with a solder jumper choosing between
+them, and the seller states it ships set to the PCB antenna: an external antenna at position ②
+*"must be soldered by yourself"*.
+
+So the bundled SMA antenna is **inert out of the box** - plugging the pigtail in changes nothing.
+Using it means moving a 0402/0603 solder blob in the RF path, and afterwards the antenna must
+always be fitted before transmitting.
+
+The guide's assumption that an external antenna would be mounted high in the compartment is
+therefore **not free**. Decision and measurement procedure: see
+[002-devkit-and-carrier.md](002-devkit-and-carrier.md) section 4 - assemble with the onboard
+antenna, measure RSSI at the real mounting point, and only rework if it falls short.
+
+### How to answer 5 on the bench
 
 **Q5 - probe sheath.** Multimeter on continuity. One lead on the stainless sheath (scratch through
 the oxide layer to get a real contact), the other on each of the three wires in turn, GND included.

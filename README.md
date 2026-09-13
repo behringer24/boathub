@@ -42,7 +42,9 @@ network.
 
 ## Hardware at a glance
 
-- **Controller:** 1 x ESP32-S3 DevKitC-1 N16R8 with external antenna
+- **Controller:** 1 x ESP32-S3 N16R8 DevKitC-1 (third-party module, on a screw-terminal carrier
+  board). Ships with an onboard PCB antenna; the bundled external antenna needs a solder rework to
+  activate - see [docs/design/002-devkit-and-carrier.md](docs/design/002-devkit-and-carrier.md)
 - **Temperature:** 3 x DS18B20 (engine bay, bilge water, fridge), each on its own 1-Wire GPIO
 - **Cabin climate:** SHT31-D (I2C, address 0x44)
 - **Analog:** 3 x ADS1115 (0x48 / 0x49 / 0x4A) on the shared I2C bus
@@ -99,7 +101,8 @@ docs/
 ├── MATERIAL.md         bill of materials and tools
 ├── design/             per-feature design documents (+ TEMPLATE.md)
 │   ├── 000-design-review.md   spec validation of the whole design
-│   └── 001-power-supply.md    12 V input, protection, battery measurement
+│   ├── 001-power-supply.md    12 V input, protection, battery measurement
+│   └── 002-devkit-and-carrier.md   DevKit, carrier board and antenna
 └── reference/          source documents (project guide PDF)
 ```
 

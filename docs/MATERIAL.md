@@ -24,7 +24,7 @@ deliberate: they cover later stages and mistakes.
 
 | Part | Qty | Purpose / requirement | Price | Status | Source |
 |------|-----|-----------------------|-------|--------|--------|
-| ESP32-S3 DevKitC-1 N16R8, external antenna | 1 | main controller, 16 MB flash / 8 MB octal PSRAM | ~18 | in stock | [Amazon](https://amzn.eu/d/06g369jW) |
+| ESP32-S3 N16R8 DevKitC-1 + carrier (Heemol set) | 1 | main controller, 16 MB flash / 8 MB octal PSRAM, MRD076A terminal adapter included. Third-party module (sparkleIoT XH-S3E); bundled SMA antenna is **inert until a solder jumper is moved** (M9a, see [002](design/002-devkit-and-carrier.md)) | ~18 | in stock | [Amazon](https://www.amazon.de/dp/B0GJZS3P1J) |
 | GERUI ADS1115 16-bit I2C, 3-pack | 1 pack | ADC for battery and 4-20 mA, plus spares | 8.99 | in stock | [Amazon](https://www.amazon.de/dp/B0F1TJ16Q6) |
 | DS18B20-compatible 1-Wire probes, 5 m, 3-pack | 1 pack | engine bay, bilge, fridge; potted probe | ~10-20 | in stock | [Amazon](https://www.amazon.de/gp/product/B0D8VMY5ZM) |
 | SHT31-D breakout, ADR 0x44/0x45 | 1 | cabin temperature and relative humidity; mounted outside box and cabinet (I1a) | ~7-12 | needed | [Amazon search](https://www.amazon.de/s?k=SHT31-D+I2C+0x44+0x45) |

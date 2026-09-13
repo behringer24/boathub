@@ -25,6 +25,7 @@ supersedes the old one - that way it stays traceable why something on board is w
 |-----|---------|-------|--------|----------|
 | 000 | Design review and spec validation | all | Accepted | [000-design-review.md](000-design-review.md) |
 | 001 | Power supply and battery measurement | 1 | Draft | [001-power-supply.md](001-power-supply.md) |
+| 002 | DevKit, carrier board and antenna | 1 | Draft | [002-devkit-and-carrier.md](002-devkit-and-carrier.md) |
 
 ## Planned documents
 
