@@ -46,9 +46,13 @@ network.
 - **Temperature:** 3 x DS18B20 (engine bay, bilge water, fridge), each on its own 1-Wire GPIO
 - **Cabin climate:** SHT31-D (I2C, address 0x44)
 - **Analog:** 3 x ADS1115 (0x48 / 0x49 / 0x4A) on the shared I2C bus
-- **Battery:** 82 kΩ / 10 kΩ divider (factor 9.2) into ADS1115 A0, calibrated against a multimeter
-- **Bilge level (optional):** hydrostatic 0-1 m probe, 4-20 mA, 100 Ω shunt into ADS1115 A1
-- **Power:** 12 V house supply → 2 A fuse → 1N5822 → TVS 1.5KE20A → DC/DC 9-36 V to 5 V
+- **Battery:** 82 kΩ / 10 kΩ divider (factor 9.2) into ADS1115 A0, tapped **upstream of** the
+  reverse-polarity diode, calibrated against a multimeter
+- **Bilge level (optional):** hydrostatic 0-1 m probe, 4-20 mA, 100 Ω (or 50 Ω) shunt into ADS1115 A1
+- **Power:** 12 V house supply → 2 A fuse → TVS 1.5KE20A → 1N5822 → DC/DC 9-36 V to 5 V
+
+The TVS sits ahead of the Schottky diode and the battery tap ahead of both - see findings B2 and B3
+in the [design review](docs/design/000-design-review.md).
 
 Full parts list with prices and sources: [docs/MATERIAL.md](docs/MATERIAL.md)
 
@@ -82,6 +86,9 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
 - **No autopilot commands from the internet.** Control lives on the local on-board Wi-Fi only; the
   server receives telemetry.
 - No Wi-Fi or server passwords in source code. Configuration lives in NVS/Preferences.
+- **The monitor can flatten the battery it monitors.** At roughly 55-80 mA continuous it draws
+  40-60 Ah per month. Without shore power this needs duty cycling and a low-voltage cutoff - see
+  finding B1.
 
 ## Repository layout
 
@@ -91,6 +98,7 @@ docs/
 ├── CHANGELOG.md        project change log
 ├── MATERIAL.md         bill of materials and tools
 ├── design/             per-feature design documents (+ TEMPLATE.md)
+│   └── 000-design-review.md   spec validation of the whole design
 └── reference/          source documents (project guide PDF)
 ```
 

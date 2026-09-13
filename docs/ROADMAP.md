@@ -5,6 +5,10 @@ previous one runs reliably. Based on the project guide v0.1 of 2026-09-13.
 
 **Status values:** `open` · `in progress` · `done` · `blocked` · `deferred`
 
+> The design review in [design/000-design-review.md](design/000-design-review.md) validated the
+> whole design against the datasheets. Its findings are folded into the work packages below and
+> referenced by ID (B = blocker, I = important, M = minor).
+
 ---
 
 ## Stage 1 - Base monitoring
@@ -17,18 +21,19 @@ the on-board Wi-Fi and push them through the marina Wi-Fi to the self-hosted ser
 
 | # | Package | Status | Design doc |
 |---|---------|--------|------------|
+| 1.0 | **Decide the power concept: shore power at the berth, or duty cycling plus low-voltage cutoff (B1)** | **open - blocks 1.5 and 1.11** | [000](design/000-design-review.md) |
 | 1.1 | Toolchain set up, blink and serial test | open | - |
-| 1.2 | DS18B20 engine bay / bilge / fridge (GPIO4/5/6) | open | planned |
-| 1.3 | SHT31-D cabin climate (I2C 0x44) | open | planned |
-| 1.4 | ADS1115 x3 (0x48/0x49/0x4A) | open | planned |
-| 1.5 | 12 V supply with fuse, reverse-polarity and transient protection | open | planned |
-| 1.6 | Battery voltage measurement 82k/10k, calibration | open | planned |
+| 1.2 | DS18B20 engine bay / bilge / fridge (GPIO4/5/6), pull-up value chosen on the bench (I3) | open | planned |
+| 1.3 | SHT31-D cabin climate (I2C 0x44), mounted outside the enclosure, max 1 m of bus (I1) | open | planned |
+| 1.4 | ADS1115 x3 (0x48/0x49/0x4A), PGA fixed before calibration (M2) | open | planned |
+| 1.5 | 12 V supply: fuse, **TVS ahead of the Schottky (B2)**, reverse-polarity protection | open | planned |
+| 1.6 | Battery measurement 82k/10k, **tapped upstream of the Schottky (B3)**, calibration | open | planned |
 | 1.7 | SoftAP BOOT-NETZ plus local configuration web UI | open | planned |
 | 1.8 | Station mode for marina Wi-Fi, configuration in NVS | open | planned |
 | 1.9 | Server uplink: MQTT over TLS, telemetry, heartbeat, last will | open | planned |
 | 1.10 | Alarms (low battery, frost, humidity, bilge) | open | planned |
-| 1.11 | Enclosure, installation, cable labelling | open | - |
-| 1.12 | Optional: bilge level 4-20 mA, calibrated | open | planned |
+| 1.11 | Enclosure, installation, cable labelling, vent membrane against condensation (I7) | open | - |
+| 1.12 | Optional: bilge level 4-20 mA, calibrated, shunt value per compliance budget (I2) | open | planned |
 | 1.13 | Optional: NAPT/NAT so clients reach the internet through the ESP | deferred | planned |
 | 1.14 | Optional: water tank temperature (GPIO7) | deferred | - |
 
@@ -44,6 +49,8 @@ the on-board Wi-Fi and push them through the marina Wi-Fi to the self-hosted ser
 - [ ] Server shows heartbeat and measurements from home
 - [ ] Enclosure and DC/DC thermally unremarkable after 30-60 minutes of operation
 - [ ] Watchdog active, sensor and network failures decoupled
+- [ ] Average current draw measured against the estimate in B1, low-voltage cutoff verified
+- [ ] `BOOT-NETZ` clients survive a marina channel change (I4)
 
 ### Server interface (target)
 
@@ -82,6 +89,7 @@ not at the next regular telemetry interval.
 
 | # | Package | Status |
 |---|---------|--------|
+| 2.0 | **Prove the 9th-bit recovery on the bench: the ESP32 UART has no 9-bit mode** (parity-error trick or bit-banged receiver) | open |
 | 2.1 | Settle the RX level shifting / isolation to 3.3 V as its own schematic revision | open |
 | 2.2 | Bench-test the RX stage (scope or logic analyser, 4800 baud, 9th bit) | open |
 | 2.3 | Read and log raw bytes (GPIO15) | open |
@@ -138,8 +146,8 @@ SeaTalk1), open-collector circuits using the 74LS07, Signal K autopilot.
 
 | # | Package | Status |
 |---|---------|--------|
-| 2B.1 | Design the open-collector / open-drain output stage and bench-test it | blocked |
-| 2B.2 | Guarantee a high-impedance TX during boot, reset and faults | blocked |
+| 2B.1 | Design the open-collector / open-drain output stage and bench-test it; N-MOSFET rather than 74LS07 (I5) | blocked |
+| 2B.2 | Guarantee a high-impedance TX during boot, reset and faults - **10 kΩ gate pull-down (I5)** | blocked |
 | 2B.3 | Commands +1 / -1 / +10 / -10 degrees | blocked |
 | 2B.4 | AUTO / STANDBY | blocked |
 | 2B.5 | Arming logic: local on-board Wi-Fi only, locked after a restart | blocked |
@@ -164,7 +172,7 @@ backbone planned.
 
 | # | Package | Status |
 |---|---------|--------|
-| 3.1 | Pick an external CAN transceiver, isolated interface on GPIO17/18 | open |
+| 3.1 | Pick an external CAN transceiver, isolated interface on GPIO17/18 - **3.3 V part, not MCP2551; no terminator on a drop (I6)** | open |
 | 3.2 | NMEA2000 to Wi-Fi for tablet and server | open |
 | 3.3 | SeaTalk1 to NMEA2000 for legacy Raymarine data | open |
 | 3.4 | Own sensor values to NMEA2000 where sensible PGNs exist | open |
@@ -208,7 +216,12 @@ Order of work for building the system together, taken from the project guide.
 
 | Topic | State |
 |-------|-------|
-| Second ESP as a dedicated network gateway | spare only; revisit if router/NAT should be separated from boat functions (coupled over UART) |
+| **Shore power at the berth?** | **open - decides whether the system may run continuously or needs duty cycling plus a low-voltage cutoff (B1)** |
+| SHT31 distance from the enclosure | open - over roughly 1 m, I2C is the wrong transport and the humidity reading is lost (I1) |
+| Minimum supply voltage of the 4-20 mA probe | open - decides the 100 Ω / 50 Ω shunt value (I2) |
+| DevKit variant: WROOM-1 or WROOM-1**U** | open - only the -1U has the U.FL antenna connector (M9) |
+| Bilge probe sheath bonded to GND internally? | open - a grounded submerged stainless probe joins the galvanic circuit (I8) |
+| Second ESP as a dedicated network gateway | spare only; revisit if router/NAT should be separated from boat functions (coupled over UART). The forced AP+STA channel sharing (I4) is the concrete argument for it |
 | SeaTalk RX/TX circuit | deliberately not fixed, own revision before connecting |
 | NAPT/NAT in the firmware | optional; AP+STA alone is not a router |
 | Lossless MOSFET reverse-polarity protection | only with a custom PCB; the prototype measures behind the Schottky diode |

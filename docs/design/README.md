@@ -23,7 +23,7 @@ supersedes the old one - that way it stays traceable why something on board is w
 
 | No. | Feature | Stage | Status | Document |
 |-----|---------|-------|--------|----------|
-| - | no documents yet | - | - | - |
+| 000 | Design review and spec validation | all | Accepted | [000-design-review.md](000-design-review.md) |
 
 ## Planned documents
 
