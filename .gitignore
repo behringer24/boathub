@@ -1,0 +1,33 @@
+# --- Secrets: niemals ins Repo ---
+secrets.h
+secrets.ini
+*credentials*
+.env
+.env.*
+!.env.example
+
+# --- PlatformIO ---
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# --- Arduino IDE ---
+build/
+*.bin
+*.elf
+*.map
+
+# --- Editor / IDE ---
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+
+# --- Betriebssystem ---
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# --- Sonstiges ---
+*.log
