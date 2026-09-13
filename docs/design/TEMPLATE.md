@@ -27,6 +27,8 @@ Only fill in when something gets soldered or wired.
 |------|-----|---------|------|
 | | | | |
 
+New parts also go into [../MATERIAL.md](../MATERIAL.md).
+
 **Pin assignment**
 
 | GPIO | Signal | Direction | Level | Note |

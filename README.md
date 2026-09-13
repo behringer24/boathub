@@ -50,6 +50,8 @@ network.
 - **Bilge level (optional):** hydrostatic 0-1 m probe, 4-20 mA, 100 Ω shunt into ADS1115 A1
 - **Power:** 12 V house supply → 2 A fuse → 1N5822 → TVS 1.5KE20A → DC/DC 9-36 V to 5 V
 
+Full parts list with prices and sources: [docs/MATERIAL.md](docs/MATERIAL.md)
+
 ### Pin assignment
 
 | GPIO | Function today | Later / note |
@@ -87,6 +89,7 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
 docs/
 ├── ROADMAP.md          stages, acceptance criteria, build evenings
 ├── CHANGELOG.md        project change log
+├── MATERIAL.md         bill of materials and tools
 ├── design/             per-feature design documents (+ TEMPLATE.md)
 └── reference/          source documents (project guide PDF)
 ```
