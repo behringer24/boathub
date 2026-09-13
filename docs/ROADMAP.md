@@ -22,7 +22,7 @@ the on-board Wi-Fi and push them through the marina Wi-Fi to the self-hosted ser
 | # | Package | Status | Design doc |
 |---|---------|--------|------------|
 | 1.0 | Decide the power concept (B1) | **done** - boat is permanently on shore power, so continuous operation with a low-voltage backstop | [000](design/000-design-review.md) |
-| 1.1 | Toolchain set up, blink and serial test | open | - |
+| 1.1 | Toolchain set up, blink and serial test on the CH343P port; confirm N16R8 and carrier pinout (002) | open | [002](design/002-devkit-and-carrier.md) |
 | 1.2 | DS18B20 engine bay / bilge / fridge (GPIO4/5/6), pull-up value chosen on the bench (I3) | open | planned |
 | 1.3 | SHT31-D cabin climate (I2C 0x44), outside box and cabinet, max 3 m of bus (I1a) | open | planned |
 | 1.4 | ADS1115 x3 (0x48/0x49/0x4A), PGA fixed before calibration (M2) | open | planned |
@@ -34,6 +34,7 @@ the on-board Wi-Fi and push them through the marina Wi-Fi to the self-hosted ser
 | 1.9 | Server uplink: MQTT over TLS, telemetry, heartbeat, last will | open | planned |
 | 1.10 | Alarms (low battery, frost, humidity, bilge) | open | planned |
 | 1.11 | Enclosure, installation, cable labelling, vent membrane against condensation (I7) | open | - |
+| 1.11a | RSSI measurement at the real mounting point; solder the antenna jumper only if it falls short (M9a) | open | [002](design/002-devkit-and-carrier.md) |
 | 1.12 | Optional: bilge level 4-20 mA, calibrated, shunt value per compliance budget (I2) | open | planned |
 | 1.13 | Optional: NAPT/NAT so clients reach the internet through the ESP | deferred | planned |
 | 1.14 | Optional: water tank temperature (GPIO7) | deferred | - |
@@ -222,7 +223,8 @@ Order of work for building the system together, taken from the project guide.
 | Shore power at the berth? | **resolved 2026-09-13 - permanently connected.** Continuous operation; the low-voltage cutoff stays as a backstop, and shore-power-loss becomes the headline alarm (B1a) |
 | SHT31 mounting point | open - outside box and cabinet is decided, exact point is not. Up to ~3 m needs nothing extra; 5-6 m needs a 3.3 kΩ pull-up pair (I1a) |
 | Minimum supply voltage of the 4-20 mA probe | open - now a **purchase criterion**, pick one specified from 9-10 V up. Default to the 50 Ω shunt either way (I2) |
-| DevKit variant: WROOM-1 or WROOM-1**U** | open - **bench check**, read the module label. Only the -1U has the U.FL connector, and the external antenna plan depends on it (M9) |
+| DevKit variant: WROOM-1 or WROOM-1**U** | **resolved 2026-09-13** - neither. It is a third-party module (sparkleIoT XH-S3E) with both a PCB antenna and a U.FL socket, chosen by a solder jumper set to the PCB antenna by default. The bundled SMA antenna does nothing until that jumper is moved (M9a, 002) |
+| Onboard vs. external antenna | open - measure RSSI at the real mounting point first; only rework the jumper if it falls short (002) |
 | Bilge probe sheath bonded to GND internally? | open - **bench check** with a multimeter. More urgent now: permanent shore power ties the boat's negative to shore earth (I8a) |
 | Maximum output voltage of the charger | open - the TVS starts conducting at 17.1 V standoff (001) |
 | Second ESP as a dedicated network gateway | spare only; revisit if router/NAT should be separated from boat functions (coupled over UART). The forced AP+STA channel sharing (I4) is the concrete argument for it |

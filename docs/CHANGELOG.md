@@ -32,6 +32,9 @@ find when rebuilding the system or revising the board.
   state machine including shore-power-loss detection.
 - Shore-power-loss alarm as a work package (1.6a). With a charger running, the battery voltage no
   longer reports state of charge - what it reports instead is whether the charger is still there.
+- `docs/design/002-devkit-and-carrier.md`: identifies the actually-delivered board (a third-party
+  sparkleIoT XH-S3E module on an MRD076A screw-terminal carrier), maps the project pin plan onto
+  the carrier's terminals, and lists the terminals that must not be used.
 
 ### Changed
 
@@ -57,6 +60,9 @@ find when rebuilding the system or revising the board.
   one extra pull-up pair. The sensor sits outside both the enclosure and the S1 cabinet (I1a).
 - 4-20 mA probe minimum supply voltage turned from an open question into a purchase criterion,
   with the 50 Ω shunt as the default so the answer matters less (I2).
+- **[HW]** Controller identified as the actually-purchased Heemol set (ASIN B0GJZS3P1J): a
+  third-party sparkleIoT XH-S3E module on an MRD076A screw-terminal carrier, not a genuine
+  Espressif WROOM-1/-1U. Superseded finding M9 with M9a (002).
 
 ### Security
 
