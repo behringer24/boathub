@@ -21,14 +21,15 @@ the on-board Wi-Fi and push them through the marina Wi-Fi to the self-hosted ser
 
 | # | Package | Status | Design doc |
 |---|---------|--------|------------|
-| 1.0 | Decide the power concept (B1) | **done** - boat is permanently on shore power, so continuous operation with a low-voltage backstop | [000](design/000-design-review.md) |
+| 1.0 | Decide the power concept (B1) | **done** - permanently on shore power in the marina, 2 x 100 Ah AGM, no solar or wind. Continuous operation with a low-voltage backstop | [000](design/000-design-review.md) |
 | 1.1 | Toolchain set up, blink and serial test on the CH343P port; confirm N16R8 and carrier pinout (002) | open | [002](design/002-devkit-and-carrier.md) |
 | 1.2 | DS18B20 engine bay / bilge / fridge (GPIO4/5/6), pull-up value chosen on the bench (I3) | open | planned |
 | 1.3 | SHT31-D cabin climate (I2C 0x44), outside box and cabinet, max 3 m of bus (I1a) | open | planned |
 | 1.4 | ADS1115 x3 (0x48/0x49/0x4A), PGA fixed before calibration (M2) | open | planned |
 | 1.5 | 12 V supply: fuse, **TVS ahead of the Schottky (B2)**, reverse-polarity protection | open | [001](design/001-power-supply.md) |
 | 1.6 | Battery measurement 82k/10k, **tapped upstream of the Schottky (B3)**, calibration | open | [001](design/001-power-supply.md) |
-| 1.6a | Shore-power-loss detection: battery state machine with debouncing (B1a) | open | [001](design/001-power-supply.md) |
+| 1.6a | Battery state machine, AGM thresholds, debouncing (B1a) | open | [001](design/001-power-supply.md) |
+| 1.6b | Shore-power-loss alarm gated on ≥6 h prior charging, so it stays quiet underway | open | [001](design/001-power-supply.md) |
 | 1.7 | SoftAP BOOT-NETZ plus local configuration web UI | open | planned |
 | 1.8 | Station mode for marina Wi-Fi, configuration in NVS | open | planned |
 | 1.9 | Server uplink: MQTT over TLS, telemetry, heartbeat, last will | open | planned |
@@ -52,7 +53,10 @@ the on-board Wi-Fi and push them through the marina Wi-Fi to the self-hosted ser
 - [ ] Enclosure and DC/DC thermally unremarkable after 30-60 minutes of operation
 - [ ] Watchdog active, sensor and network failures decoupled
 - [ ] Average current draw measured against the estimate in B1, low-voltage backstop verified
-- [ ] Pulling the shore power cable raises `ON_BATTERY`; restoring it clears the alarm
+- [ ] Pulling the shore power cable after a long float period raises the shore-power-loss alarm;
+      restoring it clears the alarm
+- [ ] An engine run followed by shutdown enters `ON_BATTERY` but raises **no** alarm
+- [ ] Charger confirmed on an AGM profile: absorption at or below ~14.7 V, no equalisation step
 - [ ] A two-second dip from the bilge pump or fridge produces **no** false alarm
 - [ ] `BOOT-NETZ` clients survive a marina channel change (I4)
 
@@ -221,6 +225,9 @@ Order of work for building the system together, taken from the project guide.
 | Topic | State |
 |-------|-------|
 | Shore power at the berth? | **resolved 2026-09-13 - permanently connected.** Continuous operation; the low-voltage cutoff stays as a backstop, and shore-power-loss becomes the headline alarm (B1a) |
+| How to tell "marina" from "underway" | **resolved 2026-09-13** - no mode switch. The alarm is gated on ≥6 h of prior charging, which only shore power sustains. From stage 2, `seatalk_online == false` confirms it (001) |
+| House bank and chemistry | **resolved 2026-09-13** - 2 x 100 Ah AGM, ~100 Ah usable, no solar or wind. AGM rests ~0.2 V higher than flooded, so thresholds are 12.3 V warning / 12.0 V critical (001) |
+| Current shunt for real Ah counting | **rejected for now** - bus monitors are NMEA2000 and die when the instruments are off; a DIY shunt needs a heavy shunt and a proper SoC algorithm. Voltage-only accepted, spare ADS1115 channels keep the door open (001) |
 | SHT31 mounting point | open - outside box and cabinet is decided, exact point is not. Up to ~3 m needs nothing extra; 5-6 m needs a 3.3 kΩ pull-up pair (I1a) |
 | Minimum supply voltage of the 4-20 mA probe | open - now a **purchase criterion**, pick one specified from 9-10 V up. Default to the 50 Ω shunt either way (I2) |
 | DevKit variant: WROOM-1 or WROOM-1**U** | **resolved 2026-09-13** - neither. It is a third-party module (sparkleIoT XH-S3E) with both a PCB antenna and a U.FL socket, chosen by a solder jumper set to the PCB antenna by default. The bundled SMA antenna does nothing until that jumper is moved (M9a, 002) |

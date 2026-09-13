@@ -63,6 +63,18 @@ find when rebuilding the system or revising the board.
 - **[HW]** Controller identified as the actually-purchased Heemol set (ASIN B0GJZS3P1J): a
   third-party sparkleIoT XH-S3E module on an MRD076A screw-terminal carrier, not a genuine
   Espressif WROOM-1/-1U. Superseded finding M9 with M9a (002).
+- Battery thresholds retuned for the actual bank, 2 x 100 Ah AGM. AGM rests about 0.2 V higher
+  than flooded lead-acid, so the generic values were far too low: warning moves from 12.0 V to
+  **12.3 V** (~50 % SoC) and critical from 11.8 V to **12.0 V** (~30 %).
+- Shore-power-loss alarm gated on **at least 6 hours of prior charging** instead of a bare voltage
+  threshold. Only a shore charger floats that long, so the alarm stays quiet underway - where
+  running on the battery is the normal state - without needing a mode switch, a user action or
+  SeaTalk. From stage 2, `seatalk_online == false` can confirm it.
+- `BATTERY_CRITICAL` behaviour split on the same condition: deep sleep to preserve capacity for the
+  bilge pump when nobody is aboard, stay awake and keep the local UI live when somebody is.
+- Recorded that a current shunt for Ah counting was considered and rejected: bus-based monitors are
+  NMEA2000 devices ("SeaTalkNG" is not SeaTalk1) and are unpowered exactly when the marina alarm
+  matters.
 
 ### Security
 

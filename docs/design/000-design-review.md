@@ -379,7 +379,10 @@ What the measurement now delivers instead is the single most valuable alarm in t
 > tripped, or someone pulled the cable.
 
 That is worth more than the original trend monitoring, and it only works because of fix B3: a
-drifting ±80 mV error would sit right on top of the 12.9 / 13.2 V decision threshold.
+drifting ±80 mV error would sit right on top of the charging/on-battery decision threshold, which
+is only about 0.3 V wide. The threshold values themselves live in
+[001-power-supply.md](001-power-supply.md) and are tuned to the AGM bank - they are deliberately
+not repeated here, so they cannot drift apart.
 
 The runtime estimate from B1 also flips from a warning into a specification: after shore power
 fails, the BoatHub keeps monitoring **for roughly four to six weeks** before it becomes a burden on
