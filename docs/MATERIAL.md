@@ -12,6 +12,10 @@ deliberate: they cover later stages and mistakes.
 
 **Status values:** `needed` · `ordered` · `in stock` · `fitted` · `optional` · `later`
 
+> Parts marked **[review]** were added by the design review in
+> [design/000-design-review.md](design/000-design-review.md). The finding ID in the note column
+> explains why.
+
 ---
 
 ## Stage 1 - base monitoring
@@ -56,8 +60,8 @@ deliberate: they cover later stages and mistakes.
 
 | Part | Qty | Purpose / requirement | Price | Status | Source |
 |------|-----|-----------------------|-------|--------|--------|
-| Bilge pressure probe 0-1 m, 4-20 mA, IP68 | 1 | hydrostatic water level, small range beats 0-5 m | ~30-45 | optional | [Amazon search](https://www.amazon.de/s?k=4-20mA+Wasserstandssensor+0-1m+IP68+316L) |
-| 100 Ω 0.1 % / 0.25 W | 1 | 4-20 mA shunt into ADS1115 A1 | ~5 (pack) | optional | [Amazon search](https://www.amazon.de/s?k=100+Ohm+0.1%25+Praezisionswiderstand) |
+| Bilge pressure probe 0-1 m, 4-20 mA, IP68 | 1 | hydrostatic water level, small range beats 0-5 m; **check its minimum supply voltage** (I2) | ~30-45 | optional | [Amazon search](https://www.amazon.de/s?k=4-20mA+Wasserstandssensor+0-1m+IP68+316L) |
+| 100 Ω 0.1 % / 0.25 W | 2 | 4-20 mA shunt into ADS1115 A1; **two in parallel give 50 Ω**, halving the burden voltage at identical resolution (I2) | ~5 (pack) | optional | [Amazon search](https://www.amazon.de/s?k=100+Ohm+0.1%25+Praezisionswiderstand) |
 
 ### Optional - water tank temperature
 
@@ -66,10 +70,23 @@ deliberate: they cover later stages and mistakes.
 | Fourth DS18B20 probe | 1 | tank wall temperature on GPIO7 | from the 3-pack | deferred | - |
 | Aluminium tape + insulation | as needed | thermal contact on the stainless tank, insulated over the top | small | deferred | - |
 
+### Additions from the design review **[review]**
+
+| Part | Qty | Purpose / requirement | Price | Status | Finding |
+|------|-----|-----------------------|-------|--------|---------|
+| 2.2 kΩ and 3.3 kΩ resistors | 3-4 each | alternative 1-Wire pull-ups; 4.7 kΩ is marginal on 5 m probes | from assortment | needed | I3 |
+| 100 Ω resistors | 3-4 | series protection in the DS18B20 DATA lines | from assortment | needed | I3 |
+| Twisted-pair or shielded cable, max 1 m | 1 | I2C run to the SHT31 outside the enclosure | ~5 | needed | I1 |
+| Pressure-equalisation vent membrane (Gore-type) | 1 | stops condensation inside the sealed box | ~8-15 | needed | I7 |
+| Electrolytics rated 105 °C, not 85 °C | - | specification of the caps above, not an extra part | - | needed | I7 |
+| DC/DC with a **specified** quiescent current | 1 | replaces the generic module if there is no shore power | ~15-25 | open | B1 |
+| Small-signal transistor + 1 kΩ + 10 kΩ | 1 set | buzzer driver; a buzzer must not hang directly on GPIO21 | ~3 | optional | M5 |
+
 ### Cost frame
 
 Roughly **100-170 EUR** for stage 1, depending on the bilge sensor, the enclosure and installation
-material. Many small parts remain for later stages.
+material, plus about **15-30 EUR** for the review additions above. Many small parts remain for
+later stages.
 
 ---
 
@@ -91,24 +108,35 @@ material. Many small parts remain for later stages.
 ## Stage 2 - SeaTalk1 (preliminary, do not order yet)
 
 The RX/TX stage is deliberately not finalised. It gets its own schematic revision and a bench test
-before anything is connected to the Raymarine S1.
+before anything is connected to the Raymarine S1. The design review turned the guide's vague
+"resistors / Zener / protection parts" into the concrete list below **[review]**.
 
-| Part | Purpose | Status |
-|------|---------|--------|
-| 3-pole screw terminal 5.08 mm | SeaTalk +12 V / DATA / GND | later |
-| Open-collector driver, e.g. 74LS07 as a reference | SeaTalk TX | design under review |
-| Level shifting / isolation stage | SeaTalk RX down to 3.3 V | design under review |
-| Resistors, Zener and protection parts | levels and protection | per final schematic |
-| Oscilloscope or logic analyser | bench test at 4800 baud, 9th bit | strongly recommended |
+| Part | Qty | Purpose | Status | Finding |
+|------|-----|---------|--------|---------|
+| 3-pole screw terminal 5.08 mm | 1 | SeaTalk +12 V / DATA / GND | later | - |
+| PC817 optocoupler (or 6N137) | 1-2 | galvanic isolation of SeaTalk RX; PC817's ~4 µs edges are fine against a 208 µs bit at 4800 baud | later | - |
+| 1-2 kΩ resistor | 1 | LED series resistor on the SeaTalk side of the opto | later | - |
+| 10 kΩ resistor | 1 | pull-up on the ESP side of the opto output | later | - |
+| 2N7002 or BSS138 N-MOSFET | 1 | SeaTalk TX open-drain driver; **replaces the 74LS07** - no 5 V rail needed, open-drain by nature | later | I5 |
+| **10 kΩ resistor** | 1 | **gate pull-down - keeps TX off while the ESP boots or after a crash. Not optional.** | later | I5 |
+| 100-470 Ω resistor | 1 | series resistor in the TX drain line | later | I5 |
+| SMBJ15A or similar TVS | 1 | protection on the SeaTalk DATA line | later | - |
+| Oscilloscope or logic analyser | 1 | bench test at 4800 baud, 9th bit | strongly recommended | - |
+
+**Firmware note:** the ESP32 UART has no 9-bit mode, so the SeaTalk command bit has to be recovered
+through the parity-error trick or a bit-banged receiver. Prove this on the bench before the
+interface hardware is finalised - see the review, section 4.
 
 ---
 
 ## Stage 3 - NMEA2000 (future)
 
-| Part | Purpose | Status |
-|------|---------|--------|
-| External CAN transceiver, preferably isolated | TWAI on GPIO17/18 | not dimensioned yet |
-| NMEA2000 backbone, drop cables, terminators | bus wiring | planned with stage 3 |
+| Part | Qty | Purpose | Status | Finding |
+|------|-----|---------|--------|---------|
+| SN65HVD230 or SN65HVD232 breakout | 1 | TWAI transceiver on GPIO17/18. **Must be a 3.3 V part - not the MCP2551**, whose 5 V RX output would sit on a GPIO rated 3.6 V absolute maximum | later | I6 |
+| or ISO1050 / TJA1052i | 1 | isolated alternative, preferred for N2K because the backbone carries its own power and ground reference | later | I6 |
+| N2K drop cable + T-piece | 1 | backbone connection | later | - |
+| **No** 120 Ω terminator | - | the BoatHub is a drop, not a bus end. Terminators belong at the two ends of the backbone only | later | I6 |
 
 ---
 

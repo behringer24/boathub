@@ -26,10 +26,33 @@ find when rebuilding the system or revising the board.
   and sources, plus the tool list and the preliminary parts for stages 2 and 3.
 - Project guide v0.1 (2026-09-13) as a source document under `docs/reference/`.
 
+- `docs/design/000-design-review.md`: validation of the whole design against the component
+  datasheets - 3 blockers, 8 important findings, 11 minor ones, plus the missing parts per stage.
+
 ### Changed
 
 - Documentation language switched to English; only the source PDF stays German until it is
   rewritten.
+- **[HW]** Input protection reordered: the TVS now sits **ahead of** the 1N5822 instead of behind
+  it, so a surge no longer has to pass through the 3 A Schottky before being clamped (B2).
+- **[HW]** Battery divider tap moved **upstream of** the 1N5822. Measuring behind it leaves roughly
+  ±80 mV of load- and temperature-dependent error that calibration cannot remove - about the width
+  of a 25 % state-of-charge step (B3).
+- **[HW]** SeaTalk TX driver changed from the 74LS07 reference to a 2N7002/BSS138 N-MOSFET **with a
+  mandatory 10 kΩ gate pull-down**, so the bus cannot be held low while the ESP boots or after a
+  crash (I5).
+- **[HW]** NMEA2000 transceiver pinned to a 3.3 V part (SN65HVD230 class); the 5 V MCP2551 would
+  drive an ESP32 GPIO beyond its absolute maximum (I6).
+- **[HW]** 4-20 mA shunt: second 100 Ω resistor added so 50 Ω is available, halving the burden
+  voltage at identical resolution if the probe needs the compliance headroom (I2).
+- 1-Wire pull-ups: 2.2 kΩ and 3.3 kΩ added as alternatives to 4.7 kΩ, which is marginal on the 5 m
+  probes (I3).
+
+### Security
+
+- Recorded that SeaTalk TX has no fail-safe in the original design: an ESP32 GPIO is
+  high-impedance for roughly 300 ms after power-on and floating again after a crash, which without
+  a gate pull-down can hold the SeaTalk bus low and take down the instruments and autopilot (I5).
 
 ---
 
