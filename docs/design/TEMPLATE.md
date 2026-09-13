@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Stage** | 1 / 2 / 2.5 / 2B / 3 / 4 |
-| **Roadmap package** | e.g. 1.2 |
+| **Roadmap package** | e.g. 1A.2 |
 | **Created** | YYYY-MM-DD |
 | **Last changed** | YYYY-MM-DD |
 | **Touches hardware** | yes / no |

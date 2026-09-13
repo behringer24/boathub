@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Stage** | 1 |
-| **Roadmap package** | 1.1, 1.11 |
+| **Stage** | 1, phases 1A and 1C |
+| **Roadmap package** | 1A.1, 1C.2 |
 | **Created** | 2026-09-13 |
 | **Last changed** | 2026-09-13 |
 | **Touches hardware** | yes |

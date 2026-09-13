@@ -75,6 +75,13 @@ find when rebuilding the system or revising the board.
 - Recorded that a current shunt for Ah counting was considered and rejected: bus-based monitors are
   NMEA2000 devices ("SeaTalkNG" is not SeaTalk1) and are unpowered exactly when the marina alarm
   matters.
+- `docs/design/003-bench-setup-usb.md`: the USB-powered bench build - power path, current budget,
+  how to prove the ADS1115 without a 12 V supply, deliberate failure-mode tests, and the USB-to-12 V
+  changeover procedure.
+- Stage 1 restructured into three phases: **1A** bench on USB power, **1B** power supply, **1C**
+  installation. The 12 V work moves to the end of the bench phase, matching the sequence the
+  project guide already specified. Package numbers now carry the phase (1A.1, 1B.2, ...) so the
+  table reads as build order.
 
 ### Security
 

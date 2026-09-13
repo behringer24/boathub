@@ -114,5 +114,10 @@ Conventions for working in this repository: [CLAUDE.md](CLAUDE.md)
 
 ## Next step
 
-Build stage 1 on the bench: ESP32 over USB, then DS18B20, SHT31 and ADS1115. Only once the sensor
-side is stable does the 12 V supply get added.
+**Phase 1A** - the bench build on USB power: ESP32 over the CH343P port, then DS18B20, SHT31 and
+ADS1115, then Wi-Fi and the server uplink. **No 12 V anywhere yet.** Start here:
+[docs/design/003-bench-setup-usb.md](docs/design/003-bench-setup-usb.md).
+
+The 12 V supply (phase 1B) is built only once the whole sensor and network stack has run 24 hours
+on USB without intervention - so that a brownout later can be blamed on the converter rather than
+on the firmware.
