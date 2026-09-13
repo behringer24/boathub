@@ -27,7 +27,7 @@ deliberate: they cover later stages and mistakes.
 | ESP32-S3 DevKitC-1 N16R8, external antenna | 1 | main controller, 16 MB flash / 8 MB octal PSRAM | ~18 | in stock | [Amazon](https://amzn.eu/d/06g369jW) |
 | GERUI ADS1115 16-bit I2C, 3-pack | 1 pack | ADC for battery and 4-20 mA, plus spares | 8.99 | in stock | [Amazon](https://www.amazon.de/dp/B0F1TJ16Q6) |
 | DS18B20-compatible 1-Wire probes, 5 m, 3-pack | 1 pack | engine bay, bilge, fridge; potted probe | ~10-20 | in stock | [Amazon](https://www.amazon.de/gp/product/B0D8VMY5ZM) |
-| SHT31-D breakout, ADR 0x44/0x45 | 1 | cabin temperature and relative humidity | ~7-12 | needed | [Amazon search](https://www.amazon.de/s?k=SHT31-D+I2C+0x44+0x45) |
+| SHT31-D breakout, ADR 0x44/0x45 | 1 | cabin temperature and relative humidity; mounted outside box and cabinet (I1a) | ~7-12 | needed | [Amazon search](https://www.amazon.de/s?k=SHT31-D+I2C+0x44+0x45) |
 
 ### Power supply and protection
 
@@ -76,10 +76,11 @@ deliberate: they cover later stages and mistakes.
 |------|-----|-----------------------|-------|--------|---------|
 | 2.2 kΩ and 3.3 kΩ resistors | 3-4 each | alternative 1-Wire pull-ups; 4.7 kΩ is marginal on 5 m probes | from assortment | needed | I3 |
 | 100 Ω resistors | 3-4 | series protection in the DS18B20 DATA lines | from assortment | needed | I3 |
-| Twisted-pair or shielded cable, max 1 m | 1 | I2C run to the SHT31 outside the enclosure | ~5 | needed | I1 |
+| 4-core twisted/shielded cable, max 3 m | 1 | I2C run to the SHT31 outside box and cabinet: 3.3 V, GND, SDA, SCL | ~5-10 | needed | I1a |
 | Pressure-equalisation vent membrane (Gore-type) | 1 | stops condensation inside the sealed box | ~8-15 | needed | I7 |
 | Electrolytics rated 105 °C, not 85 °C | - | specification of the caps above, not an extra part | - | needed | I7 |
-| DC/DC with a **specified** quiescent current | 1 | replaces the generic module if there is no shore power | ~15-25 | open | B1 |
+| 3.3 kΩ resistors | 2 | extra I2C pull-up pair, only if the SHT31 run exceeds ~3 m | from assortment | conditional | I1a |
+| ~~DC/DC with a specified low quiescent current~~ | - | **not needed** - the boat is permanently on shore power | - | dropped | B1 |
 | Small-signal transistor + 1 kΩ + 10 kΩ | 1 set | buzzer driver; a buzzer must not hang directly on GPIO21 | ~3 | optional | M5 |
 
 ### Cost frame

@@ -86,9 +86,9 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
 - **No autopilot commands from the internet.** Control lives on the local on-board Wi-Fi only; the
   server receives telemetry.
 - No Wi-Fi or server passwords in source code. Configuration lives in NVS/Preferences.
-- **The monitor can flatten the battery it monitors.** At roughly 55-80 mA continuous it draws
-  40-60 Ah per month. Without shore power this needs duty cycling and a low-voltage cutoff - see
-  finding B1.
+- The boat is permanently on shore power, so the BoatHub runs continuously. At roughly 55-80 mA it
+  would still draw 40-60 Ah per month on its own, so a **low-voltage backstop stays mandatory** for
+  the case shore power fails and stays failed - the remaining capacity belongs to the bilge pump.
 
 ## Repository layout
 
@@ -98,7 +98,8 @@ docs/
 ├── CHANGELOG.md        project change log
 ├── MATERIAL.md         bill of materials and tools
 ├── design/             per-feature design documents (+ TEMPLATE.md)
-│   └── 000-design-review.md   spec validation of the whole design
+│   ├── 000-design-review.md   spec validation of the whole design
+│   └── 001-power-supply.md    12 V input, protection, battery measurement
 └── reference/          source documents (project guide PDF)
 ```
 

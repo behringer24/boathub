@@ -333,13 +333,88 @@ Worth recording, so these do not get re-litigated later:
 
 ## 6. Open questions
 
-| # | Question | Blocks |
-|---|----------|--------|
-| 1 | **Is there shore power / a charger at the berth?** | the whole power design - B1 |
-| 2 | How far is the SHT31 mounting point from the enclosure? | I1, ordering the SHT31 |
-| 3 | What is the minimum supply voltage of the chosen 4-20 mA probe? | I2, shunt value |
-| 4 | Is the DevKit a WROOM-1**U** with a U.FL connector? | M9 |
-| 5 | Is the bilge probe's stainless sheath bonded to GND internally? | I8 |
+Answered 2026-09-13.
+
+| # | Question | Answer | Follow-up |
+|---|----------|--------|-----------|
+| 1 | Is there shore power / a charger at the berth? | **Yes - the boat is permanently on shore power while unattended.** | B1 resolved: continuous operation, no duty cycling. But see B1a below - this changes what the battery voltage *means*. |
+| 2 | How far is the SHT31 mounting point from the enclosure? | Not fixed yet; it will sit **outside the box and outside the cabinet** that holds the S1. | Keep the I2C run to **2 m maximum** and stiffen the pull-up - see I1a below. Fix the exact point before the cable gland is drilled. |
+| 3 | Minimum supply voltage of the 4-20 mA probe? | Unknown - the probe is not bought yet. | Becomes a **purchase criterion**: pick a probe specified from 9-10 V up. Default to the **50 Ω shunt** regardless, which makes the question far less critical. |
+| 4 | Is the DevKit a WROOM-1**U** with a U.FL connector? | Unknown - the seller's title names only the SoC, not the module variant. | **Bench check, 30 seconds** - see below. |
+| 5 | Is the bilge probe's stainless sheath bonded to GND internally? | Unknown. | **Bench check with a multimeter** - see below. Now more urgent, see I8a. |
+
+### How to answer 4 and 5 on the bench
+
+**Q4 - module variant.** Read the label printed on the metal shield of the module soldered to the
+DevKit. It says either `ESP32-S3-WROOM-1` or `ESP32-S3-WROOM-1U`. Visually: the **-1** has a
+meandering PCB antenna trace at one end of the module; the **-1U** has a small U.FL/IPEX socket and
+no antenna trace. If an external antenna was in the box, it is almost certainly a -1U.
+
+This matters because the whole antenna plan - external antenna mounted high in the compartment -
+only exists on the -1U. On a -1 there is nowhere to connect it.
+
+**Q5 - probe sheath.** Multimeter on continuity. One lead on the stainless sheath (scratch through
+the oxide layer to get a real contact), the other on each of the three wires in turn, GND included.
+Continuity to any wire means the sheath is bonded.
+
+### B1a - what shore power changes (new)
+
+Resolving Q1 does not just remove the blocker, it **inverts what the battery measurement is for**.
+
+With a charger running, the battery sits at float or absorption - roughly 13.2-14.4 V. **State of
+charge cannot be read from that**, because the charger, not the battery, is setting the voltage.
+What the measurement now delivers instead is the single most valuable alarm in the whole system:
+
+> Voltage falling from ~13.5 V to ~12.7 V means **the charger stopped** - shore power lost, RCD
+> tripped, or someone pulled the cable.
+
+That is worth more than the original trend monitoring, and it only works because of fix B3: a
+drifting ±80 mV error would sit right on top of the 12.9 / 13.2 V decision threshold.
+
+The runtime estimate from B1 also flips from a warning into a specification: after shore power
+fails, the BoatHub keeps monitoring **for roughly four to six weeks** before it becomes a burden on
+the battery. The low-voltage cutoff is still needed, but as a backstop rather than a normal
+operating mode - see [001-power-supply.md](001-power-supply.md).
+
+### I1a - how long the I2C run to the SHT31 may actually be (new)
+
+The original I1 said "1 m maximum" as a conservative guess. With the mounting point now known to be
+outside the cabinet, here is the real number.
+
+Four modules each carrying 10 kΩ pull-ups give **2.5 kΩ effective**, which is a strong pull-up.
+Against the 100 kHz limit of 1000 ns rise time, with roughly 50 pF of module and trace capacitance
+plus ~100 pF per metre of cable:
+
+| Cable length | Bus capacitance | Rise time | Verdict |
+|--------------|-----------------|-----------|---------|
+| 2 m | ~250 pF | ~530 ns | comfortable |
+| 3 m | ~350 pF | ~740 ns | fine |
+| 5 m | ~550 pF | ~1165 ns | **over the limit** |
+
+So **up to about 3 m needs nothing but care**. To reach 5-6 m, add one **3.3 kΩ pull-up pair** on
+SDA and SCL in the box: that brings the bus to ~1.4 kΩ, cuts the rise time at 5 m to ~660 ns, and
+still only asks 2.3 mA of the drivers - inside the 3 mA every device on this bus is specified for.
+Beyond that a P82B715 bus extender pair is the correct answer, not a stiffer resistor.
+
+Wiring rules for the run:
+
+- **4 conductors:** 3.3 V, GND, SDA, SCL - the SHT31 is powered over the same cable, and its 1.5 mA
+  makes voltage drop irrelevant.
+- Twist **SDA with a ground wire and SCL with a ground wire**, not SDA against SCL - twisting the
+  two signals together couples them into each other.
+- Shield, if used, to GND **at the box end only**, so it does not become a ground loop.
+- **100 nF between 3.3 V and GND at the sensor end**, for local decoupling at the far end of a cable.
+- Route clear of the tiller pilot's motor cables, as the guide already requires.
+
+Run the bus at **100 kHz**. There is nothing on it that benefits from 400 kHz, and every number
+above doubles in difficulty if you do.
+
+### I8a - shore power raises the stakes on the bilge probe (new)
+
+With the boat permanently connected to shore power, the boat's negative is tied to shore earth. A
+grounded stainless probe permanently submerged in the bilge is then part of a galvanic circuit that
+now includes the shore connection, which **accelerates corrosion** compared with a boat lying
+unconnected. Q5 moves from "worth checking" to "check before fitting".
 
 ---
 
