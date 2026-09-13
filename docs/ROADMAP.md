@@ -21,13 +21,14 @@ the on-board Wi-Fi and push them through the marina Wi-Fi to the self-hosted ser
 
 | # | Package | Status | Design doc |
 |---|---------|--------|------------|
-| 1.0 | **Decide the power concept: shore power at the berth, or duty cycling plus low-voltage cutoff (B1)** | **open - blocks 1.5 and 1.11** | [000](design/000-design-review.md) |
+| 1.0 | Decide the power concept (B1) | **done** - boat is permanently on shore power, so continuous operation with a low-voltage backstop | [000](design/000-design-review.md) |
 | 1.1 | Toolchain set up, blink and serial test | open | - |
 | 1.2 | DS18B20 engine bay / bilge / fridge (GPIO4/5/6), pull-up value chosen on the bench (I3) | open | planned |
-| 1.3 | SHT31-D cabin climate (I2C 0x44), mounted outside the enclosure, max 1 m of bus (I1) | open | planned |
+| 1.3 | SHT31-D cabin climate (I2C 0x44), outside box and cabinet, max 3 m of bus (I1a) | open | planned |
 | 1.4 | ADS1115 x3 (0x48/0x49/0x4A), PGA fixed before calibration (M2) | open | planned |
-| 1.5 | 12 V supply: fuse, **TVS ahead of the Schottky (B2)**, reverse-polarity protection | open | planned |
-| 1.6 | Battery measurement 82k/10k, **tapped upstream of the Schottky (B3)**, calibration | open | planned |
+| 1.5 | 12 V supply: fuse, **TVS ahead of the Schottky (B2)**, reverse-polarity protection | open | [001](design/001-power-supply.md) |
+| 1.6 | Battery measurement 82k/10k, **tapped upstream of the Schottky (B3)**, calibration | open | [001](design/001-power-supply.md) |
+| 1.6a | Shore-power-loss detection: battery state machine with debouncing (B1a) | open | [001](design/001-power-supply.md) |
 | 1.7 | SoftAP BOOT-NETZ plus local configuration web UI | open | planned |
 | 1.8 | Station mode for marina Wi-Fi, configuration in NVS | open | planned |
 | 1.9 | Server uplink: MQTT over TLS, telemetry, heartbeat, last will | open | planned |
@@ -49,7 +50,9 @@ the on-board Wi-Fi and push them through the marina Wi-Fi to the self-hosted ser
 - [ ] Server shows heartbeat and measurements from home
 - [ ] Enclosure and DC/DC thermally unremarkable after 30-60 minutes of operation
 - [ ] Watchdog active, sensor and network failures decoupled
-- [ ] Average current draw measured against the estimate in B1, low-voltage cutoff verified
+- [ ] Average current draw measured against the estimate in B1, low-voltage backstop verified
+- [ ] Pulling the shore power cable raises `ON_BATTERY`; restoring it clears the alarm
+- [ ] A two-second dip from the bilge pump or fridge produces **no** false alarm
 - [ ] `BOOT-NETZ` clients survive a marina channel change (I4)
 
 ### Server interface (target)
@@ -216,11 +219,12 @@ Order of work for building the system together, taken from the project guide.
 
 | Topic | State |
 |-------|-------|
-| **Shore power at the berth?** | **open - decides whether the system may run continuously or needs duty cycling plus a low-voltage cutoff (B1)** |
-| SHT31 distance from the enclosure | open - over roughly 1 m, I2C is the wrong transport and the humidity reading is lost (I1) |
-| Minimum supply voltage of the 4-20 mA probe | open - decides the 100 Ω / 50 Ω shunt value (I2) |
-| DevKit variant: WROOM-1 or WROOM-1**U** | open - only the -1U has the U.FL antenna connector (M9) |
-| Bilge probe sheath bonded to GND internally? | open - a grounded submerged stainless probe joins the galvanic circuit (I8) |
+| Shore power at the berth? | **resolved 2026-09-13 - permanently connected.** Continuous operation; the low-voltage cutoff stays as a backstop, and shore-power-loss becomes the headline alarm (B1a) |
+| SHT31 mounting point | open - outside box and cabinet is decided, exact point is not. Up to ~3 m needs nothing extra; 5-6 m needs a 3.3 kΩ pull-up pair (I1a) |
+| Minimum supply voltage of the 4-20 mA probe | open - now a **purchase criterion**, pick one specified from 9-10 V up. Default to the 50 Ω shunt either way (I2) |
+| DevKit variant: WROOM-1 or WROOM-1**U** | open - **bench check**, read the module label. Only the -1U has the U.FL connector, and the external antenna plan depends on it (M9) |
+| Bilge probe sheath bonded to GND internally? | open - **bench check** with a multimeter. More urgent now: permanent shore power ties the boat's negative to shore earth (I8a) |
+| Maximum output voltage of the charger | open - the TVS starts conducting at 17.1 V standoff (001) |
 | Second ESP as a dedicated network gateway | spare only; revisit if router/NAT should be separated from boat functions (coupled over UART). The forced AP+STA channel sharing (I4) is the concrete argument for it |
 | SeaTalk RX/TX circuit | deliberately not fixed, own revision before connecting |
 | NAPT/NAT in the firmware | optional; AP+STA alone is not a router |

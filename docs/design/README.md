@@ -24,6 +24,7 @@ supersedes the old one - that way it stays traceable why something on board is w
 | No. | Feature | Stage | Status | Document |
 |-----|---------|-------|--------|----------|
 | 000 | Design review and spec validation | all | Accepted | [000-design-review.md](000-design-review.md) |
+| 001 | Power supply and battery measurement | 1 | Draft | [001-power-supply.md](001-power-supply.md) |
 
 ## Planned documents
 
@@ -34,8 +35,6 @@ Ordered along the roadmap; moved into the index above when created.
 - DS18B20 temperature sensors on three separate 1-Wire GPIOs
 - SHT31-D cabin climate on the shared I2C bus
 - ADS1115 channel allocation and value conditioning
-- 12 V supply: fuse, reverse-polarity protection, TVS, DC/DC
-- Battery voltage measurement and calibration procedure
 - Bilge level 4-20 mA (optional)
 - Wi-Fi operation: SoftAP `BOOT-NETZ` plus marina station, reconnect behaviour
 - Configuration and secrets in NVS/Preferences, local web UI

@@ -28,6 +28,10 @@ find when rebuilding the system or revising the board.
 
 - `docs/design/000-design-review.md`: validation of the whole design against the component
   datasheets - 3 blockers, 8 important findings, 11 minor ones, plus the missing parts per stage.
+- `docs/design/001-power-supply.md`: 12 V input protection, battery measurement, and the battery
+  state machine including shore-power-loss detection.
+- Shore-power-loss alarm as a work package (1.6a). With a charger running, the battery voltage no
+  longer reports state of charge - what it reports instead is whether the charger is still there.
 
 ### Changed
 
@@ -47,6 +51,12 @@ find when rebuilding the system or revising the board.
   voltage at identical resolution if the probe needs the compliance headroom (I2).
 - 1-Wire pull-ups: 2.2 kΩ and 3.3 kΩ added as alternatives to 4.7 kΩ, which is marginal on the 5 m
   probes (I3).
+- Power concept settled: the boat is permanently on shore power, so the system runs continuously
+  and no low-quiescent-current DC/DC is needed. That part is dropped from the parts list (B1).
+- SHT31 I2C run revised from a conservative 1 m to a calculated **3 m**, extendable to 5-6 m with
+  one extra pull-up pair. The sensor sits outside both the enclosure and the S1 cabinet (I1a).
+- 4-20 mA probe minimum supply voltage turned from an open question into a purchase criterion,
+  with the 50 Ω shunt as the default so the answer matters less (I2).
 
 ### Security
 
