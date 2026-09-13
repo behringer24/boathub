@@ -31,6 +31,37 @@ settles the power concept:
 - **the low-voltage cutoff is still required** - as a backstop for the case shore power fails and
   stays failed, not as a normal operating mode
 
+### House bank
+
+**2 x 100 Ah AGM in parallel = 200 Ah nominal, ~100 Ah usable** to the conventional 50 % limit.
+
+There is **no solar and no wind generator**. Away from the dock the only charging source is the
+alternator, so the bank is a pure reserve between engine runs.
+
+Two facts about AGM drive the thresholds in section 4, and both differ from flooded lead-acid:
+
+- **AGM rests higher.** 50 % state of charge is about **12.3 V** at rest, where a flooded battery
+  would read roughly 12.06 V. Thresholds carried over from generic lead-acid tables sit far too
+  low and would let the bank run down to 20-30 % before warning.
+- **Most AGM must not be equalised.** Absorption is typically 14.4-14.7 V, float 13.2-13.8 V, and
+  the 15.5 V equalisation step that a flooded battery tolerates will damage AGM. Check the charger
+  is not configured for a flooded profile.
+
+### Two operating situations, one set of rules
+
+| | Marina, unattended | Underway or at anchor |
+|---|---|---|
+| Charging | shore charger, continuous float | alternator only, while the engine runs |
+| Typical load | BoatHub alone, ~60 mA (fridge normally off) | fridge 25-45 Ah/day, plus autopilot and instruments |
+| Reserve on 100 Ah usable | **~10 weeks** | **1.5-2.5 days** between engine runs |
+| Losing charge means | something failed - **alarm** | entirely normal - **no alarm** |
+
+The right-hand column is why the alarm cannot be a plain voltage threshold: underway the system is
+below every charging threshold all day long. The discriminator is in section 4.
+
+**If the fridge is left running in the marina**, the reserve collapses from ~10 weeks to **under 3
+days**. That is the case where the shore-power-loss alarm earns its keep.
+
 ## 3. Hardware
 
 ### Parts
@@ -108,18 +139,25 @@ Ratio (82 + 10) / 10 = **9.2**.
 
 | Condition | Battery | at ADS1115 A0 | Inside ±2.048 V FSR |
 |-----------|---------|---------------|---------------------|
-| Battery low cutoff | 11.8 V | 1.283 V | yes |
-| Resting, full | 12.7 V | 1.380 V | yes |
-| Float charging | 13.6 V | 1.478 V | yes |
-| Absorption | 14.4 V | 1.565 V | yes |
-| Equalisation | 15.5 V | 1.685 V | yes |
+| Critical, AGM ~30 % | 12.0 V | 1.304 V | yes |
+| Warning, AGM ~50 % | 12.3 V | 1.337 V | yes |
+| Resting, full AGM | 12.85 V | 1.397 V | yes |
+| Float charging | 13.2-13.8 V | 1.435-1.500 V | yes |
+| Absorption, AGM | 14.4-14.7 V | 1.565-1.598 V | yes |
+| Equalisation (flooded profile - **wrong for AGM**) | 15.5 V | 1.685 V | yes |
 | TVS clamping | 27.7 V | 3.011 V | clips, but below VDD 3.3 V - no damage |
 
-Quiescent draw of the divider: 148 µA at 13.6 V, about 2 mW. Irrelevant next to the ESP.
+Quiescent draw of the divider: 148 µA at 13.6 V, about 2 mW. Irrelevant next to the ESP - it is
+roughly 0.25 % of total system draw, and less than a quarter of what the DevKit's RGB LED consumes
+while dark.
 
-**Check your charger's maximum output voltage.** The TVS starts conducting at 17.1 V standoff. Any
-normal 12 V charger stays at or below 15.5 V, but a misconfigured or lithium-profile charger could
-climb higher and would make the TVS heat up.
+**Check your charger's profile.** Two separate concerns:
+
+- The TVS starts conducting at 17.1 V standoff. A misconfigured or lithium-profile charger could
+  climb there and make it heat up.
+- More likely and more damaging: a charger set to a **flooded** profile will try to equalise at
+  15.5 V+, which most AGM must never see. If the reading ever sits above ~14.8 V for an extended
+  period, the charger is set wrong for this bank.
 
 ### Expected accuracy
 
@@ -145,14 +183,49 @@ is still running.
 
 ### State machine
 
-| State | Enter when | Meaning | Action |
-|-------|------------|---------|--------|
-| `CHARGING` | V ≥ 13.2 V sustained 5 min | shore power and charger healthy | normal telemetry |
-| `ON_BATTERY` | V ≤ 12.9 V sustained 5 min | **shore power or charger lost** | immediate event, not at the next interval |
-| `BATTERY_LOW` | V ≤ 12.0 V sustained 15 min | outage has been running a while | urgent alarm, repeat daily |
-| `BATTERY_CRITICAL` | V ≤ 11.8 V sustained 15 min | protect what is left | back off, see below |
+Voltage thresholds for **AGM**, which rests roughly 0.2 V higher than flooded lead-acid at the same
+state of charge.
 
-The 12.9-13.2 V gap is deliberate hysteresis so the state cannot flap.
+| State | Enter when | ~SoC | Meaning |
+|-------|------------|------|---------|
+| `CHARGING` | V ≥ 13.1 V sustained 5 min | - | a charging source is active |
+| `ON_BATTERY` | V ≤ 12.8 V sustained 5 min | - | nothing is charging |
+| `BATTERY_LOW` | V ≤ 12.3 V sustained 15 min | ~50 % | the conventional AGM limit - act now |
+| `BATTERY_CRITICAL` | V ≤ 12.0 V sustained 15 min | ~30 % | protect the bank |
+
+The 12.8-13.1 V gap is deliberate hysteresis so the state cannot flap. Note that a fully charged
+AGM rests at about 12.85 V, so after a charger stops the voltage settles across the `ON_BATTERY`
+threshold over an hour or two rather than instantly - that delay is expected.
+
+### The alarm is not the state
+
+`ON_BATTERY` on its own is **not** an alarm condition. Underway the system sits there all day, and
+an alarm that fires every time you leave the dock is an alarm that gets muted - and is then missing
+in the marina, which is the one place it matters.
+
+The discriminator needs no mode switch, no user action and no SeaTalk:
+
+> **Raise "shore power lost" only if the system was in `CHARGING` continuously for at least 6 hours
+> immediately before dropping to `ON_BATTERY`.**
+
+Only a shore charger holds a float voltage for that long. An alternator run is measured in
+hours at most, and usually far less.
+
+| Situation | Preceded by ≥6 h charging? | Alarm |
+|-----------|---------------------------|-------|
+| Marina, shore power fails | yes - float for days | **yes** |
+| Engine run, then sailing on | no - too short | no |
+| A day under sail | no - never reached `CHARGING` | no |
+| Long motoring passage, then engine off | possibly yes | false positive, see below |
+
+The remaining false positive is a motoring passage of over six hours. It is largely
+self-suppressing, because the alarm has to leave the boat over marina Wi-Fi that is not reachable
+at sea; the event queues and is either dropped or acknowledged on arrival. **From stage 2 onwards**
+it can be suppressed properly by also requiring `seatalk_online == false` - if the instruments are
+powered, somebody is aboard.
+
+`BATTERY_LOW` and `BATTERY_CRITICAL` are raised in **both** situations. A bank at 50 % is worth
+knowing about whether or not anybody is aboard.
 
 ### Debouncing is not optional
 
@@ -165,19 +238,42 @@ wolf within its first week.
   instance to spot the fridge short-cycling
 - the sustained-time column above is a requirement, not a suggestion
 
+### How accurate is the state of charge?
+
+Not very, and the document should be honest about it. The thresholds above are **resting**
+voltages, but the battery is rarely at rest - the fridge cycles, so most readings are taken under
+some load. AGM sags roughly 0.1-0.15 V under a compressor load on a 200 Ah bank, so a measured
+12.2 V may well be 12.35 V rested, or about 55 % rather than 45 %.
+
+Realistic accuracy is **±10-15 % state of charge**. That is fine for "run the engine today" and for
+"something has gone wrong at the dock". It is not good enough to plan a passage around. Proper Ah
+counting would need a shunt, which was considered and rejected - see section 8.
+
 ### Behaviour in `BATTERY_CRITICAL`
 
-Deep sleep with a long wake interval (30-60 min), waking only to measure and report. This drops
-`BOOT-NETZ` and the immediate bilge alarm.
+This is the one place the two situations need different behaviour, and it uses the same 6-hour
+history as the alarm:
 
-**That trade is deliberate.** If shore power has been gone long enough to pull the bank to 11.8 V,
-the remaining capacity belongs to the bilge pump, not to the device that is watching it. A monitor
-that flattens the battery keeping itself online has defeated its own purpose.
+| Preceded by sustained shore charging? | Interpretation | Behaviour |
+|---------------------------------------|----------------|-----------|
+| yes | nobody aboard | **deep sleep**, 30-60 min wake interval, measure and report only |
+| no | somebody aboard | **stay awake**, keep `BOOT-NETZ` and the local UI live, warn locally |
+
+Unattended, the trade is deliberate: if an outage has pulled the bank to 12.0 V, the remaining
+capacity belongs to the bilge pump, not to the device watching it. A monitor that flattens the
+battery keeping itself online has defeated its own purpose.
+
+Aboard, the opposite holds. Going to sleep at 12.0 V would remove the display exactly when the
+reading becomes actionable - the moment you need to decide whether to start the engine.
 
 ### Configurable values
 
-All thresholds belong in NVS/Preferences, not in constants: `v_charging_on`, `v_on_battery`,
-`v_low`, `v_critical`, the debounce windows, and `v_calibration_factor` (nominal 9.2).
+All thresholds belong in NVS/Preferences, not in constants: `v_charging_on` (13.1), `v_on_battery`
+(12.8), `v_low` (12.3), `v_critical` (12.0), the debounce windows, the **charging-history window**
+(6 h), and `v_calibration_factor` (nominal 9.2).
+
+Battery chemistry is a configuration item too. Swapping the AGM bank for flooded or lithium moves
+every threshold in the table, so they must not be compiled in.
 
 ## 5. Failure modes
 
@@ -211,6 +307,10 @@ All thresholds belong in NVS/Preferences, not in constants: `v_charging_on`, `v_
 - [ ] Sweep the bench PSU 11 V to 15.5 V and confirm the ADC tracks linearly
 - [ ] Confirm the state machine transitions at the configured thresholds, with a simulated
       two-second dip to 11.5 V producing **no** state change
+- [ ] **Alarm precondition:** hold 13.5 V for less than the history window, drop to 12.5 V →
+      `ON_BATTERY` is entered but **no alarm** is raised
+- [ ] **Alarm precondition, inverse:** hold 13.5 V beyond the history window, then drop →
+      alarm **is** raised. Shorten the window to minutes for the bench run
 - [ ] Measure total current draw at 12 V and compare against the 55-80 mA estimate in B1
 
 ### In the boat
@@ -218,8 +318,12 @@ All thresholds belong in NVS/Preferences, not in constants: `v_charging_on`, `v_
 - [ ] Polarity of the 12 V feed verified with a multimeter before connecting
 - [ ] Box connected, ESP not yet fitted, 5 V output checked
 - [ ] Reading agrees with a multimeter at the battery terminals
-- [ ] Pull the shore power cable: `ON_BATTERY` is raised within the debounce window
-- [ ] Restore shore power: state returns to `CHARGING`
+- [ ] Pull the shore power cable after a long float period: `ON_BATTERY` **and** the shore-power-loss
+      alarm are raised
+- [ ] Restore shore power: state returns to `CHARGING`, alarm clears
+- [ ] Start the engine, run it, shut down: `ON_BATTERY` is entered but **no alarm** is raised
+- [ ] Confirm the charger holds AGM levels - absorption at or below ~14.7 V, no 15.5 V
+      equalisation step
 - [ ] Box and DC/DC temperature checked after 30-60 minutes
 
 ### Calibration
@@ -236,9 +340,31 @@ Calibrate with shore power **off**, so the reading is not sitting on a charger's
 
 | Point | Decide by | Who |
 |-------|-----------|-----|
-| Maximum output voltage of the installed charger | before first connection | Andreas |
-| Exact threshold values - the table above is a starting point, not measured | after a week of data | both |
+| Charger profile - confirm it is set for AGM, not flooded | before first connection | Andreas |
+| Exact threshold values - the table is a starting point, not measured on this bank | after a week of data | both |
+| Charging-history window - 6 h is a reasoned guess; tune it once real float and engine-run patterns are logged | after the first trip | both |
 | Whether `BATTERY_CRITICAL` should also cut the 4-20 mA loop (20 mA is a third of the ESP's own draw) | when the bilge sensor is fitted | both |
+| Battery temperature sensor on the spare GPIO7, for temperature-compensated thresholds | only if the readings prove too seasonal | both |
+
+### Considered and rejected: a current shunt for Ah counting
+
+Proper state-of-charge measurement needs Ah counting through a shunt, not voltage. Two routes were
+looked at and both were dropped for now:
+
+- **A bus-based battery monitor** (Yacht Devices YDBM-02, Victron SmartShunt with a gateway). These
+  are **NMEA2000 devices** - "SeaTalkNG" is N2K with a Raymarine connector, not the SeaTalk1 bus on
+  the S1 - so they would land in stage 3, not stage 2. Decisive objection: the boat's instruments
+  are switched off when nobody is aboard, so a bus device is dead exactly when the marina alarm
+  matters. Keeping an N2K backbone powered for it would cost more current than the entire BoatHub.
+- **A DIY shunt on a spare ADS1115 channel** (differential, ±0.256 V, suits a 75 mV shunt). Works
+  in both situations and stays independent of any bus, but needs a heavy shunt in the main battery
+  negative and a state-of-charge algorithm - Peukert compensation, charge efficiency,
+  synchronisation on full charge - that is easy to get subtly wrong.
+
+Voltage-only monitoring is accepted instead, with the accuracy limits stated in section 4. If the
+cruising case later becomes more important, the DIY route stays open - the spare ADS1115 channels
+are already there, and in stage 3 the BoatHub could then publish its own battery data as
+**PGN 127508** (roadmap item 3.4) rather than consuming someone else's.
 
 ## 9. References
 

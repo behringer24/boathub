@@ -88,9 +88,13 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
 - **No autopilot commands from the internet.** Control lives on the local on-board Wi-Fi only; the
   server receives telemetry.
 - No Wi-Fi or server passwords in source code. Configuration lives in NVS/Preferences.
-- The boat is permanently on shore power, so the BoatHub runs continuously. At roughly 55-80 mA it
-  would still draw 40-60 Ah per month on its own, so a **low-voltage backstop stays mandatory** for
-  the case shore power fails and stays failed - the remaining capacity belongs to the bilge pump.
+- The boat is permanently on shore power in the marina, so the BoatHub runs continuously. On the
+  2 x 100 Ah AGM bank (~100 Ah usable, no solar or wind) it would still draw 40-60 Ah per month on
+  its own, so a **low-voltage backstop stays mandatory** for the case shore power fails and stays
+  failed - the remaining capacity belongs to the bilge pump.
+- The shore-power-loss alarm is gated on at least 6 hours of prior charging, so it stays quiet
+  underway where running on the battery is normal. See
+  [docs/design/001-power-supply.md](docs/design/001-power-supply.md).
 
 ## Repository layout
 
