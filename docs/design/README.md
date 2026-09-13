@@ -1,54 +1,53 @@
-# Design-Dokumente
+# Design documents
 
-Ein Planungsdokument je Feature. Gedacht zum Denken **vor** dem Löten und Programmieren: Was soll
-das Feature können, wie wird es elektrisch und softwareseitig gelöst, wie wird es getestet und was
-kann dabei schiefgehen.
+One planning document per feature. Meant for thinking **before** soldering and coding: what the
+feature has to do, how it is solved electrically and in software, how it is tested, and what can go
+wrong.
 
-## Ablauf
+## Process
 
-1. Neues Dokument aus [TEMPLATE.md](TEMPLATE.md) kopieren.
-2. Dateiname: `NNN-kurzer-name.md`, fortlaufende Nummer, Kleinbuchstaben, Bindestriche.
-   Beispiel: `001-ds18b20-temperatursensoren.md`
-3. Unten in die Übersicht eintragen.
-4. Status pflegen: `Entwurf` → `In Review` → `Angenommen` → (`Umgesetzt` | `Verworfen` |
-   `Abgelöst durch NNN`).
-5. Angenommene Hardware-Entscheidungen zusätzlich in [../CHANGELOG.md](../CHANGELOG.md) mit
-   **[HW]** vermerken und den Status in [../ROADMAP.md](../ROADMAP.md) nachziehen.
+1. Copy a new document from [TEMPLATE.md](TEMPLATE.md).
+2. File name: `NNN-short-name.md`, running number, lower case, hyphens.
+   Example: `001-ds18b20-temperature-sensors.md`
+3. Add it to the index below.
+4. Keep the status current: `Draft` → `In review` → `Accepted` → (`Implemented` | `Rejected` |
+   `Superseded by NNN`).
+5. Record accepted hardware decisions in [../CHANGELOG.md](../CHANGELOG.md) with the **[HW]**
+   prefix and carry the status over into [../ROADMAP.md](../ROADMAP.md).
 
-Angenommene Dokumente werden nicht stillschweigend umgeschrieben. Ändert sich eine Entscheidung,
-bekommt sie ein neues Dokument, das das alte ablöst - so bleibt nachvollziehbar, warum an Bord
-etwas so verdrahtet ist, wie es verdrahtet ist.
+Accepted documents are not quietly rewritten. If a decision changes, it gets a new document that
+supersedes the old one - that way it stays traceable why something on board is wired the way it is.
 
-## Übersicht
+## Index
 
-| Nr. | Feature | Stufe | Status | Dokument |
+| No. | Feature | Stage | Status | Document |
 |-----|---------|-------|--------|----------|
-| - | noch keine Dokumente angelegt | - | - | - |
+| - | no documents yet | - | - | - |
 
-## Geplante Dokumente
+## Planned documents
 
-Reihenfolge entlang der Roadmap; wird beim Anlegen in die Übersicht oben verschoben.
+Ordered along the roadmap; moved into the index above when created.
 
-**Stufe 1**
+**Stage 1**
 
-- DS18B20-Temperatursensoren an drei getrennten 1-Wire-GPIOs
-- SHT31-D Kajütenklima am gemeinsamen I2C-Bus
-- ADS1115-Kanalbelegung und Messwertaufbereitung
-- 12-V-Versorgung: Sicherung, Verpolschutz, TVS, DC/DC
-- Batteriespannungsmessung und Kalibrierverfahren
-- Bilgenpegel 4-20 mA (optional)
-- WLAN-Betrieb: SoftAP `BOOT-NETZ` + Station Marina, Reconnect-Verhalten
-- Konfiguration und Secrets in NVS/Preferences, lokale Weboberfläche
-- Server-Uplink: MQTT über TLS, Telemetrieschema, Heartbeat, Last-Will
-- Alarm- und Schwellwertlogik
-- Fehlerbehandlung und Watchdog: Sensor- und Netzwerkfehler entkoppeln
+- DS18B20 temperature sensors on three separate 1-Wire GPIOs
+- SHT31-D cabin climate on the shared I2C bus
+- ADS1115 channel allocation and value conditioning
+- 12 V supply: fuse, reverse-polarity protection, TVS, DC/DC
+- Battery voltage measurement and calibration procedure
+- Bilge level 4-20 mA (optional)
+- Wi-Fi operation: SoftAP `BOOT-NETZ` plus marina station, reconnect behaviour
+- Configuration and secrets in NVS/Preferences, local web UI
+- Server uplink: MQTT over TLS, telemetry schema, heartbeat, last will
+- Alarm and threshold logic
+- Fault handling and watchdog: decoupling sensor and network failures
 
-**Stufe 2 und später**
+**Stage 2 and later**
 
-- SeaTalk1-RX-Stufe: Pegelanpassung und Isolation (Schaltplan-Revision)
-- SeaTalk1-Dekodierung: Datagramme, 4800 Baud, 9. Bit
-- SeaTalk1-TX-Ausgangsstufe (Open Collector) und Sicherheitsverriegelung
-- Autopilot-Bedienung im Bord-WLAN: Freigabelogik und Zustandsautomat
-- Track-Logger: Datensatz, LittleFS-Ringpuffer, Fahrterkennung
-- Track-Synchronisation und serverseitiges Logbuch
-- NMEA2000: CAN-Transceiver, Isolation, PGN-Auswahl
+- SeaTalk1 RX stage: level shifting and isolation (schematic revision)
+- SeaTalk1 decoding: datagrams, 4800 baud, 9th bit
+- SeaTalk1 TX output stage (open collector) and safety interlock
+- Autopilot operation on the on-board Wi-Fi: arming logic and state machine
+- Track logger: record format, LittleFS ring buffer, trip detection
+- Track synchronisation and server-side logbook
+- NMEA2000: CAN transceiver, isolation, PGN selection

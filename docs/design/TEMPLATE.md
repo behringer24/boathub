@@ -1,98 +1,98 @@
-# NNN - Titel des Features
+# NNN - Feature title
 
 | | |
 |---|---|
-| **Status** | Entwurf |
-| **Stufe** | 1 / 2 / 2.5 / 2B / 3 / 4 |
-| **Roadmap-Paket** | z. B. 1.2 |
-| **Erstellt** | TT.MM.JJJJ |
-| **Zuletzt geändert** | TT.MM.JJJJ |
-| **Betrifft Hardware** | ja / nein |
+| **Status** | Draft |
+| **Stage** | 1 / 2 / 2.5 / 2B / 3 / 4 |
+| **Roadmap package** | e.g. 1.2 |
+| **Created** | YYYY-MM-DD |
+| **Last changed** | YYYY-MM-DD |
+| **Touches hardware** | yes / no |
 
-## 1. Ziel
+## 1. Goal
 
-Was soll das Feature leisten, in zwei bis drei Sätzen. Was ist ausdrücklich **nicht** Teil davon.
+What the feature is supposed to do, in two or three sentences. What is explicitly **out of scope**.
 
-## 2. Ausgangslage
+## 2. Starting point
 
-Was ist schon vorhanden, was wird vorausgesetzt, welche anderen Dokumente hängen damit zusammen.
+What already exists, what is assumed, which other documents are related.
 
 ## 3. Hardware
 
-Nur ausfüllen, wenn gelötet oder verdrahtet wird.
+Only fill in when something gets soldered or wired.
 
-**Bauteile**
+**Parts**
 
-| Teil | Menge | Zweck | Bemerkung |
-|------|-------|-------|-----------|
+| Part | Qty | Purpose | Note |
+|------|-----|---------|------|
 | | | | |
 
-**Pinbelegung**
+**Pin assignment**
 
-| GPIO | Signal | Richtung | Pegel | Bemerkung |
-|------|--------|----------|-------|-----------|
+| GPIO | Signal | Direction | Level | Note |
+|------|--------|-----------|-------|------|
 | | | | | |
 
-**Schaltung**
+**Circuit**
 
 ```
-ASCII-Skizze oder Verweis auf den Schaltplan
+ASCII sketch or pointer to the schematic
 ```
 
-**Elektrische Randbedingungen** - Spannungsbereiche, Ströme, Pull-ups, Schutzbeschaltung,
-Leitungslängen, Masseführung.
+**Electrical constraints** - voltage ranges, currents, pull-ups, protection, cable lengths,
+grounding.
 
 ## 4. Software
 
-Aufbau, Module, Zustandsautomat, Timing und Intervalle, benötigte Bibliotheken.
+Structure, modules, state machine, timing and intervals, required libraries.
 
-**Datenformat / Schnittstelle**
+**Data format / interface**
 
 ```json
 ```
 
-**Konfigurierbare Werte** - was gehört in NVS/Preferences, was sind Konstanten, was sind
-Kalibrierwerte.
+**Configurable values** - what belongs in NVS/Preferences, what are constants, what are
+calibration values.
 
-## 5. Fehlerfälle
+## 5. Failure modes
 
-| Fall | Erkennung | Reaktion |
+| Case | Detection | Reaction |
 |------|-----------|----------|
-| Sensor antwortet nicht | | |
-| Wert unplausibel | | |
-| Verbindung weg | | |
+| Sensor does not answer | | |
+| Value implausible | | |
+| Connection lost | | |
 
-Ein Fehler in diesem Feature darf die übrigen Funktionen nicht mitreißen.
+A fault in this feature must not drag the remaining functions down with it.
 
-## 6. Sicherheit
+## 6. Safety
 
-Was kann schiefgehen und was schützt davor. Insbesondere:
+What can go wrong and what protects against it. In particular:
 
-- Verhalten beim Booten, nach Reset und nach Verbindungsabbruch
-- Rückwirkungen auf bestehende Bordsysteme (Autopilot, SeaTalk-Bus, Bordnetz)
-- Absicherung und galvanische Trennung
-- Zugriffsschutz: was darf nur lokal im Bord-WLAN, was darf über den Server
+- Behaviour during boot, after a reset and after a lost connection
+- Effects on existing boat systems (autopilot, SeaTalk bus, house supply)
+- Fusing and galvanic isolation
+- Access control: what is restricted to the local on-board Wi-Fi, what may go through the server
 
-Bei allem, was auf SeaTalk schreibt oder den Kurs beeinflusst, ist dieser Abschnitt Pflicht.
+For anything that writes to SeaTalk or influences the course, this section is mandatory.
 
 ## 7. Test
 
-**Am Tisch**
+**On the bench**
 
 - [ ] ...
 
-**Im Boot**
+**In the boat**
 
 - [ ] ...
 
-**Kalibrierung** - Referenzgerät, Vorgehen, wo der ermittelte Wert abgelegt wird.
+**Calibration** - reference instrument, procedure, where the resulting value is stored.
 
-## 8. Offene Punkte
+## 8. Open points
 
-| Punkt | Entscheidung bis | Wer |
-|-------|------------------|-----|
+| Point | Decide by | Who |
+|-------|-----------|-----|
 | | | |
 
-## 9. Referenzen
+## 9. References
 
-- Datenblätter, Projekte, Diskussionen
+- Datasheets, projects, discussions

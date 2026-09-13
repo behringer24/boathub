@@ -1,99 +1,99 @@
 # ESP32 BoatHub
 
-Bootsmonitoring, SeaTalk1-Gateway, Track-Logger und NMEA2000-Vorbereitung auf Basis eines
+Boat monitoring, SeaTalk1 gateway, track logger and NMEA2000 groundwork, built around an
 ESP32-S3 N16R8.
 
-Ein dauerhaft eingeschaltetes ESP32-System überwacht das Boot in der Marina, stellt ein eigenes
-Bord-WLAN bereit, sendet Messwerte über eine ausgehende TLS-Verbindung an den eigenen
-Docker-Host und wird später zum Gateway für SeaTalk1, Autopilot, Track-Logging und NMEA2000
-erweitert.
+A permanently powered ESP32 system monitors the boat in the marina, provides its own on-board
+Wi-Fi, pushes measurements over an outbound TLS connection to a self-hosted Docker server, and is
+later extended into a gateway for SeaTalk1, autopilot control, track logging and NMEA2000.
 
-Grundlage ist die Projektanleitung v0.1 vom 13.09.2026
-([PDF](docs/reference/ESP32_BoatHub_Projektanleitung.pdf)).
+Based on the project guide v0.1 of 2026-09-13
+([PDF, German](docs/reference/ESP32_BoatHub_Projektanleitung.pdf)).
 
 ## Status
 
-| Stufe | Ziel | Status |
+| Stage | Goal | Status |
 |-------|------|--------|
-| 1 | Basis-Monitoring: Temperaturen, Feuchte, Batterie, optional Bilgenpegel, Boot-WLAN, Marina-WLAN, Server-Uplink | in Arbeit |
-| 2 | SeaTalk1 lesen: Logge, Tiefe, Kompass, GPS, Autopilotstatus | geplant |
-| 2.5 | GPS-Tracks lokal speichern und als digitales Logbuch synchronisieren | geplant |
-| 2B | SeaTalk1 schreiben: lokale Autopilotsteuerung | erst nach RX-Test |
-| 3 | NMEA2000 über TWAI/CAN | Zukunft |
-| 4 | Android-Tablet/Pixel mit OpenCPN als Plotter | Zukunft |
+| 1 | Base monitoring: temperatures, humidity, battery, optional bilge level, on-board Wi-Fi, marina Wi-Fi, server uplink | in progress |
+| 2 | Read SeaTalk1: log, depth, compass, GPS, autopilot status | planned |
+| 2.5 | Store GPS tracks locally and sync them as a digital logbook | planned |
+| 2B | Write SeaTalk1: local autopilot control | after RX test |
+| 3 | NMEA2000 over TWAI/CAN | future |
+| 4 | Android tablet / Pixel running OpenCPN as a plotter | future |
 
-Details und Abnahmekriterien: [docs/ROADMAP.md](docs/ROADMAP.md)
+Details and acceptance criteria: [docs/ROADMAP.md](docs/ROADMAP.md)
 
-## Architektur (Zielbild)
+## Architecture (target)
 
 ```
-Sensorik (1-Wire / I2C / 4-20 mA)
+Sensors (1-Wire / I2C / 4-20 mA)
         |
-     ESP32-S3 N16R8  ──SoftAP──>  BOOT-NETZ (Pixel, Tablet, OpenCPN)
+     ESP32-S3 N16R8  ──SoftAP──>  BOOT-NETZ (Pixel, tablet, OpenCPN)
         |   |
-        |   └──STA──> Marina-WLAN ──TLS──> eigener Docker-Host
+        |   └──STA──> marina Wi-Fi ──TLS──> self-hosted Docker server
         |                                     ├── Mosquitto (MQTT)
-   SeaTalk1 (Stufe 2)                         ├── Backend/API
-   NMEA2000 (Stufe 3)                         ├── PostgreSQL + PostGIS
-                                              └── Grafana / Web-Dashboard
+   SeaTalk1 (stage 2)                         ├── Backend/API
+   NMEA2000 (stage 3)                         ├── PostgreSQL + PostGIS
+                                              └── Grafana / web dashboard
 ```
 
-Der ESP baut die Internetverbindung von innen nach außen auf. Im Marina-Netz sind keine
-eingehenden Ports nötig.
+The ESP opens the internet connection outbound. No inbound ports are needed in the marina
+network.
 
-## Hardware-Eckdaten
+## Hardware at a glance
 
-- **Zentrale:** 1 x ESP32-S3 DevKitC-1 N16R8 mit externer Antenne
-- **Temperatur:** 3 x DS18B20 (Motorraum, Bilgenwasser, Kühlschrank), je eigener 1-Wire-GPIO
-- **Klima Kajüte:** SHT31-D (I2C, Adresse 0x44)
-- **Analog:** 3 x ADS1115 (0x48 / 0x49 / 0x4A) am gemeinsamen I2C-Bus
-- **Batterie:** Spannungsteiler 82 kΩ / 10 kΩ (Faktor 9,2) auf ADS1115 A0, gegen Multimeter kalibriert
-- **Bilgenpegel (optional):** hydrostatischer 0-1-m-Sensor, 4-20 mA, 100-Ω-Shunt auf ADS1115 A1
-- **Versorgung:** 12 V Bordnetz → 2-A-Sicherung → 1N5822 → TVS 1.5KE20A → DC/DC 9-36 V auf 5 V
+- **Controller:** 1 x ESP32-S3 DevKitC-1 N16R8 with external antenna
+- **Temperature:** 3 x DS18B20 (engine bay, bilge water, fridge), each on its own 1-Wire GPIO
+- **Cabin climate:** SHT31-D (I2C, address 0x44)
+- **Analog:** 3 x ADS1115 (0x48 / 0x49 / 0x4A) on the shared I2C bus
+- **Battery:** 82 kΩ / 10 kΩ divider (factor 9.2) into ADS1115 A0, calibrated against a multimeter
+- **Bilge level (optional):** hydrostatic 0-1 m probe, 4-20 mA, 100 Ω shunt into ADS1115 A1
+- **Power:** 12 V house supply → 2 A fuse → 1N5822 → TVS 1.5KE20A → DC/DC 9-36 V to 5 V
 
-### Pinplan
+### Pin assignment
 
-| GPIO | Funktion heute | Später / Hinweis |
-|------|----------------|------------------|
-| 4 | DS18B20 Motorraum | eigener 1-Wire-Bus |
-| 5 | DS18B20 Bilgenwasser | eigener 1-Wire-Bus |
-| 6 | DS18B20 Kühlschrank | eigener 1-Wire-Bus |
-| 7 | Reserve | optional Wassertank-DS18B20 |
-| 8 | I2C SDA | SHT31 + alle ADS1115 |
-| 9 | I2C SCL | SHT31 + alle ADS1115 |
-| 15 | reserviert | SeaTalk RX (Stufe 2) |
-| 16 | reserviert | SeaTalk TX (Stufe 2) |
-| 17 | reserviert | TWAI TX (Stufe 3) |
-| 18 | reserviert | TWAI RX (Stufe 3) |
-| 21 | Reserve | optional lokaler Summer |
-| 43/44 | Debug UART | für Service frei lassen |
+| GPIO | Function today | Later / note |
+|------|----------------|--------------|
+| 4 | DS18B20 engine bay | dedicated 1-Wire bus |
+| 5 | DS18B20 bilge water | dedicated 1-Wire bus |
+| 6 | DS18B20 fridge | dedicated 1-Wire bus |
+| 7 | spare | optional water tank DS18B20 |
+| 8 | I2C SDA | SHT31 + all ADS1115 |
+| 9 | I2C SCL | SHT31 + all ADS1115 |
+| 15 | reserved | SeaTalk RX (stage 2) |
+| 16 | reserved | SeaTalk TX (stage 2) |
+| 17 | reserved | TWAI TX (stage 3) |
+| 18 | reserved | TWAI RX (stage 3) |
+| 21 | spare | optional local buzzer |
+| 43/44 | debug UART | keep free for servicing |
 
-Vermieden werden die Strapping-Pins GPIO0/3/45/46, die USB-Pins GPIO19/20 und beim N16R8
-GPIO33-37 (Octal-PSRAM). Die Beschriftung des gelieferten DevKit-Boards vor dem Löten
-gegenprüfen.
+Avoided: strapping pins GPIO0/3/45/46, USB pins GPIO19/20, and GPIO33-37 on the N16R8 (octal
+PSRAM). Always cross-check the silkscreen of the delivered DevKit board before soldering.
 
-## Sicherheitsregeln
+## Safety rules
 
-- **12 V sind nicht harmlos.** Eine Bootsbatterie liefert sehr hohe Kurzschlussströme. Jede neue
-  Zuleitung bekommt nahe an der Quelle eine eigene Sicherung.
-- Beim Flashen per USB die externe 5-V-Einspeisung ausschalten. Niemals 5 V auf 3V3 geben.
-- **SeaTalk-TX bleibt deaktiviert**, bis RX stabil läuft und die Ausgangsstufe separat am Tisch
-  getestet wurde. Nach Reset oder Verbindungsabbruch ist der Sendeteil passiv.
-- **Keine Autopilot-Befehle aus dem Internet.** Steuerung ausschließlich im lokalen Bord-WLAN,
-  der Server empfängt nur Telemetrie.
-- Keine WLAN- oder Server-Passwörter im Quellcode. Konfiguration in NVS/Preferences.
+- **12 V is not harmless.** A boat battery can deliver very high short-circuit currents. Every new
+  feed gets its own fuse close to the source.
+- Switch off the external 5 V supply while flashing over USB. Never feed 5 V into 3V3.
+- **SeaTalk TX stays disabled** until RX runs reliably and the output stage has been tested
+  separately on the bench. After a reset or a lost connection the transmit path is passive.
+- **No autopilot commands from the internet.** Control lives on the local on-board Wi-Fi only; the
+  server receives telemetry.
+- No Wi-Fi or server passwords in source code. Configuration lives in NVS/Preferences.
 
-## Repository-Struktur
+## Repository layout
 
 ```
 docs/
-├── ROADMAP.md          Ausbaustufen, Abnahmekriterien, Bauabende
-├── CHANGELOG.md        Änderungsprotokoll des Projekts
-├── design/             Planungsdokumente je Feature (+ TEMPLATE.md)
-└── reference/          Quelldokumente (Projektanleitung als PDF)
+├── ROADMAP.md          stages, acceptance criteria, build evenings
+├── CHANGELOG.md        project change log
+├── design/             per-feature design documents (+ TEMPLATE.md)
+└── reference/          source documents (project guide PDF)
 ```
 
-## Nächster Schritt
+Conventions for working in this repository: [CLAUDE.md](CLAUDE.md)
 
-Stufe 1 auf dem Tisch aufbauen: ESP32 per USB, danach DS18B20, SHT31 und ADS1115. Erst wenn die
-Sensorik stabil ist, wird die 12-V-Versorgung hinzugefügt.
+## Next step
+
+Build stage 1 on the bench: ESP32 over USB, then DS18B20, SHT31 and ADS1115. Only once the sensor
+side is stable does the 12 V supply get added.

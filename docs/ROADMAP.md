@@ -1,56 +1,56 @@
 # Roadmap
 
-Ausbaustufen des ESP32 BoatHub. Jede Stufe ist eigenständig nutzbar und wird erst begonnen, wenn
-die vorherige stabil läuft. Grundlage: Projektanleitung v0.1 vom 13.09.2026.
+Build stages of the ESP32 BoatHub. Each stage is usable on its own and is only started once the
+previous one runs reliably. Based on the project guide v0.1 of 2026-09-13.
 
-**Legende Status:** `offen` · `in Arbeit` · `erledigt` · `blockiert` · `zurückgestellt`
+**Status values:** `open` · `in progress` · `done` · `blocked` · `deferred`
 
 ---
 
-## Stufe 1 - Basis-Monitoring
+## Stage 1 - Base monitoring
 
-**Status:** in Arbeit
-**Ziel:** Temperaturen, Feuchte, Batteriespannung und optional Bilgenpegel erfassen, im Bord-WLAN
-anzeigen und über das Marina-WLAN an den eigenen Server senden.
+**Status:** in progress
+**Goal:** Measure temperatures, humidity, battery voltage and optionally bilge level, show them on
+the on-board Wi-Fi and push them through the marina Wi-Fi to the self-hosted server.
 
-### Arbeitspakete
+### Work packages
 
-| # | Paket | Status | Design-Doc |
-|---|-------|--------|------------|
-| 1.1 | Entwicklungsumgebung, Blink-/Seriell-Test | offen | - |
-| 1.2 | DS18B20 Motorraum / Bilge / Kühlschrank (GPIO4/5/6) | offen | geplant |
-| 1.3 | SHT31-D Kajüte (I2C 0x44) | offen | geplant |
-| 1.4 | ADS1115 x3 (0x48/0x49/0x4A) | offen | geplant |
-| 1.5 | 12-V-Versorgung mit Sicherung, Verpol- und Transientenschutz | offen | geplant |
-| 1.6 | Batteriespannungsmessung 82k/10k, Kalibrierung | offen | geplant |
-| 1.7 | SoftAP BOOT-NETZ + lokale Konfigurations-Weboberfläche | offen | geplant |
-| 1.8 | Station-Modus Marina-WLAN, Konfiguration in NVS | offen | geplant |
-| 1.9 | Server-Uplink: MQTT/TLS, Telemetrie, Heartbeat, Last-Will | offen | geplant |
-| 1.10 | Alarme (Batterie niedrig, Frost, Feuchte, Bilge) | offen | geplant |
-| 1.11 | Gehäuse, Einbau, Kabelbeschriftung | offen | - |
-| 1.12 | Optional: Bilgenpegel 4-20 mA, kalibriert | offen | geplant |
-| 1.13 | Optional: NAPT/NAT, damit Clients über den ESP ins Internet kommen | zurückgestellt | geplant |
-| 1.14 | Optional: Wassertanktemperatur (GPIO7) | zurückgestellt | - |
+| # | Package | Status | Design doc |
+|---|---------|--------|------------|
+| 1.1 | Toolchain set up, blink and serial test | open | - |
+| 1.2 | DS18B20 engine bay / bilge / fridge (GPIO4/5/6) | open | planned |
+| 1.3 | SHT31-D cabin climate (I2C 0x44) | open | planned |
+| 1.4 | ADS1115 x3 (0x48/0x49/0x4A) | open | planned |
+| 1.5 | 12 V supply with fuse, reverse-polarity and transient protection | open | planned |
+| 1.6 | Battery voltage measurement 82k/10k, calibration | open | planned |
+| 1.7 | SoftAP BOOT-NETZ plus local configuration web UI | open | planned |
+| 1.8 | Station mode for marina Wi-Fi, configuration in NVS | open | planned |
+| 1.9 | Server uplink: MQTT over TLS, telemetry, heartbeat, last will | open | planned |
+| 1.10 | Alarms (low battery, frost, humidity, bilge) | open | planned |
+| 1.11 | Enclosure, installation, cable labelling | open | - |
+| 1.12 | Optional: bilge level 4-20 mA, calibrated | open | planned |
+| 1.13 | Optional: NAPT/NAT so clients reach the internet through the ESP | deferred | planned |
+| 1.14 | Optional: water tank temperature (GPIO7) | deferred | - |
 
-### Abnahmekriterien
+### Acceptance criteria
 
-- [ ] Jeder DS18B20 wird einzeln erkannt und liefert plausible Werte
-- [ ] SHT31 liefert Temperatur und relative Luftfeuchte
-- [ ] Alle drei ADS1115 auf 0x48/0x49/0x4A erkannt
-- [ ] Batteriespannung stimmt nach Kalibrierung mit dem Multimeter überein
-- [ ] DC/DC liefert ohne ESP stabile 5,0 V; 3V3-Pin des ESP ca. 3,3 V
-- [ ] BOOT-NETZ erscheint, Pixel verbindet sich mit der lokalen Weboberfläche
-- [ ] Marina-WLAN wird verbunden, Reconnect nach Ausfall funktioniert
-- [ ] Server zeigt Heartbeat und Messwerte von zuhause aus
-- [ ] Box und DC/DC nach 30-60 Minuten Dauerbetrieb thermisch unauffällig
-- [ ] Watchdog aktiv, Sensor- und Netzwerkfehler entkoppelt
+- [ ] Each DS18B20 is detected individually and reports plausible values
+- [ ] SHT31 reports temperature and relative humidity
+- [ ] All three ADS1115 respond on 0x48/0x49/0x4A
+- [ ] Battery voltage matches the multimeter after calibration
+- [ ] DC/DC delivers a stable 5.0 V without the ESP; ESP 3V3 pin around 3.3 V
+- [ ] BOOT-NETZ appears, the Pixel reaches the local web UI
+- [ ] Marina Wi-Fi connects, reconnect after an outage works
+- [ ] Server shows heartbeat and measurements from home
+- [ ] Enclosure and DC/DC thermally unremarkable after 30-60 minutes of operation
+- [ ] Watchdog active, sensor and network failures decoupled
 
-### Server-Schnittstelle (Ziel)
+### Server interface (target)
 
 ```
-boathub/<boot-id>/telemetry
-boathub/<boot-id>/status      Last-Will: "offline"
-boathub/<boot-id>/events
+boathub/<boat-id>/telemetry
+boathub/<boat-id>/status      last will: "offline"
+boathub/<boat-id>/events
 ```
 
 ```json
@@ -67,149 +67,149 @@ boathub/<boot-id>/events
 }
 ```
 
-Heartbeat ca. jede Minute. Kritische Ereignisse (z. B. steigender Bilgenpegel) werden sofort
-gesendet, nicht erst im normalen Telemetrieintervall.
+Heartbeat roughly every minute. Critical events such as a rising bilge level are sent immediately,
+not at the next regular telemetry interval.
 
 ---
 
-## Stufe 2 - SeaTalk1 lesen
+## Stage 2 - Read SeaTalk1
 
-**Status:** geplant
-**Ziel:** Daten aus dem vorhandenen SeaTalk1-Netz am freien Port des Raymarine S1 mitlesen.
-**Voraussetzung:** Stufe 1 läuft stabil im Boot.
+**Status:** planned
+**Goal:** Listen in on the existing SeaTalk1 network through the free port on the Raymarine S1.
+**Prerequisite:** Stage 1 running reliably in the boat.
 
-### Arbeitspakete
+### Work packages
 
-| # | Paket | Status |
-|---|-------|--------|
-| 2.1 | RX-Pegelanpassung/Isolation auf 3,3 V als eigene Schaltplan-Revision festlegen | offen |
-| 2.2 | Bench-Test der RX-Stufe (Oszilloskop/Logikanalysator, 4800 Baud, 9. Bit) | offen |
-| 2.3 | Rohe Bytes lesen und protokollieren (GPIO15) | offen |
-| 2.4 | Datagramme dekodieren: Tiefe, Logge, Kompasskurs | offen |
-| 2.5 | GPS-Position, SOG/COG, Zeit - falls im Bus vorhanden | offen |
-| 2.6 | Autopilotstatus und Sollkurs dekodieren | offen |
-| 2.7 | Unbekannte Datagramme roh sammeln und auswerten | offen |
-| 2.8 | SeaTalk-Werte in Telemetrie und Bord-WLAN integrieren | offen |
+| # | Package | Status |
+|---|---------|--------|
+| 2.1 | Settle the RX level shifting / isolation to 3.3 V as its own schematic revision | open |
+| 2.2 | Bench-test the RX stage (scope or logic analyser, 4800 baud, 9th bit) | open |
+| 2.3 | Read and log raw bytes (GPIO15) | open |
+| 2.4 | Decode datagrams: depth, log speed, compass heading | open |
+| 2.5 | GPS position, SOG/COG, time - if present on the bus | open |
+| 2.6 | Decode autopilot status and target heading | open |
+| 2.7 | Collect unknown datagrams raw and analyse them | open |
+| 2.8 | Feed SeaTalk values into telemetry and the on-board Wi-Fi | open |
 
-### Abnahmekriterien
+### Acceptance criteria
 
-- [ ] RX-Stufe am Tisch getestet, bevor sie an den S1 kommt
-- [ ] Rohdatenstrom über Stunden stabil, ohne Rückwirkung auf den Bus
-- [ ] Tiefe, Speed, Kurs und - falls vorhanden - GPS eindeutig identifiziert
-- [ ] Feld `seatalk_online` in der Telemetrie korrekt
+- [ ] RX stage bench-tested before it touches the S1
+- [ ] Raw data stream stable over hours, with no effect on the bus
+- [ ] Depth, speed, heading and - if available - GPS unambiguously identified
+- [ ] `seatalk_online` field in telemetry correct
 
-**Offen:** Die genaue RX/TX-Stufe ist bewusst noch nicht festgelegt. Referenzen: APRemote
-(ESP32 + SeaTalk1), Open-Collector-Schaltungen mit 74LS07, Signal K Autopilot.
-
----
-
-## Stufe 2.5 - Track-Logging und digitales Logbuch
-
-**Status:** geplant
-**Ziel:** Fahrten offline aufzeichnen und in der Marina automatisch zum Server synchronisieren.
-**Voraussetzung:** GPS-Daten aus Stufe 2 verfügbar.
-
-### Arbeitspakete
-
-| # | Paket | Status |
-|---|-------|--------|
-| 2.5.1 | Trackpunkt-Format festlegen (Zeit, Lat/Lon, SOG/COG, Heading, Tiefe, AP-Status, Batterie) | offen |
-| 2.5.2 | Ringpuffer in LittleFS, blockweises Schreiben aus dem RAM-Puffer | offen |
-| 2.5.3 | Fahrterkennung: Start bei GPS + Bewegung über Schwellwert, Ende nach Ruhephase | offen |
-| 2.5.4 | Zeitbasis: GPS-Zeit, sonst NTP über Marina-WLAN | offen |
-| 2.5.5 | Upload noch nicht übertragener Fahrten, quittiert und wiederaufsetzbar | offen |
-| 2.5.6 | Serverseitig: Kartenansicht, Logbucheinträge, GPX-/CSV-Export | offen |
-
-### Abnahmekriterien
-
-- [ ] Intervall 5-10 s, Flash-Schreibvorgänge durch RAM-Puffer reduziert
-- [ ] Eine komplette Fahrt ohne Internet aufgezeichnet und danach vollständig hochgeladen
-- [ ] Übertragene Tracks werden bei Platzbedarf zuerst gelöscht, aktuelle nie
-- [ ] Server zeigt Start, Ziel, Dauer, Distanz, Durchschnitts- und Maximalgeschwindigkeit
+**Open:** The exact RX/TX stage is deliberately not fixed yet. References: APRemote (ESP32 +
+SeaTalk1), open-collector circuits using the 74LS07, Signal K autopilot.
 
 ---
 
-## Stufe 2B - Autopilot steuern (SeaTalk1 TX)
+## Stage 2.5 - Track logging and digital logbook
 
-**Status:** blockiert - erst nach stabilem RX-Betrieb und getesteter Ausgangsstufe
-**Ziel:** Lokale Bedienung des Raymarine S1 aus dem Bord-WLAN.
+**Status:** planned
+**Goal:** Record trips offline and sync them to the server automatically once back in the marina.
+**Prerequisite:** GPS data from stage 2 available.
 
-### Arbeitspakete
+### Work packages
 
-| # | Paket | Status |
-|---|-------|--------|
-| 2B.1 | Open-Collector/Open-Drain-Ausgangsstufe entwerfen und am Tisch testen | blockiert |
-| 2B.2 | TX hochohmig beim Booten, Reset und im Fehlerfall sicherstellen | blockiert |
-| 2B.3 | Kommandos +1 / -1 / +10 / -10 Grad | blockiert |
-| 2B.4 | AUTO / STANDBY | blockiert |
-| 2B.5 | Freigabelogik: nur lokales Bord-WLAN, nach Neustart gesperrt | blockiert |
-| 2B.6 | TRACK / Route - erst nach Navigationstest, mit Bestätigung durch den Benutzer | blockiert |
+| # | Package | Status |
+|---|---------|--------|
+| 2.5.1 | Define the track point record (time, lat/lon, SOG/COG, heading, depth, AP status, battery) | open |
+| 2.5.2 | Ring buffer in LittleFS, block writes out of the RAM buffer | open |
+| 2.5.3 | Trip detection: start on GPS fix plus movement above a threshold, end after a quiet period | open |
+| 2.5.4 | Time base: GPS time, otherwise NTP over marina Wi-Fi | open |
+| 2.5.5 | Upload of not-yet-transferred trips, acknowledged and resumable | open |
+| 2.5.6 | Server side: map view, logbook entries, GPX/CSV export | open |
 
-### Sicherheitsregeln
+### Acceptance criteria
 
-- Der Bus darf niemals aktiv auf 12 V getrieben werden.
-- STANDBY ist immer direkt erreichbar.
-- AUTO nur durch explizite Bedienaktion, nie automatisch nach Neustart.
-- Der vorhandene Raymarine-Bedienteil bleibt immer erhalten und funktionsfähig.
-- **Keine Autopilot-Befehle aus dem Internet oder vom Server.**
-
----
-
-## Stufe 3 - NMEA2000
-
-**Status:** Zukunft
-**Ziel:** TWAI/CAN-Anbindung als Gateway zu moderner Bordelektronik.
-**Voraussetzung:** Stufe 1 und SeaTalk stabil. Erst dann wird die CAN-Schnittstelle dimensioniert
-und der Backbone geplant.
-
-| # | Paket | Status |
-|---|-------|--------|
-| 3.1 | Externen CAN-Transceiver auswählen, isolierte Schnittstelle an GPIO17/18 | offen |
-| 3.2 | NMEA2000 nach WLAN für Tablet/Server | offen |
-| 3.3 | SeaTalk1 nach NMEA2000 für alte Raymarine-Daten | offen |
-| 3.4 | Eigene Sensorwerte nach NMEA2000, soweit sinnvolle PGNs existieren | offen |
-| 3.5 | Optional: AIS, moderne Sensorik, Orca Core o. ä. | offen |
+- [ ] Interval 5-10 s, flash write cycles reduced by the RAM buffer
+- [ ] A complete trip recorded without internet and afterwards uploaded in full
+- [ ] Transferred tracks are discarded first when space runs low, current ones never
+- [ ] Server shows start, destination, duration, distance, average and maximum speed
 
 ---
 
-## Stufe 4 - OpenCPN auf Tablet/Pixel
+## Stage 2B - Autopilot control (SeaTalk1 TX)
 
-**Status:** Zukunft
-**Ziel:** Das Bord-WLAN verteilt Navigationsdaten an OpenCPN. Tablet als Hauptbildschirm, Pixel als
-Backup. Der ESP bleibt Gateway, nicht Kartenplotter.
+**Status:** blocked - only after reliable RX operation and a tested output stage
+**Goal:** Operate the Raymarine S1 locally from the on-board Wi-Fi.
 
----
+### Work packages
 
-## Bauabende
+| # | Package | Status |
+|---|---------|--------|
+| 2B.1 | Design the open-collector / open-drain output stage and bench-test it | blocked |
+| 2B.2 | Guarantee a high-impedance TX during boot, reset and faults | blocked |
+| 2B.3 | Commands +1 / -1 / +10 / -10 degrees | blocked |
+| 2B.4 | AUTO / STANDBY | blocked |
+| 2B.5 | Arming logic: local on-board Wi-Fi only, locked after a restart | blocked |
+| 2B.6 | TRACK / route - only after a navigation test, with user confirmation | blocked |
 
-Reihenfolge für den gemeinsamen Aufbau aus der Projektanleitung.
+### Safety rules
 
-| Abend | Ziel | Fertig wenn... | Status |
-|-------|------|----------------|--------|
-| 1 | ESP kennenlernen | Serieller Monitor und erster Test laufen | offen |
-| 2 | Drei DS18B20 | alle drei Temperaturen einzeln stabil | offen |
-| 3 | SHT31 + I2C | Kajütentemperatur und Feuchte sichtbar | offen |
-| 4 | ADS1115 | I2C-Adressen und Testspannung messbar | offen |
-| 5 | 12-V-Versorgung | 5 V sauber, Schutzteile eingebaut | offen |
-| 6 | Batteriemessung | Wert gegen Multimeter kalibriert | offen |
-| 7 | Boot-WLAN | Pixel verbindet sich lokal mit Weboberfläche | offen |
-| 8 | Marina-WLAN + Server | Messwerte von zuhause sichtbar | offen |
-| 9 | Gehäuse/Einbau | Box sicher montiert, Kabel beschriftet | offen |
-| 10 | Bilgenpegel optional | 4-20 mA kalibriert | offen |
-| 11 | SeaTalk RX | nur lesen, Daten roh loggen | offen |
-| 12 | SeaTalk dekodieren | Tiefe/Speed/Kurs/GPS identifiziert | offen |
-| 13 | Track-Logger | Fahrt offline speichern und hochladen | offen |
-| 14 | SeaTalk TX | Bench-Test, dann lokale Autopilot-Steuerung | offen |
-| 15 | NMEA2000 | isolierte CAN-Schnittstelle hinzugefügt | offen |
+- The bus must never be driven actively to 12 V.
+- STANDBY is always directly reachable.
+- AUTO only through an explicit user action, never automatically after a restart.
+- The existing Raymarine control head always stays in place and functional.
+- **No autopilot commands from the internet or the server.**
 
 ---
 
-## Offene Entscheidungen
+## Stage 3 - NMEA2000
 
-| Thema | Stand |
+**Status:** future
+**Goal:** TWAI/CAN connection as a gateway to modern marine electronics.
+**Prerequisite:** Stage 1 and SeaTalk stable. Only then is the CAN interface dimensioned and the
+backbone planned.
+
+| # | Package | Status |
+|---|---------|--------|
+| 3.1 | Pick an external CAN transceiver, isolated interface on GPIO17/18 | open |
+| 3.2 | NMEA2000 to Wi-Fi for tablet and server | open |
+| 3.3 | SeaTalk1 to NMEA2000 for legacy Raymarine data | open |
+| 3.4 | Own sensor values to NMEA2000 where sensible PGNs exist | open |
+| 3.5 | Optional: AIS, modern sensors, Orca Core and similar | open |
+
+---
+
+## Stage 4 - OpenCPN on tablet / Pixel
+
+**Status:** future
+**Goal:** The on-board Wi-Fi distributes navigation data to OpenCPN. Tablet as the main screen, the
+Pixel as backup. The ESP stays a gateway, not a chart plotter.
+
+---
+
+## Build evenings
+
+Order of work for building the system together, taken from the project guide.
+
+| Evening | Goal | Done when... | Status |
+|---------|------|--------------|--------|
+| 1 | Get to know the ESP | serial monitor and first test running | open |
+| 2 | Three DS18B20 | all three temperatures stable individually | open |
+| 3 | SHT31 + I2C | cabin temperature and humidity visible | open |
+| 4 | ADS1115 | I2C addresses found and test voltage measurable | open |
+| 5 | 12 V supply | clean 5 V, protection parts fitted | open |
+| 6 | Battery measurement | value calibrated against the multimeter | open |
+| 7 | On-board Wi-Fi | Pixel connects locally to the web UI | open |
+| 8 | Marina Wi-Fi + server | measurements visible from home | open |
+| 9 | Enclosure and installation | box mounted safely, cables labelled | open |
+| 10 | Bilge level (optional) | 4-20 mA calibrated | open |
+| 11 | SeaTalk RX | read only, log raw data | open |
+| 12 | Decode SeaTalk | depth/speed/heading/GPS identified | open |
+| 13 | Track logger | trip stored offline and uploaded | open |
+| 14 | SeaTalk TX | bench test, then local autopilot control | open |
+| 15 | NMEA2000 | isolated CAN interface added | open |
+
+---
+
+## Open decisions
+
+| Topic | State |
 |-------|-------|
-| Zweiter ESP als reines Netzwerk-Gateway | nur Reserve; erst wenn Router/NAT von Bordfunktionen getrennt werden soll (Kopplung per UART) |
-| SeaTalk RX/TX-Schaltung | bewusst noch nicht festgelegt, eigene Revision vor dem Anschluss |
-| NAPT/NAT in der Firmware | optional; AP+STA allein ist noch kein Router |
-| Verlustfreier MOSFET-Verpolschutz | erst bei einer eigenen PCB, Prototyp misst hinter der Schottky-Diode |
-| Bilgensonde Edelstahlqualität | bei Salz-/Brackwasser regelmäßig auf Korrosion prüfen, austauschbar montieren |
+| Second ESP as a dedicated network gateway | spare only; revisit if router/NAT should be separated from boat functions (coupled over UART) |
+| SeaTalk RX/TX circuit | deliberately not fixed, own revision before connecting |
+| NAPT/NAT in the firmware | optional; AP+STA alone is not a router |
+| Lossless MOSFET reverse-polarity protection | only with a custom PCB; the prototype measures behind the Schottky diode |
+| Bilge probe stainless grade | check for corrosion regularly in salt/brackish water, mount so it can be replaced |

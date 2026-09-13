@@ -1,41 +1,45 @@
 # Changelog
 
-Alle nennenswerten Änderungen an Firmware, Hardware und Serverseite des ESP32 BoatHub.
+All notable changes to the firmware, hardware and server side of the ESP32 BoatHub.
 
-Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
-Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
+Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows
+[Semantic Versioning](https://semver.org/).
 
-Kategorien: `Hinzugefügt` · `Geändert` · `Veraltet` · `Entfernt` · `Behoben` · `Sicherheit`
+Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Security`
 
-Hardware-Änderungen (Schaltung, Pinbelegung, Bauteile) werden mit dem Präfix **[HW]**
-gekennzeichnet, damit sie beim Nachbau und bei Revisionen der Platine auffindbar bleiben.
-
----
-
-## [Unveröffentlicht]
-
-### Hinzugefügt
-
-- Projekt-Repository angelegt: `docs/` mit Roadmap, Changelog, Design-Verzeichnis und
-  Quelldokumenten.
-- README mit Architekturüberblick, Pinplan, Hardware-Eckdaten und Sicherheitsregeln.
-- Roadmap mit den Ausbaustufen 1, 2, 2.5, 2B, 3 und 4 inklusive Abnahmekriterien und der
-  Reihenfolge der Bauabende.
-- Vorlage und Index für Feature-Designdokumente unter `docs/design/`.
-- Projektanleitung v0.1 (13.09.2026) als Quelldokument unter `docs/reference/`.
+Hardware changes (circuit, pin assignment, parts) are prefixed with **[HW]** so they stay easy to
+find when rebuilding the system or revising the board.
 
 ---
 
-## Vorgeschichte
+## [Unreleased]
 
-Stand vor Beginn der Repository-Historie, übernommen aus dem Änderungsprotokoll der
-Projektanleitung.
+### Added
 
-### 0.1 - 13.09.2026
+- Project repository created: `docs/` with roadmap, changelog, design directory and source
+  documents.
+- README with architecture overview, pin assignment, hardware summary and safety rules.
+- Roadmap covering stages 1, 2, 2.5, 2B, 3 and 4 including acceptance criteria and the order of
+  the build evenings.
+- Template and index for per-feature design documents under `docs/design/`.
+- Project guide v0.1 (2026-09-13) as a source document under `docs/reference/`.
 
-- Erste zusammengefasste Projektanleitung.
-- Stufe 1 konkretisiert; SeaTalk1 und NMEA2000 als spätere Ausbauphasen abgegrenzt.
-- **[HW]** Batteriespannungsteiler auf 82 kΩ / 10 kΩ festgelegt (Teilerfaktor 9,2) für mehr
-  Spannungsreserve gegenüber Bordnetzspitzen.
-- **[HW]** Pinplan festgelegt: DS18B20 auf GPIO4/5/6, I2C auf GPIO8/9, SeaTalk auf GPIO15/16
-  reserviert, TWAI auf GPIO17/18 reserviert.
+### Changed
+
+- Documentation language switched to English; only the source PDF stays German until it is
+  rewritten.
+
+---
+
+## Prehistory
+
+State before this repository's history began, taken from the change log of the project guide.
+
+### 0.1 - 2026-09-13
+
+- First consolidated project guide.
+- Stage 1 detailed; SeaTalk1 and NMEA2000 scoped as later build stages.
+- **[HW]** Battery voltage divider fixed at 82 kΩ / 10 kΩ (divider factor 9.2) for more headroom
+  against house-supply spikes.
+- **[HW]** Pin assignment fixed: DS18B20 on GPIO4/5/6, I2C on GPIO8/9, SeaTalk reserved on
+  GPIO15/16, TWAI reserved on GPIO17/18.

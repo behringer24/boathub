@@ -1,32 +1,42 @@
-# ESP32 BoatHub - Arbeitsweise
+# ESP32 BoatHub - working conventions
 
 ## Git
 
-- Hauptbranch ist `main`.
-- **Commit-Nachrichten enthalten niemals einen `Co-Authored-By:`-Trailer** und keinen Hinweis auf
-  ein KI-Werkzeug. Auch nicht in Pull-Request-Beschreibungen.
-- Commit-Nachrichten auf Deutsch, Betreffzeile im Imperativ.
+- Main branch is `main`.
+- **Never push.** Andreas pushes himself. Commit and merge locally only.
+- Work happens on feature branches: `feature/<short-name>`, merged back into `main` with
+  `--no-ff`. Never commit straight onto `main`.
+- **Commit messages never contain a `Co-Authored-By:` trailer** and no reference to an AI tool.
+  The same applies to pull request descriptions.
+- Commit messages in English, short and meaningful, subject line in the imperative.
 
-## Dokumentation
+## Documentation
 
-- Projektsprache ist Deutsch.
-- Neue Features bekommen vor der Umsetzung ein Designdokument in `docs/design/`
-  (Vorlage: `docs/design/TEMPLATE.md`), eingetragen in die Übersicht in `docs/design/README.md`.
-- Statusänderungen werden in `docs/ROADMAP.md` nachgezogen.
-- Nennenswerte Änderungen kommen in `docs/CHANGELOG.md`; Hardware-Änderungen mit **[HW]**
-  markieren.
-- Quelldokumente liegen unter `docs/reference/`.
+- All documentation is written in English. The only exception is the source PDF under
+  `docs/reference/`, which stays German until it is rewritten.
+- **Keep the documentation in sync with every change.** A change is not finished until the
+  affected documents are updated in the same commit:
 
-## Technische Leitplanken
+  | Change | Also update |
+  |--------|-------------|
+  | anything notable | `docs/CHANGELOG.md` (hardware marked **[HW]**) |
+  | work package status | `docs/ROADMAP.md` |
+  | new or changed feature | design document in `docs/design/` plus its index |
+  | pin assignment, architecture, safety rules | `README.md` |
 
-Diese Regeln stammen aus der Projektanleitung und sind nicht verhandelbar:
+- New features get a design document in `docs/design/` before they are implemented
+  (template: `docs/design/TEMPLATE.md`), listed in the index in `docs/design/README.md`.
 
-- Keine WLAN- oder Server-Passwörter im Quellcode. Konfiguration in NVS/Preferences.
-- Server-Telemetrie ist Einbahnstraße: **keine Autopilot- oder Steuerbefehle aus dem Internet.**
-  Steuerung nur im lokalen Bord-WLAN.
-- SeaTalk-TX bleibt deaktiviert, bis RX stabil läuft und die Ausgangsstufe getestet ist. Nach Reset
-  oder Verbindungsabbruch ist der Sendeteil passiv.
-- Sensor- und Netzwerkfehler sind voneinander entkoppelt; ein defekter Sensor darf das System nicht
-  lahmlegen. Watchdog nutzen.
-- Reservierte GPIOs (15/16 SeaTalk, 17/18 TWAI, 43/44 Debug-UART) nicht anderweitig belegen.
-  Strapping-Pins GPIO0/3/45/46, USB-Pins GPIO19/20 und beim N16R8 GPIO33-37 meiden.
+## Technical guardrails
+
+These rules come from the project guide and are not up for negotiation:
+
+- No Wi-Fi or server passwords in source code. Configuration lives in NVS/Preferences.
+- Server telemetry is one-way: **no autopilot or control commands from the internet.** Control is
+  restricted to the local on-board Wi-Fi.
+- SeaTalk TX stays disabled until RX runs reliably and the output stage has been tested. After a
+  reset or a lost connection the transmit path is passive.
+- Sensor and network faults are decoupled; a broken sensor must not take the system down. Use the
+  watchdog.
+- Do not reassign the reserved GPIOs (15/16 SeaTalk, 17/18 TWAI, 43/44 debug UART). Avoid the
+  strapping pins GPIO0/3/45/46, the USB pins GPIO19/20 and GPIO33-37 on the N16R8.
