@@ -13,7 +13,8 @@ wrong.
 4. Keep the status current: `Draft` → `In review` → `Accepted` → (`Implemented` | `Rejected` |
    `Superseded by NNN`).
 5. Record accepted hardware decisions in [../CHANGELOG.md](../CHANGELOG.md) with the **[HW]**
-   prefix and carry the status over into [../ROADMAP.md](../ROADMAP.md).
+   prefix, update [../MATERIAL.md](../MATERIAL.md) if the bill of materials changes, and carry the
+   status over into [../ROADMAP.md](../ROADMAP.md).
 
 Accepted documents are not quietly rewritten. If a decision changes, it gets a new document that
 supersedes the old one - that way it stays traceable why something on board is wired the way it is.

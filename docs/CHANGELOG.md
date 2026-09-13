@@ -22,6 +22,8 @@ find when rebuilding the system or revising the board.
 - Roadmap covering stages 1, 2, 2.5, 2B, 3 and 4 including acceptance criteria and the order of
   the build evenings.
 - Template and index for per-feature design documents under `docs/design/`.
+- `docs/MATERIAL.md`: bill of materials for stage 1 with quantities, purpose, prices, order status
+  and sources, plus the tool list and the preliminary parts for stages 2 and 3.
 - Project guide v0.1 (2026-09-13) as a source document under `docs/reference/`.
 
 ### Changed
