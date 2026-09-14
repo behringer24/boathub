@@ -59,6 +59,14 @@ find when rebuilding the system or revising the board.
 - **[HW]** Octal PSRAM confirmed working on the delivered board (8 386 279 bytes usable, 1 MB
   write/read test passed). This is the empirical proof that GPIO33-37 are occupied and must stay
   off the project pin plan - until now that was only derived from the datasheet.
+- **[HW]** Carrier terminal order verified against the delivered board (A-001 section 3). All 22
+  labels on each block match the transcription, `IO14` included, so the caveat that section 3 came
+  from a product photo is resolved. The continuity check stays open - this confirms the silkscreen,
+  not the routing behind it.
+- The two USB-C sockets are now told apart in A-001 section 5: with the module at the top, the
+  right-hand socket is the CH343P and the left-hand one is the native ESP32-S3 USB. Identify by USB
+  ID (`1A86:55D3` against `303A:....`) rather than by position, since a board revision could swap
+  them.
 - Documentation language switched to English; only the source PDF stays German until it is
   rewritten.
 - **[HW]** Input protection reordered: the TVS now sits **ahead of** the 1N5822 instead of behind
