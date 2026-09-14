@@ -17,14 +17,25 @@ cd server
 ### 1. Create the broker user
 
 The broker denies anonymous access, so the password file has to exist **before the first start**.
-Without it the container comes up and then restarts in a loop, with `Unable to open pwfile` in the
-log. Run this once and pick your own password when prompted:
+Run this once and pick your own password when prompted:
 
 ```
-docker run --rm -it -v "${PWD}/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 mosquitto_passwd -c /mosquitto/config/passwd boathub
+docker run --rm -it --user 1883:1883 -v "${PWD}/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 mosquitto_passwd -c /mosquitto/config/passwd boathub
 ```
 
-`boathub` is the username. The file it writes holds only a hash, but it is still excluded from git.
+`boathub` is the username. The file holds only a hash, but it is still excluded from git.
+
+**`--user 1883:1883` is not optional.** `mosquitto_passwd` creates the file with mode 0600 owned by
+whoever ran it. The broker itself drops to the unprivileged `mosquitto` user, uid 1883, and cannot
+read a file owned by root - it starts, fails with `Unable to open pwfile`, and restarts in a loop
+that reads like a broken image rather than a permissions problem. Creating the file as 1883 in the
+first place avoids it.
+
+If a file created the wrong way already exists, hand it over instead of retyping the password:
+
+```
+docker run --rm -v "${PWD}/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 chown 1883:1883 /mosquitto/config/passwd
+```
 
 ### 2. Start the broker
 
