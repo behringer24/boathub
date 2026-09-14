@@ -34,3 +34,6 @@ desktop.ini
 
 # --- Local progress tracking, not documentation ---
 PROGRESS.md
+
+# --- MQTT broker credentials (hashes, but still not ours to publish) ---
+server/mosquitto/config/passwd

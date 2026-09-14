@@ -1,0 +1,19 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: boathub-mqtt
+    restart: unless-stopped
+    ports:
+      # 1883 is the IANA-registered MQTT port. 8883 is reserved for the TLS
+      # step and is deliberately not published yet.
+      - "1883:1883"
+    volumes:
+      # Read-only: the broker never writes here. The passwd file has to exist
+      # before the first start - see README.md.
+      - ./mosquitto/config:/mosquitto/config:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+
+volumes:
+  mosquitto-data:
+  mosquitto-log:

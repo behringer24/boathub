@@ -23,9 +23,9 @@ and not the firmware.
 | 2 | Three DS18B20 on GPIO4/5/6, pull-ups proven with the real 5 m cables | [A-003](A-003-ds18b20-temperature-sensors.md) |
 | 3 | SHT31-D cabin climate on I2C 0x44 | [A-002](A-002-bench-setup-usb.md) |
 | 4 | Three ADS1115 on 0x48/0x49/0x4A against a known reference voltage, PGA fixed | [A-002](A-002-bench-setup-usb.md) |
-| 5 | SoftAP `BOOT-NETZ` and the local configuration web UI | planned |
-| 6 | Station mode, Wi-Fi credentials in NVS | planned |
-| 7 | Server uplink: MQTT over TLS, telemetry, heartbeat, last will | planned |
+| 5 | SoftAP `BOOT-NETZ` and the local configuration web UI | [A-004](A-004-wifi-and-configuration-portal.md) |
+| 6 | Station mode, Wi-Fi credentials in NVS | [A-004](A-004-wifi-and-configuration-portal.md) |
+| 7 | Server uplink: MQTT, telemetry, heartbeat, last will | [A-005](A-005-server-uplink.md) |
 | 8 | Alarm and threshold logic for the sensors that exist by then | planned |
 | 9 | Fault handling and watchdog: a dead sensor must not take the network path with it | planned |
 
@@ -65,6 +65,8 @@ In reading order.
 | first | [A-001](A-001-devkit-and-carrier.md) | DevKit, carrier board and antenna |
 | **start building** | [A-002](A-002-bench-setup-usb.md) | Bench setup on USB power |
 | then | [A-003](A-003-ds18b20-temperature-sensors.md) | DS18B20 temperature sensors |
+| then | [A-004](A-004-wifi-and-configuration-portal.md) | Wi-Fi operation and configuration portal |
+| then | [A-005](A-005-server-uplink.md) | Server uplink |
 | last, on the bench | [B-001](B-001-power-supply.md) | Power supply and battery measurement |
 
 ## Writing a new one
@@ -90,9 +92,6 @@ They take the next free number in their phase when written.
 
 - SHT31-D cabin climate on the shared I2C bus
 - ADS1115 channel allocation and value conditioning
-- Wi-Fi operation: SoftAP `BOOT-NETZ` plus station, reconnect behaviour
-- Configuration and secrets in NVS/Preferences, local web UI
-- Server uplink: MQTT over TLS, telemetry schema, heartbeat, last will
 - Alarm and threshold logic
 - Fault handling and watchdog: decoupling sensor and network failures
 
