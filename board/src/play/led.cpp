@@ -147,6 +147,9 @@ void loop() {
     lastReport = now;
   }
 
+  //Serial.printf("heartbeat %lu  uptime %lus  heap %lu\n", (unsigned long)iterations,
+  //              (unsigned long)(millis() / 1000), (unsigned long)ESP.getFreeHeap());
+
   // Hands the CPU back to FreeRTOS for a millisecond. loop() is an ordinary
   // FreeRTOS task at priority 1, and the idle task below it only runs when
   // nothing else wants the core. On this build only CPU0's idle task is

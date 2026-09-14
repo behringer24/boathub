@@ -106,7 +106,7 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
 
 ```
 board/                  PlatformIO firmware project - ESP32-S3 N16R8, see board/platformio.ini
-server/                 telemetry server - not started yet
+server/                 MQTT broker in Docker, see server/README.md
 docs/
 ├── ROADMAP.md          planned software functionality, board and server
 ├── CHANGELOG.md        software change log
