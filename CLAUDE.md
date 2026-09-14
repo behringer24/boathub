@@ -12,22 +12,34 @@
 
 ## Documentation
 
+The documentation is written for someone else building this system, not as a record of how we got
+here. It has to read straight through.
+
 - All documentation is written in English. The only exception is the source PDF under
   `docs/reference/`, which stays German until it is rewritten.
+- **Never document our own detours.** No "originally we assumed", no "superseded by", no
+  "corrected on <date>", no findings register to cross-reference. When something turns out
+  differently, **correct the affected document in place** so it reads as if it had always said
+  that. The git history is what preserves the previous state.
+- **No progress in the documentation.** No ticked checkboxes, no dates, no order status, no "done"
+  markers. Verification checklists stay, but unticked - they are instructions for the reader.
+  Our own state lives in `PROGRESS.md` at the repository root, which is gitignored and local.
 - **Keep the documentation in sync with every change.** A change is not finished until the
   affected documents are updated in the same commit:
 
   | Change | Also update |
   |--------|-------------|
-  | anything notable | `docs/CHANGELOG.md` (hardware marked **[HW]**) |
-  | work package status | `docs/ROADMAP.md` |
-  | parts, prices, sources, order status | `docs/MATERIAL.md` |
+  | board firmware or server software | `docs/CHANGELOG.md` |
+  | planned software functionality | `docs/ROADMAP.md` |
+  | parts, prices, sources | `docs/MATERIAL.md` |
   | a design document's own parts table | reconcile it into `docs/MATERIAL.md` in the same commit - the design doc is the rationale, MATERIAL.md is the single orderable list |
-  | new or changed feature | design document in `docs/design/` plus its index |
+  | new or changed feature | design document in `docs/design/` plus the index and build order in `docs/design/README.md` |
   | pin assignment, architecture, safety rules | `README.md` |
 
+- `docs/CHANGELOG.md` and `docs/ROADMAP.md` cover **software only** - the board firmware and the
+  server. Hardware and build order belong in the design documents and `docs/design/README.md`.
 - New features get a design document in `docs/design/` before they are implemented
-  (template: `docs/design/TEMPLATE.md`), listed in the index in `docs/design/README.md`.
+  (template: `docs/design/TEMPLATE.md`), listed in `docs/design/README.md`.
 
 ## Technical guardrails
 

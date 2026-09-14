@@ -2,12 +2,8 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
 | **Phase** | A |
 | **Stage** | 1 |
-| **Roadmap package** | A.2 |
-| **Created** | 2026-09-14 |
-| **Last changed** | 2026-09-14 |
 | **Touches hardware** | yes |
 
 ## 1. Goal
@@ -21,7 +17,7 @@ belong to the alarm logic document.
 
 ## 2. Starting point
 
-The probes are already in stock (3-pack, 5 m, potted). GPIO4/5/6 are reserved for them in the pin
+Three potted 5 m probes, one per measuring point. GPIO4/5/6 are reserved for them in the pin
 plan and are all on the **top row** of the carrier's screw terminals, next to each other - see
 [A-001-devkit-and-carrier.md](A-001-devkit-and-carrier.md).
 
@@ -48,9 +44,9 @@ The cost is three pins, and the pin plan has them spare. Keep it.
 
 | Part | Qty | Purpose | Note |
 |------|-----|---------|------|
-| DS18B20-compatible potted probe, 5 m | 3 | engine bay, bilge, fridge | from the 3-pack in stock |
+| DS18B20-compatible potted probe, 5 m | 3 | engine bay, bilge, fridge | sold in 3-packs |
 | 2.2 kΩ resistor | 3 | 1-Wire pull-up, one per bus | **not** 4.7 kΩ - see below |
-| 100 Ω resistor | 3 | series protection in each DATA line | finding I3 |
+| 100 Ω resistor | 3 | series protection in each DATA line | |
 | 3-pole screw terminal | 3 | detachable probe connection, on the perfboard | cables must come off for service |
 | Clamp-on ferrite | 3 | optional, conducted noise at the box entry | |
 
@@ -88,7 +84,7 @@ incorrectly, so pin it off explicitly in firmware rather than letting the librar
 
 ### Why 2.2 kΩ and not the textbook 4.7 kΩ
 
-4.7 kΩ is the standard value for a bus a few centimetres long. At 5 m it is thin (finding I3):
+4.7 kΩ is the standard value for a bus a few centimetres long. At 5 m it is thin:
 
 | Pull-up | Cable ~500 pF | τ = RC | Rise to threshold | Margin in the 15 µs read slot |
 |---------|---------------|--------|-------------------|-------------------------------|
@@ -126,7 +122,7 @@ short jumpers proves nothing - the cable capacitance that makes 4.7 kΩ marginal
 **The bilge probe is a consumable.** On cheap probes the stainless alloy is unspecified, and many
 have the sheath bonded internally to GND. A grounded stainless probe permanently submerged, tied to
 the boat's negative - which permanent shore power ties to shore earth - sits in a galvanic circuit
-with every other underwater metal (findings I8, I8a). Check continuity before fitting (section 7),
+with every other underwater metal. Check continuity before fitting (section 7),
 mount it so it can be swapped without dismantling anything, and inspect it at every haul-out.
 
 ## 4. Software
@@ -140,7 +136,7 @@ mount it so it can be swapped without dismantling anything, and inspect it at ev
 Resolution is configurable at 9-12 bits. **Use 11 bits**: 0.125 °C resolution at a 375 ms
 conversion, against 750 ms for the 12-bit default. Nothing here needs 0.0625 °C.
 
-**Do not block on the conversion.** The obvious `requestTemperatures()` call waits for the full
+**Do not block on the conversion.** The obvious `requestTemperatures` call waits for the full
 conversion time and would stall the loop - and with it Wi-Fi and MQTT - every cycle. Instead:
 
 1. `setWaitForConversion(false)`
@@ -219,7 +215,7 @@ None of these may reset the ESP or affect the network path.
 ### On the bench
 
 - [ ] **Wire colours metered out before connecting.** Red/black/yellow is common but not universal
-      on clones (M7). In diode-test mode, the black lead on GND shows a forward drop to both other
+      on clones. In diode-test mode, the black lead on GND shows a forward drop to both other
       wires; reversed it shows open. If a probe does not enumerate within a second of power-up,
       disconnect immediately rather than leaving it mis-wired.
 - [ ] Each probe enumerates, **ROM family code is 0x28**
@@ -237,7 +233,7 @@ None of these may reset the ESP or affect the network path.
 ### In the boat
 
 - [ ] Cables labelled `MOTOR-T`, `BILGE-T`, `FRIDGE-T` at both ends
-- [ ] **Bilge probe sheath continuity checked** against all three wires before fitting (I8a)
+- [ ] **Bilge probe sheath continuity checked** against all three wires before fitting
 - [ ] Bilge probe mounted so it can be replaced without dismantling anything
 - [ ] Engine bay probe in free air, clear of the block and exhaust, cable strain-relieved
 - [ ] Fridge probe in air, not touching the evaporator
@@ -285,8 +281,6 @@ Both are observations to confirm with real data before anything is built on them
 
 ## 9. References
 
-- [000-design-review.md](000-design-review.md) - findings I3 (pull-up), M7 (clones, CRC), I8/I8a
-  (bilge corrosion)
 - [A-001-devkit-and-carrier.md](A-001-devkit-and-carrier.md) - carrier terminals, free spare pins
 - [A-002-bench-setup-usb.md](A-002-bench-setup-usb.md) - the bench environment this is built in
 - [B-001-power-supply.md](B-001-power-supply.md) - charging discriminator, SoC accuracy limits

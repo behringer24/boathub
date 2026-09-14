@@ -2,11 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
 | **Stage** | 1, phase A |
-| **Roadmap package** | A.1 - A.4 |
-| **Created** | 2026-09-13 |
-| **Last changed** | 2026-09-13 |
 | **Touches hardware** | yes (breadboard only) |
 
 > Design documents are numbered in creation order. This one is **the first thing to build** -
@@ -19,6 +15,9 @@ alone. **No 12 V exists at this point** - not on the bench, not in the enclosure
 
 The 12 V supply from [B-001-power-supply.md](B-001-power-supply.md) is built at the *end* of the bench
 phase, once everything else is stable.
+
+**You need one thing that is not on the bench:** an MQTT broker reachable over TLS, with its
+certificate in place, before the server uplink step. Everything before that runs without it.
 
 **Out of scope:** battery voltage measurement (needs a real supply, phase B), enclosure and
 installation (phase C).
@@ -78,17 +77,73 @@ shorter cable, or a powered hub before debugging firmware.
 ### Breadboard notes
 
 - Sensor and I2C wiring is short and uncritical at this stage - a breadboard is fine.
-- **Use the real 5 m probe cables for the DS18B20 pull-up test (I3).** With short jumpers the
+- **Use the real 5 m probe cables for the DS18B20 pull-up test.** With short jumpers the
   cable capacitance that makes 4.7 kΩ marginal simply does not exist, so a short-cable test proves
   nothing about the installed system. Try 4.7 kΩ, 3.3 kΩ and 2.2 kΩ with the full cable length.
-- The SHT31 and all three ADS1115 each carry 10 kΩ I2C pull-ups, giving **2.5 kΩ effective**.
-  **Do not add external pull-ups** (M1). Run the bus at 100 kHz.
+
+### The I2C bus
+
+All four modules - the SHT31 and the three ADS1115 - carry 10 kΩ pull-ups to their own supply pin,
+which puts roughly **2.5 kΩ on the bus**. That is already a strong pull-up, so:
+
+- **Do not add external pull-ups.**
+- Run the bus at **100 kHz**. Nothing on it benefits from 400 kHz, and every figure below doubles
+  in difficulty if you do.
 - Set the ADS1115 addresses one module at a time and confirm with an I2C scanner:
   ADDR→GND = 0x48, ADDR→VDD = 0x49, ADDR→SDA = 0x4A.
+- The SHT31 answers at **0x44** with ADDR low and 0x45 with ADDR high. Not every breakout brings
+  ADDR out at all; where it does not, the address is fixed and only one sensor can share the bus.
+  **ADDR must never float** - check this before planning for two.
+
+**Power the SHT31 from 3.3 V, never 5 V.** Its pull-ups go to the supply pin, and typical breakouts
+carry neither a regulator nor a level shifter, so a 5 V feed puts 5 V onto ESP32 pins rated 3.6 V
+absolute maximum.
+
+#### How long the cable run to the SHT31 may be
+
+The SHT31 measures cabin climate, so it cannot live inside the sealed enclosure: the box runs
+10-12 °C above ambient, and because relative humidity depends on temperature, a few degrees of
+error become several %RH of error. It has to sit outside, which means I2C over a cable.
+
+Against the 100 kHz limit of 1000 ns rise time, with ~50 pF of module and trace capacitance plus
+~100 pF per metre of cable:
+
+| Cable length | Bus capacitance | Rise time | Verdict |
+|--------------|-----------------|-----------|---------|
+| 2 m | ~250 pF | ~530 ns | comfortable |
+| 3 m | ~350 pF | ~740 ns | fine |
+| 5 m | ~550 pF | ~1165 ns | over the limit |
+
+**Up to about 3 m needs nothing but care.** To reach 5-6 m, add one **3.3 kΩ pull-up pair** on SDA
+and SCL inside the box: that takes the bus to ~1.4 kΩ, cuts the rise time at 5 m to ~660 ns, and
+still asks only 2.3 mA of the drivers - inside the 3 mA every device here is specified for. Beyond
+that the correct answer is a P82B715 bus extender pair, not a stiffer resistor.
+
+Wiring rules for the run:
+
+- **Four conductors:** 3.3 V, GND, SDA, SCL. The sensor is powered over the same cable; its 1.5 mA
+  makes the voltage drop irrelevant.
+- Twist **SDA with a ground wire and SCL with a ground wire** - not SDA against SCL, which couples
+  the two signals into each other.
+- A shield, if used, goes to GND **at the box end only**, so it cannot become a ground loop.
+- **100 nF between 3.3 V and GND at the sensor end**, for local decoupling at the far end of a cable.
+- Route clear of the tiller pilot's motor cables.
 
 ## 4. Testing the ADS1115 without 12 V
 
-The ADC still has to be proven, just not against a battery. Two levels:
+The ADC still has to be proven, just not against a battery.
+
+Three properties to settle before calibrating anything:
+
+- The input impedance **changes with the PGA setting** - 6 MΩ at ±2.048 V, 3 MΩ at ±1.024 V.
+  Against a ~9 kΩ source impedance that is a ~0.15 % gain error. **Pick the PGA once and never
+  change it afterwards**, or an existing calibration silently becomes wrong.
+- In single-ended mode only the positive half of the full-scale range is used, so this is **15
+  usable bits, not 16**. Still ~62.5 µV per step at ±2.048 V - just set expectations correctly.
+- Put **100 nF to GND at every input you use**, not only at A0. It doubles as the charge reservoir
+  the switched-capacitor input wants.
+
+Two levels of test:
 
 ### Level 1 - always possible, no bench PSU
 
@@ -160,13 +215,13 @@ A broken sensor must never take the system down - that is a guardrail, not a nic
 
 - [ ] Blink and serial output over the CH343P port
 - [ ] Carrier terminal order verified against [A-001](A-001-devkit-and-carrier.md) section 3
-- [ ] Each DS18B20 detected individually, family code 0x28, **CRC verified on every read** (M7)
+- [ ] Each DS18B20 detected individually, family code 0x28, **CRC verified on every read**
 - [ ] DS18B20 wire colours metered out before connecting - red/black/yellow is common, not universal
 - [ ] Pull-up value chosen using the **full 5 m cables**
 - [ ] SHT31 responds at 0x44, plausible temperature and humidity
 - [ ] All three ADS1115 on 0x48 / 0x49 / 0x4A via I2C scanner
 - [ ] ADS1115 reading matches the multimeter on a known divider
-- [ ] PGA fixed at the value that will be used in service (M2)
+- [ ] PGA fixed at the value that will be used in service
 - [ ] `BOOT-NETZ` appears, a phone connects and reaches the local web UI
 - [ ] Station connects to home Wi-Fi, survives a router reboot
 - [ ] Server shows heartbeat and telemetry
@@ -192,20 +247,7 @@ When phase B is built, the transition needs care:
 This is the single rule most likely to be broken in a moment of impatience, and it is the one that
 costs a board.
 
-## 9. Open points
+## 9. References
 
-| Point | Decide by | Who |
-|-------|-----------|-----|
-| Whether an adjustable bench PSU is available for the level 2 divider test | before A.4 | Andreas |
-| MQTT broker and TLS certificate set up on the Docker host | before A.7 | Andreas |
-
-**Resolved 2026-09-14 - PlatformIO, not the Arduino IDE.** The firmware project lives in `board/`
-with `framework = arduino` on platform 7.1.3 (Arduino core 2.0.17). The deciding argument is that
-the N16R8 needs explicit flash, PSRAM and partition overrides, and PlatformIO keeps those in a
-checked-in, reviewable `platformio.ini` instead of in IDE menu settings.
-
-## 10. References
-
-- [000-design-review.md](000-design-review.md) - findings I3, M1, M2, M7
 - [B-001-power-supply.md](B-001-power-supply.md) - what gets built after this phase
 - [A-001-devkit-and-carrier.md](A-001-devkit-and-carrier.md) - ports, pin mapping, terminals to avoid

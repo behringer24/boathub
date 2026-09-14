@@ -31,3 +31,6 @@ desktop.ini
 
 # --- Sonstiges ---
 *.log
+
+# --- Local progress tracking, not documentation ---
+PROGRESS.md

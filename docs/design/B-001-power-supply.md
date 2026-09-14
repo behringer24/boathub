@@ -2,20 +2,13 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
 | **Stage** | 1, phase B |
-| **Roadmap package** | B.1 - B.5 |
-| **Created** | 2026-09-13 |
-| **Last changed** | 2026-09-13 |
 | **Touches hardware** | yes |
 
 ## 1. Goal
 
 Turn the 12 V house supply into a protected, stable 5 V feed for the ESP32-S3, and measure the
 house battery voltage accurately enough to detect a shore power failure.
-
-Incorporates findings B2 (TVS ahead of the Schottky), B3 (battery tap ahead of the Schottky) and
-B1a (what the voltage means under a charger) from [000-design-review.md](000-design-review.md).
 
 **Out of scope:** the 4-20 mA bilge loop supply (its own document), the 3.3 V sensor rail (taken
 from the DevKit's onboard regulator, which has ample headroom for the <20 mA the sensors draw).
@@ -29,6 +22,20 @@ from the DevKit's onboard regulator, which has ample headroom for the <20 mA the
 
 **The boat is permanently on shore power while unattended** (answer to open question 1). That
 settles the power concept:
+
+Continuous draw of the finished stage 1 system:
+
+| Item | at 12 V |
+|------|---------|
+| ESP32-S3, Wi-Fi associated, no light sleep | ~40-50 mA |
+| DevKit overhead - regulator, PWR LED, CH343P, RGB LED | ~10-18 mA |
+| DC/DC quiescent current, typical 3 A module | ~5-20 mA |
+| Divider and sensors | <1 mA |
+| **Total** | **~55-90 mA** |
+
+That is 1.3-2.2 Ah per day, or 40-65 Ah per month. The **DC/DC quiescent current sets the floor**,
+not the ESP: no sleep strategy can get below the converter's own idle draw, so the converter choice
+matters more than the firmware. On shore power none of this is a problem, and it follows that:
 
 - continuous operation, no duty cycling
 - a standard DC/DC module is fine; no low-quiescent-current part needed
@@ -78,7 +85,7 @@ days**. That is the case where the shore-power-loss alarm earns its keep.
 | 1N5822 | 1 | reverse polarity | 3 A / 40 V Schottky |
 | DC/DC 9-36 V to 5 V, min. 3 A | 1 | ESP supply | wide input covers 11-15 V comfortably |
 | 100 nF / 50 V | 2 | HF bypass, input and output | |
-| 100 µF / 35 V, **105 °C** | 1 | bulk, DC/DC input | 105 °C per finding I7 |
+| 100 µF / 35 V, **105 °C** | 1 | bulk, DC/DC input | 105 °C |
 | 470 µF / 16 V, **105 °C** | 1 | bulk, 5 V output | |
 | 82 kΩ 0.1 % | 1 | divider, top leg | |
 | 10 kΩ 0.1 % | 1 | divider, bottom leg | |
@@ -92,10 +99,10 @@ days**. That is the case where the shore-power-loss alarm earns its keep.
       |
     2 A fuse
       |
-      +---- 1.5KE20A --------- GND      <- TVS first (B2)
+      +---- 1.5KE20A --------- GND      <- TVS first
       +---- 100 nF ----------- GND
       |
-      +---- 82 kOhm ---+                <- battery tap, ahead of the diode (B3)
+      +---- 82 kOhm ---+                <- battery tap, ahead of the diode
       |                |
       |                +--- 1 kOhm ---- ADS1115 A0
       |                |
@@ -120,8 +127,8 @@ days**. That is the case where the shore-power-loss alarm earns its keep.
 | Element | Reason |
 |---------|--------|
 | Fuse first | Everything downstream, the TVS included, is protected by it. A sustained overvoltage blows the fuse rather than cooking the TVS. |
-| TVS second | A surge is clamped **before** it reaches the 3 A Schottky. In the guide's original order the diode sat in the surge path and was the weakest link (B2). |
-| Battery tap third | Measuring ahead of the diode removes the ±80 mV of load- and temperature-dependent error that no calibration can take out (B3). |
+| TVS second | A surge is clamped **before** it reaches the 3 A Schottky. In the guide's original order the diode sat in the surge path and was the weakest link. |
+| Battery tap third | Measuring ahead of the diode removes the ±80 mV of load- and temperature-dependent error that no calibration can take out. |
 | Schottky fourth | Reverse polarity protection for everything that follows. |
 
 ### Consequence worth knowing: reverse polarity now blows the fuse
@@ -170,7 +177,7 @@ while dark.
 |--------------|-----------|------------------------|
 | Resistor tolerance, 0.1 % each | up to ~27 mV at 13.6 V | yes |
 | ADS1115 gain error | up to ~0.15 % | yes |
-| Source impedance 8.9 kΩ against 6 MΩ input | ~0.15 % gain error | yes, **as long as the PGA is never changed afterwards** (M2) |
+| Source impedance 8.9 kΩ against 6 MΩ input | ~0.15 % gain error | yes, **as long as the PGA is never changed afterwards** |
 | Resistor tempco, 25-50 ppm/°C over 30 °C | ~20 mV | no |
 | ADC resolution, ±2.048 V FSR | 0.6 mV at the battery | not needed |
 
@@ -299,7 +306,7 @@ every threshold in the table, so they must not be compiled in.
 - The 1 kΩ series resistor into A0 is a safety part: on reversed polarity it limits current into
   the ADS1115's ESD clamp to ~0.1 mA against a 10 mA limit. **Do not omit it.**
 - No path exists from the server to anything in this document. Battery data is telemetry only.
-- Star ground in the box (M8).
+- Star ground in the box.
 
 ## 7. Test
 
@@ -316,7 +323,7 @@ every threshold in the table, so they must not be compiled in.
       `ON_BATTERY` is entered but **no alarm** is raised
 - [ ] **Alarm precondition, inverse:** hold 13.5 V beyond the history window, then drop →
       alarm **is** raised. Shorten the window to minutes for the bench run
-- [ ] Measure total current draw at 12 V and compare against the 55-80 mA estimate in B1
+- [ ] Measure total current draw at 12 V and compare against the ~55-80 mA estimate in section 2
 
 ### In the boat
 
@@ -333,7 +340,7 @@ every threshold in the table, so they must not be compiled in.
 
 ### Calibration
 
-1. Set the PGA to ±2.048 V. **Fix it before calibrating and never change it** (M2).
+1. Set the PGA to ±2.048 V. **Fix it before calibrating and never change it**.
 2. Measure the battery at the terminals with the multimeter.
 3. Read the raw ADC value.
 4. `v_calibration_factor = V_multimeter / V_adc_raw`, nominally 9.2.
@@ -374,7 +381,6 @@ are already there, and in stage 3 the BoatHub could then publish its own battery
 
 ## 9. References
 
-- [000-design-review.md](000-design-review.md) - findings B1, B1a, B2, B3, I7, M2, M8
 - [ESP32-S3-DevKitC-1 hardware reference](https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32s3/hw-reference/esp32s3/user-guide-devkitc-1.html)
 - [TI ADS1115 datasheet](https://www.ti.com/product/ADS1115)
 - [Littelfuse 1.5KE series datasheet](https://www.mouser.com/datasheet/2/395/1_5KE_2520SERIES_O2104-3402913.pdf)

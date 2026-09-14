@@ -10,18 +10,19 @@ later extended into a gateway for SeaTalk1, autopilot control, track logging and
 Based on the project guide v0.1 of 2026-09-13
 ([PDF, German](docs/reference/ESP32_BoatHub_Projektanleitung.pdf)).
 
-## Status
+## What it does, in the order it is built
 
-| Stage | Goal | Status |
-|-------|------|--------|
-| 1 | Base monitoring: temperatures, humidity, battery, optional bilge level, on-board Wi-Fi, marina Wi-Fi, server uplink | in progress |
-| 2 | Read SeaTalk1: log, depth, compass, GPS, autopilot status | planned |
-| 2.5 | Store GPS tracks locally and sync them as a digital logbook | planned |
-| 2B | Write SeaTalk1: local autopilot control | after RX test |
-| 3 | NMEA2000 over TWAI/CAN | future |
-| 4 | Android tablet / Pixel running OpenCPN as a plotter | future |
+| | Scope |
+|---|-------|
+| **v1** | Base monitoring: temperatures, humidity, battery, optional bilge level, on-board Wi-Fi, marina Wi-Fi, server uplink |
+| **v2** | Read SeaTalk1: log, depth, compass, GPS, autopilot status |
+| **v2.5** | Store GPS tracks locally and sync them as a digital logbook |
+| **v2B** | Write SeaTalk1: local autopilot control - only after RX runs reliably |
+| **v3** | NMEA2000 over TWAI/CAN |
+| **v4** | Android tablet or phone running OpenCPN as a plotter |
 
-Details and acceptance criteria: [docs/ROADMAP.md](docs/ROADMAP.md)
+Software scope in detail: [docs/ROADMAP.md](docs/ROADMAP.md).
+Build order: [docs/design/README.md](docs/design/README.md).
 
 ## Architecture (target)
 
@@ -37,8 +38,12 @@ Sensors (1-Wire / I2C / 4-20 mA)
                                               └── Grafana / web dashboard
 ```
 
-The ESP opens the internet connection outbound. No inbound ports are needed in the marina
-network.
+The ESP opens the internet connection outbound. No inbound ports are needed in the marina network.
+
+**The two networks share one radio.** In AP+STA mode the SoftAP is forced onto whatever channel the
+station connects to, so when the marina access point changes channel - many do so automatically -
+every device on `BOOT-NETZ` is disconnected. This is normal behaviour, not a fault: clients have to
+tolerate reconnects, and no local UI may treat a dropped socket as anything unusual.
 
 ## Hardware at a glance
 
@@ -53,8 +58,8 @@ network.
 - **Bilge level (optional):** hydrostatic 0-1 m probe, 4-20 mA, 100 Ω (or 50 Ω) shunt into ADS1115 A1
 - **Power:** 12 V house supply → 2 A fuse → TVS 1.5KE20A → 1N5822 → DC/DC 9-36 V to 5 V
 
-The TVS sits ahead of the Schottky diode and the battery tap ahead of both - see findings B2 and B3
-in the [design review](docs/design/000-design-review.md).
+The TVS sits ahead of the Schottky diode, and the battery tap ahead of both - see
+[docs/design/B-001-power-supply.md](docs/design/B-001-power-supply.md) for why the order matters.
 
 Full parts list with prices and sources: [docs/MATERIAL.md](docs/MATERIAL.md)
 
@@ -72,7 +77,7 @@ Full parts list with prices and sources: [docs/MATERIAL.md](docs/MATERIAL.md)
 | 16 | reserved | SeaTalk TX (stage 2) |
 | 17 | reserved | TWAI TX (stage 3) |
 | 18 | reserved | TWAI RX (stage 3) |
-| 21 | spare | optional local buzzer |
+| 21 | spare | optional local buzzer - **through a transistor**, 20-30 mA exceeds the GPIO limit |
 | 43/44 | debug UART | keep free for servicing |
 | 48 | onboard WS2812 RGB LED | DevKit-internal, confirmed on the delivered board - do not reuse |
 
@@ -103,11 +108,10 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
 board/                  PlatformIO firmware project - ESP32-S3 N16R8, see board/platformio.ini
 server/                 telemetry server - not started yet
 docs/
-├── ROADMAP.md          stages, acceptance criteria, build evenings
-├── CHANGELOG.md        project change log
+├── ROADMAP.md          planned software functionality, board and server
+├── CHANGELOG.md        software change log
 ├── MATERIAL.md         bill of materials and tools
-├── design/             per-feature design documents, named <PHASE>-NNN-* (+ TEMPLATE.md)
-│   ├── 000-design-review.md          spec validation of the whole design
+├── design/             build guide and one document per feature (+ TEMPLATE.md)
 │   ├── A-001-devkit-and-carrier.md   DevKit, carrier board and antenna
 │   ├── A-002-bench-setup-usb.md      the USB bench build - start here
 │   ├── A-003-ds18b20-temperature-sensors.md   three 5 m 1-Wire probes
@@ -117,12 +121,13 @@ docs/
 
 Conventions for working in this repository: [CLAUDE.md](CLAUDE.md)
 
-## Next step
+## Where to start
 
-**Phase A** - the bench build on USB power: ESP32 over the CH343P port, then DS18B20, SHT31 and
-ADS1115, then Wi-Fi and the server uplink. **No 12 V anywhere yet.** Start here:
+Read [docs/design/A-001-devkit-and-carrier.md](docs/design/A-001-devkit-and-carrier.md) to identify
+the board and its carrier, then build along
 [docs/design/A-002-bench-setup-usb.md](docs/design/A-002-bench-setup-usb.md).
 
-The 12 V supply (phase B) is built only once the whole sensor and network stack has run 24 hours
-on USB without intervention - so that a brownout later can be blamed on the converter rather than
-on the firmware.
+**Phase A runs entirely on USB power - no 12 V anywhere.** The 12 V supply is built only once the
+whole sensor and network stack has run 24 hours on USB without intervention, so that a brownout
+later can be blamed on the converter rather than on the firmware. The full build order is in
+[docs/design/README.md](docs/design/README.md).

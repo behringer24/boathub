@@ -1,61 +1,92 @@
 # Design documents
 
-One planning document per feature. Meant for thinking **before** soldering and coding: what the
-feature has to do, how it is solved electrically and in software, how it is tested, and what can go
-wrong.
+One document per feature: what it has to do, how it is solved electrically and in software, how it
+is verified, and what can go wrong. Read these before soldering or writing code.
 
-## Process
+## How the system is built
 
-1. Copy a new document from [TEMPLATE.md](TEMPLATE.md).
-2. File name: `<PHASE>-NNN-short-name.md` - the build phase letter, then the next free number
-   **within that phase**, lower case, hyphens.
-   Example: `A-003-ds18b20-temperature-sensors.md`.
-3. Add it to the index below, in build order.
-4. Keep the status current: `Draft` → `In review` → `Accepted` → (`Implemented` | `Rejected` |
-   `Superseded by <id>`).
-5. Record accepted hardware decisions in [../CHANGELOG.md](../CHANGELOG.md) with the **[HW]**
-   prefix, update [../MATERIAL.md](../MATERIAL.md) if the bill of materials changes, and carry the
-   status over into [../ROADMAP.md](../ROADMAP.md).
+The build runs in three phases. **Nothing is soldered to 12 V until the whole sensor and network
+stack runs on USB power.** That way, when something browns out later, the converter is the suspect
+and not the firmware.
 
-Accepted documents are not quietly rewritten. If a decision changes, it gets a new document that
-supersedes the old one - that way it stays traceable why something on board is wired the way it is.
+| Phase | Covers |
+|-------|--------|
+| **A** | bench build on USB power: sensors, Wi-Fi, server uplink. No 12 V anywhere |
+| **B** | 12 V supply, protection, battery measurement |
+| **C** | installation in the boat |
 
-## Phases
+### Phase A - on the bench, USB power only
 
-Documents are grouped by **build phase**, and the phase letter is part of the identifier. Phases
-are the execution timeline; the stages in [../ROADMAP.md](../ROADMAP.md) are the feature scope.
+| # | Step | Document |
+|---|------|----------|
+| 1 | Toolchain, blink and serial over the CH343P port; confirm the module is an N16R8 and check the carrier terminals | [A-001](A-001-devkit-and-carrier.md), [A-002](A-002-bench-setup-usb.md) |
+| 2 | Three DS18B20 on GPIO4/5/6, pull-ups proven with the real 5 m cables | [A-003](A-003-ds18b20-temperature-sensors.md) |
+| 3 | SHT31-D cabin climate on I2C 0x44 | [A-002](A-002-bench-setup-usb.md) |
+| 4 | Three ADS1115 on 0x48/0x49/0x4A against a known reference voltage, PGA fixed | [A-002](A-002-bench-setup-usb.md) |
+| 5 | SoftAP `BOOT-NETZ` and the local configuration web UI | planned |
+| 6 | Station mode, Wi-Fi credentials in NVS | planned |
+| 7 | Server uplink: MQTT over TLS, telemetry, heartbeat, last will | planned |
+| 8 | Alarm and threshold logic for the sensors that exist by then | planned |
+| 9 | Fault handling and watchdog: a dead sensor must not take the network path with it | planned |
 
-| Phase | Covers | Stage |
-|-------|--------|-------|
-| **A** | bench build on USB power - sensors, Wi-Fi, server uplink. No 12 V anywhere | 1 |
-| **B** | 12 V supply, protection, battery measurement | 1 |
-| **C** | installation in the boat | 1 |
-| D and on | assigned when a later stage is planned in detail | 2 and later |
+The milestone is a monitor that runs off any USB charger and reports to the server. Not the final
+system - no battery measurement, no 12 V robustness - but a real, testable one.
 
-Numbering restarts per phase, so a document inserted into phase A never disturbs phase B. Within a
-phase the number is still an identifier, not a step number - a `A-005` written later may well be
-built before `A-003`. The build order lives in the roadmap.
+### Phase B - power supply, still on the bench
 
-## Index
+| # | Step | Document |
+|---|------|----------|
+| 1 | 12 V supply board: fuse, TVS, reverse-polarity protection, DC/DC | [B-001](B-001-power-supply.md) |
+| 2 | Battery divider and its calibration factor | [B-001](B-001-power-supply.md) |
+| 3 | Battery state machine and debouncing | [B-001](B-001-power-supply.md) |
+| 4 | Shore-power-loss alarm, gated so it stays quiet underway | [B-001](B-001-power-supply.md) |
+| 5 | Changeover from USB to 12 V - never both at once | [B-001](B-001-power-supply.md) |
+| 6 | Bilge level 4-20 mA, optional | planned |
 
-In build order.
+### Phase C - into the boat
 
-| Read | ID | Feature | Status | Document |
-|------|----|---------|--------|----------|
-| first | 000 | Design review and spec validation - project-wide, no phase | Accepted | [000-design-review.md](000-design-review.md) |
-| then | A-001 | DevKit, carrier board and antenna | Draft | [A-001-devkit-and-carrier.md](A-001-devkit-and-carrier.md) |
-| **start building** | A-002 | Bench setup on USB power | Draft | [A-002-bench-setup-usb.md](A-002-bench-setup-usb.md) |
-| then | A-003 | DS18B20 temperature sensors | Draft | [A-003-ds18b20-temperature-sensors.md](A-003-ds18b20-temperature-sensors.md) |
-| last, on the bench | B-001 | Power supply and battery measurement | Draft | [B-001-power-supply.md](B-001-power-supply.md) |
+| # | Step |
+|---|------|
+| 1 | Enclosure, cable labelling, and a pressure-equalisation vent membrane fitted pointing down |
+| 2 | RSSI at the real mounting point; rework the antenna jumper only if it falls short |
+| 3 | Marina Wi-Fi credentials, server reachable from home |
 
-A document without a phase letter - currently only `000` - is project-wide reference material
-rather than a build step.
+**Why the vent membrane.** A sealed IP65 box on a boat goes through daily temperature cycles and
+the air inside carries moisture, which condenses on the coldest surface - usually the board. IP65
+keeps spray out and moisture in. Specify **105 °C electrolytics** rather than 85 °C parts for the
+same reason: inside the box at summer ambient the internal temperature reaches 55-60 °C.
+
+## The documents
+
+In reading order.
+
+| Read | ID | Feature |
+|------|----|---------|
+| first | [A-001](A-001-devkit-and-carrier.md) | DevKit, carrier board and antenna |
+| **start building** | [A-002](A-002-bench-setup-usb.md) | Bench setup on USB power |
+| then | [A-003](A-003-ds18b20-temperature-sensors.md) | DS18B20 temperature sensors |
+| last, on the bench | [B-001](B-001-power-supply.md) | Power supply and battery measurement |
+
+## Writing a new one
+
+1. Copy [TEMPLATE.md](TEMPLATE.md).
+2. Name it `<PHASE>-NNN-short-name.md`: the build phase letter, then the next free number **within
+   that phase**, lower case, hyphens. Numbering restarts per phase, so inserting a document into
+   phase A never disturbs phase B.
+3. Add it to the table above, in reading order.
+4. Update [../MATERIAL.md](../MATERIAL.md) if the bill of materials changes.
+
+The number is an identifier, not a step number - an `A-005` written later may well be built before
+`A-003`. The build order is the tables above.
+
+**When a decision changes, correct the document in place.** These documents describe the system as
+it should be built, not how the thinking arrived there; the git history keeps what came before.
 
 ## Planned documents
 
-Ordered along the roadmap; they take the next free number in their phase when created.
+They take the next free number in their phase when written.
 
-**Phase A - bench on USB power**
+**Phase A**
 
 - SHT31-D cabin climate on the shared I2C bus
 - ADS1115 channel allocation and value conditioning
@@ -65,19 +96,19 @@ Ordered along the roadmap; they take the next free number in their phase when cr
 - Alarm and threshold logic
 - Fault handling and watchdog: decoupling sensor and network failures
 
-**Phase B - power supply**
+**Phase B**
 
 - Bilge level 4-20 mA (optional)
 
-**Phase C - installation**
+**Phase C**
 
 - Enclosure, mounting, cable routing and labelling
 
 **Later stages, phase letters not yet assigned**
 
-- SeaTalk1 RX stage: level shifting and isolation (schematic revision)
+- SeaTalk1 RX stage: level shifting and isolation
 - SeaTalk1 decoding: datagrams, 4800 baud, 9th bit
-- SeaTalk1 TX output stage (open collector) and safety interlock
+- SeaTalk1 TX output stage and safety interlock
 - Autopilot operation on the on-board Wi-Fi: arming logic and state machine
 - Track logger: record format, LittleFS ring buffer, trip detection
 - Track synchronisation and server-side logbook

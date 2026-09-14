@@ -2,12 +2,8 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
 | **Phase** | A / B / C - or "project-wide" |
-| **Stage** | 1 / 2 / 2.5 / 2B / 3 / 4 |
-| **Roadmap package** | e.g. A.2 |
-| **Created** | YYYY-MM-DD |
-| **Last changed** | YYYY-MM-DD |
+| **Software version** | v1 / v2 / v2.5 / v2B / v3 / v4 - see ../ROADMAP.md |
 | **Touches hardware** | yes / no |
 
 ## 1. Goal
@@ -78,7 +74,7 @@ What can go wrong and what protects against it. In particular:
 
 For anything that writes to SeaTalk or influences the course, this section is mandatory.
 
-## 7. Test
+## 7. Verification
 
 **On the bench**
 
@@ -90,12 +86,9 @@ For anything that writes to SeaTalk or influences the course, this section is ma
 
 **Calibration** - reference instrument, procedure, where the resulting value is stored.
 
-## 8. Open points
+Leave the boxes unticked. This is a checklist for whoever builds the thing, not a progress report;
+our own state belongs in `PROGRESS.md`.
 
-| Point | Decide by | Who |
-|-------|-----------|-----|
-| | | |
-
-## 9. References
+## 8. References
 
 - Datasheets, projects, discussions

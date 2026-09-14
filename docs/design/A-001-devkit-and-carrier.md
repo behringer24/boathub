@@ -2,11 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
 | **Stage** | 1, phases A and C |
-| **Roadmap package** | A.1, C.2 |
-| **Created** | 2026-09-13 |
-| **Last changed** | 2026-09-14 |
 | **Touches hardware** | yes |
 
 ## 1. Goal
@@ -14,22 +10,14 @@
 Record what the delivered board actually is, map the project pin plan onto the carrier board's
 screw terminals, and settle the antenna question.
 
-Answers open question 4 from [000-design-review.md](000-design-review.md) and replaces the
-assumption there that the board is an ESP32-S3-WROOM-1**U**.
+## 2. The board
 
-## 2. What was actually delivered
-
-Heemol set, Amazon ASIN **B0GJZS3P1J**, "ESP32-S3 N16R8 DevKitC-1 with expansion board".
-
-Source: the seller's own product images, with the module line since confirmed against the board in hand. The Amazon listing itself could not be retrieved
-programmatically, so **everything below should be confirmed against the physical board** on the
-first bench evening. The pin order on the carrier terminals was originally transcribed from a
-product photograph; it has since been checked against a photograph of the delivered board and
-matches in every position - see section 6.
+Heemol set, Amazon ASIN **B0GJZS3P1J**, "ESP32-S3 N16R8 DevKitC-1 with expansion board". Sets sold
+under this description vary, so check yours against the table below - section 6 lists how.
 
 | Item | Detail |
 |------|--------|
-| Module | **Verified on the delivered board 2026-09-14.** The shield reads only `ESP32-S3-N16R8` / `WIFI+BT Model` / `ISM 2.4G 802.11 b/g/n` - no manufacturer, no WROOM designation. An **unbranded third-party module**, pin-compatible with the WROOM-1 and carrying the same 16 MB flash / 8 MB octal PSRAM. |
+| Module | The shield reads only `ESP32-S3-N16R8` / `WIFI+BT Model` / `ISM 2.4G 802.11 b/g/n` - no manufacturer, no WROOM designation. An **unbranded third-party module**, pin-compatible with the WROOM-1 and carrying the same 16 MB flash / 8 MB octal PSRAM. |
 | Antenna | **Both** a PCB antenna and a U.FL/IPEX socket, selected by a solder jumper. See section 4. |
 | Regulator | AMS1117-3.3 (SOT-223) |
 | USB | **Two** Type-C ports: one native ESP32-S3 USB/OTG on GPIO19/20, one USB-serial via **CH343P** - which socket is which is in section 5 |
@@ -45,10 +33,8 @@ means the Espressif datasheet is a **reference, not a guarantee** for this speci
 performance and the seller's "2 dB" antenna gain claim are unverified. If anything RF-related
 behaves oddly, this is the first thing to suspect.
 
-**The seller's photos showed two different modules** - one labelled `sparkleIoT XH-S3E`, one
-generic. The delivered board is the generic one. Practical consequence: **the label cannot be used
-to look up which antenna variant this is.** There is no datasheet to consult, so the antenna
-question in section 4 has to be answered by looking at the board itself.
+There is no manufacturer label to look up, so **the antenna variant cannot be established from a
+datasheet.** Section 4 answers that question by looking at the board instead.
 
 ## 3. Pin plan mapped to the carrier terminals
 
@@ -69,7 +55,7 @@ pin plan except GPIO21 sits on the top row.**
 |----------|-----|----------|-------|
 | `5V` | top | DC/DC 5 V feed in, routes to the DevKit 5Vin pin | 1 |
 | `3.3V` x2 | top | sensor rail for DS18B20, SHT31, ADS1115 | 1 |
-| `GND` x4 | both | star point (M8) | 1 |
+| `GND` x4 | both | star point | 1 |
 | `IO4` | top | DS18B20 engine bay | 1 |
 | `IO5` | top | DS18B20 bilge water | 1 |
 | `IO6` | top | DS18B20 fridge | 1 |
@@ -80,7 +66,7 @@ pin plan except GPIO21 sits on the top row.**
 | `IO16` | top | reserved, SeaTalk TX | 2B |
 | `IO17` | top | reserved, TWAI TX | 3 |
 | `IO18` | top | reserved, TWAI RX | 3 |
-| `IO21` | bottom | spare, optional buzzer via a transistor (M5) | 1 |
+| `IO21` | bottom | spare, optional buzzer via a transistor | 1 |
 | `RX` / `TX` | bottom | debug UART (GPIO44/43), keep free for service | - |
 
 ### Terminals that must not be used
@@ -169,16 +155,15 @@ Carrier 84.5 x 73.7 mm inside a 200 x 120 x 75 mm enclosure - fits with room for
 alongside. Stack height with the socketed DevKit is roughly 20 mm against 75 mm of depth. Both USB-C
 ports face sideways; leave access to them or accept opening the box to reflash.
 
-### Power budget refinement
+### DevKit overhead
 
-Two items to fold into the B1 estimate:
+Two items belong in the power budget in [B-001](B-001-power-supply.md):
 
 - the **AMS1117-3.3 ground current** is roughly 5-10 mA on its own
 - the **WS2812 draws around 1 mA even with no data**, and the CH343P plus the PWR LED add more
 
-This does not change the conclusion - shore power is confirmed - but it does mean the DevKit
-overhead is nearer 10-18 mA than the 5-8 mA assumed in B1. The measurement in the
-[B-001](B-001-power-supply.md) test plan settles it either way.
+The DevKit's own overhead is therefore around **10-18 mA**. On permanent shore power that changes
+nothing, but it is the figure the budget should carry.
 
 For a permanent installation the PWR LED and the CH343P are wasted current and can be removed, but
 with shore power there is no reason to bother.
@@ -198,7 +183,8 @@ a board revision could swap them:
 | `1A86:55D3`, "USB-Enhanced-SERIAL CH343" | CH343P | **yes** |
 | `303A:....`, Espressif | native ESP32-S3 USB | no |
 
-`pio device list` prints the VID:PID. Confirmed 2026-09-14: the CH343P came up as COM9.
+`pio device list` prints the VID:PID of every serial device, which is the quickest way to tell
+the two apart.
 
 Picking the wrong socket does not announce itself. The firmware in `board/` is built with
 `ARDUINO_USB_CDC_ON_BOOT=0` and therefore never creates a native USB serial port - so an upload over
@@ -207,16 +193,14 @@ stays silent for good.
 
 ## 6. Test
 
-- [x] Read the module silkscreen and confirm N16R8 - done 2026-09-14, reads `ESP32-S3-N16R8`
+- [ ] Read the module silkscreen and confirm it says `ESP32-S3-N16R8`
 - [ ] Locate the U.FL socket and the antenna solder jumper, and record which position it ships in
-- [x] **Verify the carrier terminal order against section 3** - done 2026-09-14 against a photograph
-      of the delivered board. All 22 labels on each block match, `IO14` included. This confirms the
-      silkscreen only; the continuity check below is what proves the routing behind it
-- [x] Blink and serial test over the CH343P port - done 2026-09-14 on COM9 (CH343, `1A86:55D3`)
-- [x] Confirm the board boots and PSRAM is detected (proves IO35-37 are in use and off limits) -
-      done 2026-09-14, `psramInit(): PSRAM enabled`, 8 386 279 bytes usable and a 1 MB write/read
-      test passed. The octal PSRAM is therefore real: IO35-37 stay off the pin plan
-- [x] Verify which GPIO drives the WS2812 - **GPIO48**, confirmed 2026-09-14 by a green blink
+- [ ] **Check the carrier terminal order against section 3** - all 22 labels per block, `IO14`
+      included. This confirms the silkscreen only; the continuity check below proves the routing
+- [ ] Blink and serial test over the CH343P port
+- [ ] Confirm the board boots and PSRAM is detected. A working octal PSRAM is the proof that
+      IO35-37 are in use and must stay off the pin plan
+- [ ] Confirm the WS2812 responds on GPIO48
 - [ ] Continuity-check each project terminal on the carrier through to the right DevKit pin before
       wiring sensors
 - [ ] RSSI measurement per section 4, in the closed enclosure at the real mounting point
@@ -232,6 +216,5 @@ stays silent for good.
 
 ## 8. References
 
-- [000-design-review.md](000-design-review.md) - open question 4, findings M8, M9, M5
 - [B-001-power-supply.md](B-001-power-supply.md) - 5 V feed and current budget
 - [ESP32-S3-DevKitC-1 hardware reference](https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32s3/hw-reference/esp32s3/user-guide-devkitc-1.html)
