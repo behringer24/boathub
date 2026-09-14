@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: BoatHub
+    type: file
+    folder: BoatHub
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: false
