@@ -29,6 +29,19 @@ bool blink(uint32_t now, uint32_t period, uint32_t on) {
   return (now % period) < on;
 }
 
+// One second dark, one second fading up, one second fading down.
+//
+// Squared on purpose: perceived brightness is roughly the square root of
+// emitted light, so a linear ramp appears to rush the bright end and crawl at
+// the dark one. Squaring the ramp makes it look even.
+uint8_t breathe(uint32_t now) {
+  const uint32_t phase = now % 3000;
+  if (phase < 1000) return 0;  // the pause
+  const uint32_t t = (phase < 2000) ? (phase - 1000)   // 0..999, rising
+                                    : (2999 - phase);  // 999..0, falling
+  return (uint8_t)((t * t * LEVEL) / (1000UL * 1000UL));
+}
+
 // Two short pulses, then a pause - readable at a glance and clearly different
 // from a single blink.
 bool doubleBlink(uint32_t now, uint32_t period) {
@@ -80,9 +93,10 @@ void loop() {
         write(on ? LEVEL : 0, on ? LEVEL / 2 : 0, 0);
         return;
       }
-      // Everything works. Green heartbeat - the pattern that proves the loop
-      // is alive, not merely powered.
-      write(0, doubleBlink(now, 1500) ? LEVEL : 0, 0);
+      // Everything works. Green breathing - calm rather than urgent, and
+      // still moving, which is what proves the loop is alive rather than
+      // merely powered.
+      write(0, breathe(now), 0);
       return;
   }
 }
