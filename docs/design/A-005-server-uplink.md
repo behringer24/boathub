@@ -59,6 +59,17 @@ boathub/<boat-id>/events        alarms and state changes, only when something ha
 `status` is **retained** and carries `offline` as the last will, so a client connecting later
 immediately learns whether the boat is reachable, without waiting for a heartbeat to time out.
 
+**A restart produces a spurious `offline` / `online` pair, milliseconds wide.** The board reconnects
+under the same client id, the broker evicts the session it has not yet noticed is dead - logging
+`session taken over` - and publishing that session's will on the way out. The new connection then
+publishes `online`.
+
+This matters more than it looks. **An alarm that fires on `offline` would fire on every reboot**,
+and an alarm that cries wolf gets muted within a week. Whatever raises the shore-power-loss alarm
+has to require the boat to stay unreachable for a sustained period, not merely to have gone quiet
+once. The genuine case is distinguishable in the broker log: a real outage disconnects with
+`exceeded timeout` after the keepalive lapses, not with `session taken over`.
+
 ### First payload
 
 ```json
@@ -76,6 +87,17 @@ These are not filler. They are the four numbers that explain everything a growin
 wrong: `uptime_s` exposes silent restarts, `heap_free` exposes a leak long before it crashes
 anything, `rssi_dbm` separates a radio problem from a firmware problem, and `reset_reason`
 distinguishes a watchdog bite from a brownout. They stay in the payload when the sensors arrive.
+
+**Read `POWERON` as "EN went low or the supply was interrupted", not as "the supply failed".** The
+RST button pulls the enable pin to ground, and so does opening a serial port on most hosts, because
+the port asserts DTR/RTS as it opens. The chip cannot tell any of those from a real power loss. The
+values that are actually diagnostic are the other ones - `BROWNOUT`, `TASK_WDT`, `PANIC` - and
+those can be believed.
+
+`reset_reason` is a property of the boot rather than of the sample, so it is redundant in every
+message. It is here because a payload that stands on its own survives the loss of the first message
+after a restart, which is exactly when a message is most likely to be lost. It belongs in a boot
+event on the `events` topic once anything publishes there, and can leave the telemetry then.
 
 Sensor fields are added to the same object as they come up, matching the schema in
 [../ROADMAP.md](../ROADMAP.md). A field that has no sensor yet is **left out**, never sent as zero -
