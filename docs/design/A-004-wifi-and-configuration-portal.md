@@ -119,7 +119,33 @@ access control. That is proportionate for a configuration page on a boat.
 No scan-and-pick list of surrounding networks in this version. A scan in AP+STA mode interrupts the
 access point, which is exactly the behaviour the rest of the design works to avoid. Type the SSID.
 
-## 5. Failure modes
+## 5. Local indication
+
+The onboard WS2812 on GPIO48 shows the state at the box. On a boat that is worth more than the
+dashboard: you walk past, look, and know - without a phone, without Wi-Fi, and without the server
+being reachable, which is exactly the situation where you most want to know.
+
+| Colour | Pattern | State |
+|--------|---------|-------|
+| blue | slow single blink | nothing configured - the portal is waiting for you |
+| yellow | single blink, once a second | credentials known, not associated |
+| yellow | double blink | Wi-Fi up, broker not answering |
+| green | double blink | everything works, telemetry is flowing |
+| red | twice a second | alarm |
+
+Two "not finished yet" states share yellow because at a glance the distinction that matters is
+blue / yellow / green. The pattern separates them once you look properly.
+
+**Nothing blinks to save current.** A WS2812 draws about 1 mA just being powered, and the pattern
+adds roughly 0.2 mA against 55-90 mA for the system - about two per cent, which is not a reason to
+do anything. It blinks because **a steady LED only proves the supply is on, while a moving pattern
+proves `loop()` is still running.** If the firmware hangs, the pattern freezes, and that is visible
+from across the cabin. A static indicator could not tell "healthy" from "crashed with the light
+left on".
+
+Write the table on the inside of the enclosure lid, next to the wire colours.
+
+## 6. Failure modes
 
 | Case | Detection | Reaction |
 |------|-----------|----------|
@@ -129,7 +155,7 @@ access point, which is exactly the behaviour the rest of the design works to avo
 | NVS empty or corrupt | no SSID readable | `PORTAL` - the board is always configurable |
 | Somebody sets an unusable AP password | - | shorter than 8 characters is rejected by the form; WPA2 requires 8 |
 
-## 6. Verification
+## 7. Verification
 
 - [ ] With NVS cleared, `BOOT-NETZ` appears and the serial port prints the generated password
 - [ ] `http://192.168.4.1` serves the form on a phone
@@ -139,9 +165,10 @@ access point, which is exactly the behaviour the rest of the design works to avo
 - [ ] A reflash keeps the configuration - NVS survives, because the partition layout is fixed
 - [ ] Wrong password: the board keeps retrying and the portal is still reachable
 - [ ] `GET /status` reports station address and RSSI
+- [ ] The LED is blue with nothing configured, yellow while connecting and green once telemetry flows
 - [ ] The same page requested from the station side is refused with 403, and the refusal is logged
 
-## 7. References
+## 8. References
 
 - [A-005-server-uplink.md](A-005-server-uplink.md) - what uses this connection
 - [A-002-bench-setup-usb.md](A-002-bench-setup-usb.md) - the bench environment
