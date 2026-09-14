@@ -130,11 +130,16 @@ being reachable, which is exactly the situation where you most want to know.
 | blue | slow single blink | nothing configured - the portal is waiting for you |
 | yellow | single blink, once a second | credentials known, not associated |
 | yellow | double blink | Wi-Fi up, broker not answering |
-| green | double blink | everything works, telemetry is flowing |
+| green | breathing, 3 s cycle | everything works, telemetry is flowing |
 | red | twice a second | alarm |
 
 Two "not finished yet" states share yellow because at a glance the distinction that matters is
 blue / yellow / green. The pattern separates them once you look properly.
+
+Green breathes rather than pulses: a second dark, a second fading up, a second fading down. Calm
+reads as "running", where a pulse reads as "reporting". The ramp is squared, because perceived
+brightness is roughly the square root of emitted light and a linear fade appears to rush the bright
+end.
 
 **Nothing blinks to save current.** A WS2812 draws about 1 mA just being powered, and the pattern
 adds roughly 0.2 mA against 55-90 mA for the system - about two per cent, which is not a reason to
