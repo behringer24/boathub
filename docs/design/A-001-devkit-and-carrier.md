@@ -2,7 +2,8 @@
 
 | | |
 |---|---|
-| **Stage** | 1, phases A and C |
+| **Phase** | A and C |
+| **Software version** | v1 |
 | **Touches hardware** | yes |
 
 ## 1. Goal
