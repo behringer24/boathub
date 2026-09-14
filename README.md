@@ -74,6 +74,7 @@ Full parts list with prices and sources: [docs/MATERIAL.md](docs/MATERIAL.md)
 | 18 | reserved | TWAI RX (stage 3) |
 | 21 | spare | optional local buzzer |
 | 43/44 | debug UART | keep free for servicing |
+| 48 | onboard WS2812 RGB LED | DevKit-internal, confirmed on the delivered board - do not reuse |
 
 Avoided: strapping pins GPIO0/3/45/46, USB pins GPIO19/20, and GPIO33-37 on the N16R8 (octal
 PSRAM). Always cross-check the silkscreen of the delivered DevKit board before soldering.
@@ -99,6 +100,8 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
 ## Repository layout
 
 ```
+board/                  PlatformIO firmware project - ESP32-S3 N16R8, see board/platformio.ini
+server/                 telemetry server - not started yet
 docs/
 ├── ROADMAP.md          stages, acceptance criteria, build evenings
 ├── CHANGELOG.md        project change log

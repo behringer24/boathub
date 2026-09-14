@@ -1,0 +1,13 @@
+{
+  "folders": [
+    { "name": "board (firmware)", "path": "board" },
+    { "name": "ESP32-BoatHub", "path": "." }
+  ],
+  "extensions": {
+    "recommendations": ["platformio.platformio-ide", "ms-vscode.cpptools"]
+  },
+  "settings": {
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true
+  }
+}

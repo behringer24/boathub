@@ -1,0 +1,16 @@
+# ESP32 BoatHub - 16 MB flash layout (N16R8)
+#
+# Fixed before the first flash on purpose: changing the layout later erases
+# NVS, and NVS is where the Wi-Fi and server credentials live.
+#
+# No OTA is planned, but the two app slots cost nothing here and keep the
+# option open. littlefs is sized for the track logger (000-design-review:
+# ~50 bytes per point every 6 s, 4 MB holds ~130 h - this gives 6 MB).
+#
+# name,     type, subtype,  offset,    size,     flags
+nvs,        data, nvs,      0x9000,    0x5000,
+otadata,    data, ota,      0xe000,    0x2000,
+app0,       app,  ota_0,    0x10000,   0x500000,
+app1,       app,  ota_1,    0x510000,  0x500000,
+littlefs,   data, spiffs,   0xA10000,  0x5E0000,
+coredump,   data, coredump, 0xFF0000,  0x10000,
