@@ -1,10 +1,10 @@
-# 003 - Bench setup on USB power
+# A-002 - Bench setup on USB power
 
 | | |
 |---|---|
 | **Status** | Draft |
-| **Stage** | 1, phase 1A |
-| **Roadmap package** | 1A.1 - 1A.4 |
+| **Stage** | 1, phase A |
+| **Roadmap package** | A.1 - A.4 |
 | **Created** | 2026-09-13 |
 | **Last changed** | 2026-09-13 |
 | **Touches hardware** | yes (breadboard only) |
@@ -17,11 +17,11 @@
 Get the complete sensor set and the whole network stack working on a breadboard, powered from USB
 alone. **No 12 V exists at this point** - not on the bench, not in the enclosure, nowhere.
 
-The 12 V supply from [001-power-supply.md](001-power-supply.md) is built at the *end* of the bench
+The 12 V supply from [B-001-power-supply.md](B-001-power-supply.md) is built at the *end* of the bench
 phase, once everything else is stable.
 
-**Out of scope:** battery voltage measurement (needs a real supply, phase 1B), enclosure and
-installation (phase 1C).
+**Out of scope:** battery voltage measurement (needs a real supply, phase B), enclosure and
+installation (phase C).
 
 ## 2. Why this order
 
@@ -33,7 +33,7 @@ The project guide sequences it this way and it is worth spelling out why:
 - **The power supply is the only part that can hurt you.** Everything in this phase runs at 3.3 V
   and 5 V. The fuse, TVS and DC/DC work is the part where a mistake costs a board or a finger, and
   it deserves its own undivided session.
-- **It produces something usable early.** At the end of phase 1A the system reports temperatures
+- **It produces something usable early.** At the end of phase A the system reports temperatures
   and humidity to the server over TLS. Plugged into any USB charger, that is already a real - if
   incomplete - boat monitor.
 
@@ -55,7 +55,7 @@ Everything hangs off the DevKit's own regulator. Nothing else is needed.
 
 Use the **CH343P port** (the USB-to-serial one), not the native ESP32-S3 port. The native port
 occupies GPIO19/20, and the serial monitor is the main debugging tool in this phase. See
-[002-devkit-and-carrier.md](002-devkit-and-carrier.md).
+[A-001-devkit-and-carrier.md](A-001-devkit-and-carrier.md).
 
 ### Current budget
 
@@ -114,12 +114,12 @@ bench PSU +  ---- 82 kOhm ---+--- 1 kOhm --- ADS1115 A0
 Sweep the PSU from 11 V to 15.5 V and confirm the ADC tracks linearly. That gets the calibration
 factor established early, and the reading can then be cross-checked once the real supply is built.
 
-> **Safety.** This is the one step in phase 1A with a voltage that can destroy the ESP. Build the
+> **Safety.** This is the one step in phase A with a voltage that can destroy the ESP. Build the
 > divider on a **separate part of the breadboard**, apply the PSU, and **verify with a multimeter
 > that the tap really sits near 1.5 V before connecting anything to the ADS1115.** A slipped
 > jumper putting 15 V on a GPIO ends the evening. Current-limit the PSU if it can.
 
-If no bench supply is available, skip level 2 - it belongs to phase 1B anyway.
+If no bench supply is available, skip level 2 - it belongs to phase B anyway.
 
 ## 5. What the telemetry looks like in this phase
 
@@ -143,7 +143,7 @@ now rather than retrofitting - stages 2 and 2.5 add fields the same way.
 
 ## 6. Failure modes to exercise deliberately
 
-The watchdog and fault decoupling (1A.9) are much easier to test on the bench than in the boat.
+The watchdog and fault decoupling (A.9) are much easier to test on the bench than in the boat.
 Pull each of these on purpose and confirm the rest keeps running:
 
 | Provoke | Expected |
@@ -159,7 +159,7 @@ A broken sensor must never take the system down - that is a guardrail, not a nic
 ## 7. Test
 
 - [ ] Blink and serial output over the CH343P port
-- [ ] Carrier terminal order verified against [002](002-devkit-and-carrier.md) section 3
+- [ ] Carrier terminal order verified against [A-001](A-001-devkit-and-carrier.md) section 3
 - [ ] Each DS18B20 detected individually, family code 0x28, **CRC verified on every read** (M7)
 - [ ] DS18B20 wire colours metered out before connecting - red/black/yellow is common, not universal
 - [ ] Pull-up value chosen using the **full 5 m cables**
@@ -174,7 +174,7 @@ A broken sensor must never take the system down - that is a guardrail, not a nic
 - [ ] Every failure mode in section 6 exercised
 - [ ] Runs unattended for 24 h without a reset
 
-## 8. Exit criteria into phase 1B
+## 8. Exit criteria into phase B
 
 Do not start the power supply until all of the above pass **and** the system has run 24 hours on
 USB without intervention. The point of this phase is to be able to say, later, "the firmware is
@@ -182,7 +182,7 @@ not the problem".
 
 ### The changeover itself
 
-When phase 1B is built, the transition needs care:
+When phase B is built, the transition needs care:
 
 1. Flash the final firmware **over USB, with no external 5 V connected**.
 2. Disconnect USB.
@@ -196,12 +196,12 @@ costs a board.
 
 | Point | Decide by | Who |
 |-------|-----------|-----|
-| Arduino IDE or PlatformIO | before 1A.1 | Andreas |
-| Whether an adjustable bench PSU is available for the level 2 divider test | before 1A.4 | Andreas |
-| MQTT broker and TLS certificate set up on the Docker host | before 1A.7 | Andreas |
+| Arduino IDE or PlatformIO | before A.1 | Andreas |
+| Whether an adjustable bench PSU is available for the level 2 divider test | before A.4 | Andreas |
+| MQTT broker and TLS certificate set up on the Docker host | before A.7 | Andreas |
 
 ## 10. References
 
 - [000-design-review.md](000-design-review.md) - findings I3, M1, M2, M7
-- [001-power-supply.md](001-power-supply.md) - what gets built after this phase
-- [002-devkit-and-carrier.md](002-devkit-and-carrier.md) - ports, pin mapping, terminals to avoid
+- [B-001-power-supply.md](B-001-power-supply.md) - what gets built after this phase
+- [A-001-devkit-and-carrier.md](A-001-devkit-and-carrier.md) - ports, pin mapping, terminals to avoid

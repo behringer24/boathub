@@ -1,10 +1,11 @@
-# NNN - Feature title
+# <PHASE>-NNN - Feature title
 
 | | |
 |---|---|
 | **Status** | Draft |
+| **Phase** | A / B / C - or "project-wide" |
 | **Stage** | 1 / 2 / 2.5 / 2B / 3 / 4 |
-| **Roadmap package** | e.g. 1A.2 |
+| **Roadmap package** | e.g. A.2 |
 | **Created** | YYYY-MM-DD |
 | **Last changed** | YYYY-MM-DD |
 | **Touches hardware** | yes / no |
