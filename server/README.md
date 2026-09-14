@@ -7,10 +7,18 @@ Design: [../docs/design/A-005-server-uplink.md](../docs/design/A-005-server-upli
 
 ## Setup
 
+**Every command below runs in this directory**, not in the repository root - the compose file
+lives here. Starting from the root gives "no configuration file provided".
+
+```
+cd server
+```
+
 ### 1. Create the broker user
 
-The broker denies anonymous access, so the password file has to exist before the first start. Run
-this once, from this directory, and pick your own password when prompted:
+The broker denies anonymous access, so the password file has to exist **before the first start**.
+Without it the container comes up and then restarts in a loop, with `Unable to open pwfile` in the
+log. Run this once and pick your own password when prompted:
 
 ```
 docker run --rm -it -v "${PWD}/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 mosquitto_passwd -c /mosquitto/config/passwd boathub
@@ -27,6 +35,9 @@ docker compose up -d
 ```
 docker compose logs -f
 ```
+
+A healthy start ends with `mosquitto version 2.x running`. If the log repeats instead, the
+container is restarting - read the last error before the repetition begins.
 
 ### 3. Find the address the board has to use
 
