@@ -38,5 +38,16 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   holding up telemetry.
 - `server/`: Mosquitto broker as a Docker Compose service on port 1883, authenticated, with
   persistence so retained messages survive a restart.
+- Telemetry storage: PostgreSQL with TimescaleDB and PostGIS. The `telemetry` hypertable is
+  partitioned on the server's receive time rather than the board's clock, which is null until NTP
+  has synced, and compressed after seven days. At roughly 40 MB a year compressed there is no
+  retention policy - full resolution is kept. PostGIS is unused so far and present so the track
+  logger needs no migration of the whole database.
+- `server/ingest`: a Go service that subscribes to the broker and writes rows. It ignores fields it
+  does not know so newer firmware cannot stop it, drops malformed payloads with a log line rather
+  than exiting, and retries broker and database independently.
+- Grafana with a provisioned data source and a heartbeat dashboard - uptime, free heap, signal
+  strength and messages per minute. Those four show a board restarting at night, a leak, a radio
+  degrading and an outage that happened while nobody was watching.
 - `bringup` build environment: the board verification firmware moved out of the way now that
   `boathub` carries the real application.

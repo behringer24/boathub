@@ -1,0 +1,88 @@
+{
+  "uid": "boathub-heartbeat",
+  "title": "BoatHub - heartbeat",
+  "tags": ["boathub"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "editable": true,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Uptime",
+      "description": "Drops to zero on every restart. A sawtooth here is the first sign of something rebooting at night.",
+      "datasource": { "type": "postgres", "uid": "boathub" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "custom": { "lineWidth": 2, "fillOpacity": 5 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, uptime_s FROM telemetry WHERE $__timeFilter(received_at) ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Free heap",
+      "description": "Flat is healthy. A downward trend over days is a leak, long before it crashes anything.",
+      "datasource": { "type": "postgres", "uid": "boathub" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes", "custom": { "lineWidth": 2, "fillOpacity": 5 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, heap_free FROM telemetry WHERE $__timeFilter(received_at) ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Wi-Fi signal",
+      "description": "Separates a radio problem from a firmware problem. Below about -75 dBm expect dropouts.",
+      "datasource": { "type": "postgres", "uid": "boathub" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "dBm", "max": -30, "custom": { "lineWidth": 2, "fillOpacity": 5 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, rssi_dbm FROM telemetry WHERE $__timeFilter(received_at) ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Messages per minute",
+      "description": "Six at a ten second interval. A dip is a gap in the uplink - the panel that shows an outage you slept through.",
+      "datasource": { "type": "postgres", "uid": "boathub" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "min": 0, "custom": { "lineWidth": 2, "fillOpacity": 20, "drawStyle": "bars" } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time_bucket('1 minute', received_at) AS time, count(*) AS messages FROM telemetry WHERE $__timeFilter(received_at) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    }
+  ]
+}

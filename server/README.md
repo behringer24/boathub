@@ -1,14 +1,25 @@
 # Server
 
-The server side of the BoatHub. At this stage it is one container: an MQTT broker the board
-publishes telemetry to. Storage, dashboards and the logbook come later.
+The server side of the BoatHub: a broker the boat publishes to, a database that keeps what it sent,
+and a dashboard to look at it.
 
-Design: [../docs/design/A-005-server-uplink.md](../docs/design/A-005-server-uplink.md).
+| Service | Does | Reachable on |
+|---------|------|--------------|
+| `mosquitto` | MQTT broker | 1883 |
+| `db` | PostgreSQL with TimescaleDB and PostGIS | compose network only |
+| `ingest` | subscribes and writes rows | - |
+| `grafana` | dashboard | 3000 |
+
+The database is deliberately **not** published to the host. Only ingest and Grafana need it and both
+sit on the compose network.
+
+Design: [../docs/design/A-005-server-uplink.md](../docs/design/A-005-server-uplink.md) and
+[../docs/design/A-006-telemetry-storage.md](../docs/design/A-006-telemetry-storage.md).
 
 ## Setup
 
-**Every command below runs in this directory**, not in the repository root - the compose file
-lives here. Starting from the root gives "no configuration file provided".
+**Every command below runs in this directory**, not in the repository root - the compose file lives
+here. Starting from the root gives "no configuration file provided".
 
 ```
 cd server
@@ -37,7 +48,22 @@ If a file created the wrong way already exists, hand it over instead of retyping
 docker run --rm -v "${PWD}/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 chown 1883:1883 /mosquitto/config/passwd
 ```
 
-### 2. Start the broker
+### 2. Fill in the passwords
+
+```
+cp .env.example .env
+```
+
+Four values, none of which belong in git:
+
+| Variable | What it is |
+|----------|------------|
+| `POSTGRES_PASSWORD` | pick anything; only the containers ever use it |
+| `MQTT_USER` | the username from step 1, `boathub` unless you changed it |
+| `MQTT_PASSWORD` | **the same password you typed in step 1.** The broker stores only a hash, so it cannot be recovered - if you have forgotten it, redo step 1 |
+| `GRAFANA_PASSWORD` | the `admin` password for the dashboard |
+
+### 3. Start everything
 
 ```
 docker compose up -d
@@ -47,10 +73,11 @@ docker compose up -d
 docker compose logs -f
 ```
 
-A healthy start ends with `mosquitto version 2.x running`. If the log repeats instead, the
-container is restarting - read the last error before the repetition begins.
+A healthy start ends with mosquitto `running`, the database `ready to accept connections`, and
+ingest `subscribed to boathub/+/telemetry`. If the log repeats instead, something is restarting -
+read the last error before the repetition begins.
 
-### 3. Find the address the board has to use
+### 4. Point the board at this machine
 
 The board connects over the network, so it needs the **LAN address of this machine** - not
 `localhost`, which on the board means the board itself.
@@ -59,23 +86,34 @@ The board connects over the network, so it needs the **LAN address of this machi
 ipconfig
 ```
 
-Take the IPv4 address of the adapter that carries your Wi-Fi, and enter it on the board's
-configuration page along with port 1883 and the credentials from step 1.
+Take the IPv4 address of the adapter on your home network and enter it on the board's configuration
+page, with port 1883 and the credentials from step 1.
 
-If nothing arrives, the Windows firewall is the first suspect: inbound TCP 1883 has to be allowed
-for Docker.
+Two things worth doing once: give this machine a fixed DHCP lease in the router, or the board will
+be pointing at nothing after the next router restart. And if nothing arrives, check the Windows
+firewall allows inbound TCP 1883 for Docker.
 
-## Watching what arrives
+## Looking at the data
+
+Dashboard at **http://localhost:3000**, user `admin` with the password from `.env`. The data source
+and the heartbeat dashboard are provisioned - there is nothing to set up by hand.
+
+Straight into the database:
+
+```
+docker exec -it boathub-db psql -U boathub -d boathub
+```
+
+```sql
+SELECT received_at, boat_id, uptime_s, heap_free, rssi_dbm FROM telemetry ORDER BY received_at DESC LIMIT 10;
+SELECT * FROM boat_status ORDER BY received_at DESC LIMIT 10;
+```
+
+Watching the raw MQTT traffic:
 
 ```
 docker exec -it boathub-mqtt mosquitto_sub -h localhost -p 1883 -u boathub -P '<password>' -t 'boathub/#' -v
 ```
-
-`-v` prints the topic alongside the payload, which is what you want when more than one topic is
-live. Expect a `telemetry` message every ten seconds and a retained `status` of `online`.
-
-Powering the board down makes `status` turn to `offline` once the keepalive expires - that is the
-last will, published by the broker rather than by the board.
 
 ## Topics
 
@@ -85,10 +123,22 @@ boathub/<boat-id>/status        "online" / "offline", retained
 boathub/<boat-id>/events        alarms and state changes
 ```
 
-The board is the only publisher. It subscribes to nothing that can make it act, and no control path
-from the server exists or is planned.
+The board is the only publisher, and ingest only ever subscribes. No control path from the server
+exists or is planned.
+
+## Backups
+
+**The Docker volume is not a backup.** While this is heartbeats, losing it costs nothing. Once the
+logbook is in here it is irreplaceable, because a trip cannot be measured again:
+
+```
+docker exec boathub-db pg_dump -U boathub boathub | gzip > boathub-$(date +%F).sql.gz
+```
+
+Put it somewhere that is not this machine, and restore it into an empty database once so you know
+the file is good.
 
 ## Not yet, but planned
 
-TLS on 8883 once the server is reachable from outside the home network. Until then this setup
-belongs on a trusted LAN only: on port 1883 the credentials cross the network in the clear.
+TLS on 8883 once the server is reachable from outside the home network. Until then this belongs on
+a trusted LAN only: on port 1883 the credentials cross the network in the clear.

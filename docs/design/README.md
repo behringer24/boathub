@@ -26,8 +26,9 @@ and not the firmware.
 | 5 | SoftAP `BOOT-NETZ` and the local configuration web UI | [A-004](A-004-wifi-and-configuration-portal.md) |
 | 6 | Station mode, Wi-Fi credentials in NVS | [A-004](A-004-wifi-and-configuration-portal.md) |
 | 7 | Server uplink: MQTT, telemetry, heartbeat, last will | [A-005](A-005-server-uplink.md) |
-| 8 | Alarm and threshold logic for the sensors that exist by then | planned |
-| 9 | Fault handling and watchdog: a dead sensor must not take the network path with it | planned |
+| 8 | Store the telemetry and put it on a dashboard | [A-006](A-006-telemetry-storage.md) |
+| 9 | Alarm and threshold logic for the sensors that exist by then | planned |
+| 10 | Fault handling and watchdog: a dead sensor must not take the network path with it | planned |
 
 The milestone is a monitor that runs off any USB charger and reports to the server. Not the final
 system - no battery measurement, no 12 V robustness - but a real, testable one.
@@ -67,6 +68,7 @@ In reading order.
 | then | [A-003](A-003-ds18b20-temperature-sensors.md) | DS18B20 temperature sensors |
 | then | [A-004](A-004-wifi-and-configuration-portal.md) | Wi-Fi operation and configuration portal |
 | then | [A-005](A-005-server-uplink.md) | Server uplink |
+| then | [A-006](A-006-telemetry-storage.md) | Telemetry storage and dashboard |
 | last, on the bench | [B-001](B-001-power-supply.md) | Power supply and battery measurement |
 
 ## Writing a new one
