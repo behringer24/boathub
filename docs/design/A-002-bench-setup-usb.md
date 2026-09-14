@@ -95,9 +95,11 @@ which puts roughly **2.5 kΩ on the bus**. That is already a strong pull-up, so:
 - The SHT31 answers at **0x44** with its address pin low and **0x45** with it high, so two of them
   fit on this bus. Breakouts often abbreviate the pin to `AD` and put it on the back of the board
   next to `AL`, the alert output; `AL` can be left unconnected.
-- **Tie the address pin yourself** - to GND for 0x44, to 3.3 V for 0x45. The datasheet requires it
-  to sit at a defined level, and a breakout that leaves it floating gives an unreliable address.
-  Do not assume the module pulls it anywhere.
+- Most breakouts carry a 10 kΩ pull-down on the address pin, so leaving `AD` open gives **0x44**.
+  Check yours: the resistors sit on the back, and a `103` next to the `AD` hole is that pull-down.
+  For 0x45, tie `AD` to 3.3 V - a hard tie wins against the pull-down.
+- The datasheet wants the address pin at a defined level, so on a board **without** that pull-down
+  it must be tied by hand. A floating address pin gives a sensor that answers sometimes.
 
 **Power the SHT31 from 3.3 V, never 5 V.** Its pull-ups go to the supply pin, and typical breakouts
 carry neither a regulator nor a level shifter, so a 5 V feed puts 5 V onto ESP32 pins rated 3.6 V
