@@ -23,15 +23,16 @@ Heemol set, Amazon ASIN **B0GJZS3P1J**, "ESP32-S3 N16R8 DevKitC-1 with expansion
 
 Source: the seller's own product images, with the module line since confirmed against the board in hand. The Amazon listing itself could not be retrieved
 programmatically, so **everything below should be confirmed against the physical board** on the
-first bench evening - particularly the pin order on the carrier terminals, which is transcribed
-from a photograph.
+first bench evening. The pin order on the carrier terminals was originally transcribed from a
+product photograph; it has since been checked against a photograph of the delivered board and
+matches in every position - see section 6.
 
 | Item | Detail |
 |------|--------|
 | Module | **Verified on the delivered board 2026-09-14.** The shield reads only `ESP32-S3-N16R8` / `WIFI+BT Model` / `ISM 2.4G 802.11 b/g/n` - no manufacturer, no WROOM designation. An **unbranded third-party module**, pin-compatible with the WROOM-1 and carrying the same 16 MB flash / 8 MB octal PSRAM. |
 | Antenna | **Both** a PCB antenna and a U.FL/IPEX socket, selected by a solder jumper. See section 4. |
 | Regulator | AMS1117-3.3 (SOT-223) |
-| USB | **Two** Type-C ports: one native ESP32-S3 USB/OTG on GPIO19/20, one USB-serial via **CH343P** |
+| USB | **Two** Type-C ports: one native ESP32-S3 USB/OTG on GPIO19/20, one USB-serial via **CH343P** - which socket is which is in section 5 |
 | Buttons | RST and BOOT |
 | LEDs | PWR, TX, RX, plus a **WS2812 RGB** LED |
 | Carrier | MRD076A "Terminal Adapter for ESP32-S3", 84.5 x 73.7 mm, all pins on screw terminals |
@@ -187,12 +188,30 @@ with shore power there is no reason to bother.
 Use the **CH343P port** (the USB-serial one) for flashing; the native USB port occupies GPIO19/20.
 The guide's rule stands for both ports: **external 5 V off while USB is connected.**
 
+**Which of the two sockets.** Hold the board with the module at the top and both USB-C sockets along
+the bottom edge: the **right-hand socket is the CH343P**, the left-hand one is the native ESP32-S3
+USB. Nothing on the silkscreen says so. Identify it by the USB ID rather than by position, because
+a board revision could swap them:
+
+| Enumerates as | Port | Use it? |
+|---------------|------|---------|
+| `1A86:55D3`, "USB-Enhanced-SERIAL CH343" | CH343P | **yes** |
+| `303A:....`, Espressif | native ESP32-S3 USB | no |
+
+`pio device list` prints the VID:PID. Confirmed 2026-09-14: the CH343P came up as COM9.
+
+Picking the wrong socket does not announce itself. The firmware in `board/` is built with
+`ARDUINO_USB_CDC_ON_BOOT=0` and therefore never creates a native USB serial port - so an upload over
+the native socket can still succeed, after which the port vanishes on reboot and the serial monitor
+stays silent for good.
+
 ## 6. Test
 
 - [x] Read the module silkscreen and confirm N16R8 - done 2026-09-14, reads `ESP32-S3-N16R8`
 - [ ] Locate the U.FL socket and the antenna solder jumper, and record which position it ships in
-- [ ] **Verify the carrier terminal order against section 3** - it was transcribed from a product
-      photo, not from the board in hand
+- [x] **Verify the carrier terminal order against section 3** - done 2026-09-14 against a photograph
+      of the delivered board. All 22 labels on each block match, `IO14` included. This confirms the
+      silkscreen only; the continuity check below is what proves the routing behind it
 - [x] Blink and serial test over the CH343P port - done 2026-09-14 on COM9 (CH343, `1A86:55D3`)
 - [x] Confirm the board boots and PSRAM is detected (proves IO35-37 are in use and off limits) -
       done 2026-09-14, `psramInit(): PSRAM enabled`, 8 386 279 bytes usable and a 1 MB write/read
