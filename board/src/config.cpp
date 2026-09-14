@@ -11,6 +11,17 @@ String suffix;
 
 const char *NS = "boathub";
 
+// Preferences logs an error for every key it does not find, which on a fresh
+// board means a wall of red for the entirely normal "nothing stored yet" case.
+// Ask first.
+String str(const char *key, const String &fallback) {
+  return prefs.isKey(key) ? prefs.getString(key) : fallback;
+}
+
+uint16_t u16(const char *key, uint16_t fallback) {
+  return prefs.isKey(key) ? prefs.getUShort(key) : fallback;
+}
+
 void readMacSuffix() {
   uint8_t mac[6] = {0};
   // Works before Wi-Fi is started, unlike WiFi.macAddress().
@@ -26,17 +37,20 @@ namespace config {
 
 void begin() {
   readMacSuffix();
-  prefs.begin(NS, /*readOnly=*/true);
+  // Read-write even though this only reads: opening read-only on a namespace
+  // that does not exist yet logs an error on every first boot, which looks
+  // like a fault and is not one.
+  prefs.begin(NS, /*readOnly=*/false);
 
-  cfg.wifiSsid = prefs.getString("wifi_ssid", "");
-  cfg.wifiPass = prefs.getString("wifi_pass", "");
-  cfg.apPass = prefs.getString("ap_pass", "boathub-" + suffix);
-  cfg.boatId = prefs.getString("boat_id", "boat-" + suffix);
-  cfg.mqttHost = prefs.getString("mqtt_host", "");
-  cfg.mqttUser = prefs.getString("mqtt_user", "");
-  cfg.mqttPass = prefs.getString("mqtt_pass", "");
-  cfg.mqttPort = prefs.getUShort("mqtt_port", 1883);
-  cfg.pubSecs = prefs.getUShort("pub_secs", 10);
+  cfg.wifiSsid = str("wifi_ssid", "");
+  cfg.wifiPass = str("wifi_pass", "");
+  cfg.apPass = str("ap_pass", "boathub-" + suffix);
+  cfg.boatId = str("boat_id", "boat-" + suffix);
+  cfg.mqttHost = str("mqtt_host", "");
+  cfg.mqttUser = str("mqtt_user", "");
+  cfg.mqttPass = str("mqtt_pass", "");
+  cfg.mqttPort = u16("mqtt_port", 1883);
+  cfg.pubSecs = u16("pub_secs", 10);
 
   prefs.end();
 }
