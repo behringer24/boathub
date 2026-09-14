@@ -87,6 +87,15 @@ find when rebuilding the system or revising the board.
   them: `001-power-supply` → `B-001-power-supply`, `002-devkit-and-carrier` → `A-001-…`,
   `003-bench-setup-usb` → `A-002-…`. The design review keeps the bare `000` as project-wide
   reference material with no phase.
+- `docs/design/A-003-ds18b20-temperature-sensors.md`: the three 5 m probes - circuit, mounting,
+  non-blocking conversion, ROM identity check against swapped cables, and the reading-validation
+  ladder including the 85 °C power-on-default trap.
+- **[HW]** 1-Wire pull-up settled at **2.2 kΩ** rather than the guide's 4.7 kΩ. At 5 m the textbook
+  value leaves ~2.8 µs of rise against a 15 µs read slot; 2.2 kΩ more than halves that at a sink
+  current of 1.5 mA, well inside the DS18B20's 4 mA rating (I3).
+- **[HW]** 100 Ω in series in each DS18B20 DATA line at the board end, for surge and ringing
+  protection. Deliberately no clamping diodes - their capacitance would cost more in edge quality
+  than they buy at 3.3 V (I3).
 
 ### Security
 

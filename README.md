@@ -107,6 +107,7 @@ docs/
 │   ├── 000-design-review.md          spec validation of the whole design
 │   ├── A-001-devkit-and-carrier.md   DevKit, carrier board and antenna
 │   ├── A-002-bench-setup-usb.md      the USB bench build - start here
+│   ├── A-003-ds18b20-temperature-sensors.md   three 5 m 1-Wire probes
 │   └── B-001-power-supply.md         12 V input, protection, battery measurement
 └── reference/          source documents (project guide PDF)
 ```

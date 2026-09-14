@@ -45,6 +45,7 @@ In build order.
 | first | 000 | Design review and spec validation - project-wide, no phase | Accepted | [000-design-review.md](000-design-review.md) |
 | then | A-001 | DevKit, carrier board and antenna | Draft | [A-001-devkit-and-carrier.md](A-001-devkit-and-carrier.md) |
 | **start building** | A-002 | Bench setup on USB power | Draft | [A-002-bench-setup-usb.md](A-002-bench-setup-usb.md) |
+| then | A-003 | DS18B20 temperature sensors | Draft | [A-003-ds18b20-temperature-sensors.md](A-003-ds18b20-temperature-sensors.md) |
 | last, on the bench | B-001 | Power supply and battery measurement | Draft | [B-001-power-supply.md](B-001-power-supply.md) |
 
 A document without a phase letter - currently only `000` - is project-wide reference material
@@ -56,7 +57,6 @@ Ordered along the roadmap; they take the next free number in their phase when cr
 
 **Phase A - bench on USB power**
 
-- DS18B20 temperature sensors on three separate 1-Wire GPIOs
 - SHT31-D cabin climate on the shared I2C bus
 - ADS1115 channel allocation and value conditioning
 - Wi-Fi operation: SoftAP `BOOT-NETZ` plus station, reconnect behaviour

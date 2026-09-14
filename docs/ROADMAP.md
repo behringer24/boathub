@@ -33,7 +33,7 @@ No 12 V anywhere. The ESP is powered from the CH343P USB-C port, the sensors fro
 |---|---------|--------|------------|
 | A.0 | Decide the power concept (B1) | **done** - permanently on shore power in the marina, 2 x 100 Ah AGM, no solar or wind | [000](design/000-design-review.md) |
 | A.1 | Toolchain set up, blink and serial test on the CH343P port; confirm N16R8 and carrier pinout | open | [A-001](design/A-001-devkit-and-carrier.md), [A-002](design/A-002-bench-setup-usb.md) |
-| A.2 | DS18B20 engine bay / bilge / fridge (GPIO4/5/6), pull-up value chosen with the real 5 m cables (I3) | open | [A-002](design/A-002-bench-setup-usb.md) |
+| A.2 | DS18B20 engine bay / bilge / fridge (GPIO4/5/6), 2.2 kΩ pull-ups verified with the real 5 m cables (I3) | open | [A-003](design/A-003-ds18b20-temperature-sensors.md) |
 | A.3 | SHT31-D cabin climate (I2C 0x44) | open | [A-002](design/A-002-bench-setup-usb.md) |
 | A.4 | ADS1115 x3 (0x48/0x49/0x4A) against a known reference voltage, PGA fixed (M2) | open | [A-002](design/A-002-bench-setup-usb.md) |
 | A.5 | SoftAP BOOT-NETZ plus local configuration web UI | open | planned |
