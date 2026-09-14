@@ -135,6 +135,36 @@ Wiring rules for the run:
 - **100 nF between 3.3 V and GND at the sensor end**, for local decoupling at the far end of a cable.
 - Route clear of the tiller pilot's motor cables.
 
+#### Wire colours
+
+There is no standard, but Qwiic and STEMMA QT agree, and ready-made I2C cables are wired that way:
+
+| Conductor | Colour |
+|-----------|--------|
+| `GND` | black |
+| 3.3 V | red |
+| `SDA` | blue |
+| `SCL` | yellow |
+
+**Grove uses a different scheme** - yellow is `SDA` there and white is `SCL`. Yellow therefore means
+two different things depending on where the cable came from. Meter any ready-made cable before
+trusting it, the same discipline the probe wiring needs in
+[A-003](A-003-ds18b20-temperature-sensors.md).
+
+With only four conductors the twisting rule above decides the pairing:
+
+```
+blue   SDA  --twisted with--  black  GND
+yellow SCL  --twisted with--  red    3.3 V
+```
+
+Red works as a return because the 100 nF at the sensor end ties the supply to ground at signal
+frequencies. That capacitor is in the parts list for this as much as for decoupling. A five- or
+six-core cable is cleaner still: then each signal gets a ground of its own.
+
+Write the scheme on the inside of the enclosure lid. Somebody will be looking at these wires years
+from now, in a dark locker, with a torch.
+
 ## 4. Testing the ADS1115 without 12 V
 
 The ADC still has to be proven, just not against a battery.
