@@ -70,6 +70,46 @@ pin plan except GPIO21 sits on the top row.**
 | `IO21` | bottom | spare, optional buzzer via a transistor | 1 |
 | `RX` / `TX` | bottom | debug UART (GPIO44/43), keep free for service | - |
 
+### Checking the carrier against your own board
+
+The tables above are read off a silkscreen. What the silkscreen promises and what the copper does
+are two different claims, and only the second one matters once a sensor is wired on. **Check it
+before the first sensor, not after a reading looks wrong.**
+
+**Power off, USB unplugged.** Continuity testing a live board gives meaningless readings.
+
+Clamp a short piece of stiff wire into each terminal you want to test. Screw terminals are awkward
+to probe directly, and a slipping probe shorts the neighbour.
+
+Leave the DevKit **in its socket**: the socket contact is itself a failure point and belongs in the
+test. Put one probe on the terminal and the other on the pin as labelled **on the DevKit**, not on
+the carrier - whether those two labels agree is the whole question.
+
+For phase A these are the ones that matter:
+
+| Terminal | Must reach DevKit pin | Used for |
+|----------|----------------------|----------|
+| `3.3V` x2 | `3V3` | sensor rail |
+| `GND` | `GND` | ground |
+| `IO4` `IO5` `IO6` | `4` `5` `6` | the three DS18B20 |
+| `IO8` `IO9` | `8` `9` | I2C SDA and SCL |
+| `5V` | `5Vin` | the DC/DC feed in phase B |
+
+Under about 1 Ω, with the beeper sounding, is a pass.
+
+**Then test the opposite.** Put one probe on each of two *neighbouring* terminals: it must stay
+silent. A solder bridge or a swapped track shows up nowhere else. `IO8` and `IO9` sit next to each
+other and are the I2C bus - a bridge there means no device answers at all, and the search for it
+goes looking in the firmware.
+
+| Result | Meaning |
+|--------|---------|
+| no continuity | poor socket contact - reseat the DevKit - or the terminal goes somewhere else |
+| continuity to the wrong pin | the carrier's silkscreen is wrong. **Your measurement wins**, correct the tables above |
+| neighbouring terminals beep | short circuit |
+
+Power up once afterwards and confirm the board still boots normally before wiring anything.
+
 ### Terminals that must not be used
 
 The carrier exposes several pins that are unusable on this board. They sit on labelled screw
