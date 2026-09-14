@@ -12,6 +12,7 @@
 #include "config.h"
 #include "net.h"
 #include "portal.h"
+#include "status.h"
 #include "uplink.h"
 
 void setup() {
@@ -30,15 +31,17 @@ void setup() {
   net::begin();
   portal::begin();
   uplink::begin();
+  status::begin();
 }
 
 void loop() {
-  // Three independent state machines, none of which blocks. A broker that is
-  // down must not stall the portal, and a marina outage must not stall either
-  // of them - the same rule the sensors will follow.
+  // Independent state machines, none of which blocks. A broker that is down
+  // must not stall the portal, and a marina outage must not stall either of
+  // them - the same rule the sensors will follow.
   net::loop();
   portal::loop();
   uplink::loop();
+  status::loop();
 
   static uint32_t lastReport = 0;
   const uint32_t now = millis();

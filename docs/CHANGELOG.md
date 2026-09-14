@@ -46,6 +46,10 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 - `server/ingest`: a Go service that subscribes to the broker and writes rows. It ignores fields it
   does not know so newer firmware cannot stop it, drops malformed payloads with a log line rather
   than exiting, and retries broker and database independently.
+- Status indication on the onboard RGB LED: blue when nothing is configured, yellow while
+  connecting or while the broker is silent, green once telemetry flows, red for an alarm. It blinks
+  rather than sitting still so that a frozen pattern gives a hanging firmware away - a steady LED
+  would only prove the supply is on. `status::setAlarm()` is in place for the alarm logic to call.
 - Grafana with a provisioned data source and a heartbeat dashboard - uptime, free heap, signal
   strength and messages per minute. Those four show a board restarting at night, a leak, a radio
   degrading and an outage that happened while nobody was watching.
