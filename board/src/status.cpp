@@ -16,11 +16,21 @@ const uint32_t FRAME_MS = 20;
 bool alarmActive = false;  // not "alarm": POSIX declares alarm() in unistd.h
 uint32_t lastFrame = 0;
 
+// Only transmit when something actually changed.
+//
+// The WS2812 is pure timing: neopixelWrite() bit-bangs through the RMT, and
+// under Wi-Fi load a transmission can be stretched enough to corrupt a bit,
+// which shows as a brief wrong value. Repainting an unchanged colour 50 times
+// a second is 50 chances a second to glitch, for no benefit - and during the
+// dark phase of a fade a stray flash is exactly what you notice.
 void write(uint8_t r, uint8_t g, uint8_t b) {
+  static uint8_t lastR = 255, lastG = 255, lastB = 255;
+  if (r == lastR && g == lastG && b == lastB) return;
+  lastR = r;
+  lastG = g;
+  lastB = b;
 #ifdef RGB_BUILTIN
   neopixelWrite(RGB_BUILTIN, r, g, b);
-#else
-  (void)r; (void)g; (void)b;
 #endif
 }
 
