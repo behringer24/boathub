@@ -23,6 +23,7 @@ const time_t TIME_SANE_AFTER = 1700000000;
 uint32_t retryDelay = RETRY_MIN_MS;
 uint32_t nextAttempt = 0;
 uint32_t nextPublish = 0;
+bool publishRequested = false;
 const char *status = "not connected";
 
 String topicTelemetry, topicStatus;
@@ -156,13 +157,22 @@ void loop() {
 
   mqtt.loop();
 
-  if ((int32_t)(now - nextPublish) >= 0) {
+  if (publishRequested || (int32_t)(now - nextPublish) >= 0) {
+    publishRequested = false;
     nextPublish = now + (uint32_t)c.pubSecs * 1000;
     publish();
   }
 }
 
 bool connected() { return mqtt.connected(); }
+
+void publishNow() {
+  if (!mqtt.connected()) {
+    Serial.println("[mqtt] publish requested, but not connected");
+    return;
+  }
+  publishRequested = true;
+}
 
 const char *statusText() { return status; }
 

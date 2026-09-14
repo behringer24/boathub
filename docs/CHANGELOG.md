@@ -50,6 +50,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   connecting or while the broker is silent, green once telemetry flows, red for an alarm. It blinks
   rather than sitting still so that a frozen pattern gives a hanging firmware away - a steady LED
   would only prove the supply is on. `status::setAlarm()` is in place for the alarm logic to call.
+- The BOOT button does something: a short press acknowledges an alarm if one shows and otherwise
+  publishes immediately, which is how you prove the chain works while standing at the box. Held for
+  eight seconds it restores the access point password to its MAC-derived default - the only lockout
+  this design allows, since the access point is never switched off. The LED signals the long press
+  building from one second in.
 - Grafana with a provisioned data source and a heartbeat dashboard - uptime, free heap, signal
   strength and messages per minute. Those four show a board restarting at night, a leak, a radio
   degrading and an outage that happened while nobody was watching.

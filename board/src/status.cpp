@@ -13,7 +13,9 @@ const uint8_t LEVEL = 20;
 // protocol that blocks for about 30 us per update - no reason to run it faster.
 const uint32_t FRAME_MS = 20;
 
-bool alarmActive = false;  // not "alarm": POSIX declares alarm() in unistd.h
+bool alarmOn = false;  // not "alarm": POSIX declares alarm() in unistd.h
+bool buttonHeld = false;
+bool buttonFired = false;
 uint32_t lastFrame = 0;
 
 // Only transmit when something actually changed.
@@ -70,16 +72,39 @@ void begin() {
 #endif
 }
 
-void setAlarm(bool on) { alarmActive = on; }
+void setAlarm(bool on) { alarmOn = on; }
+
+bool alarmActive() { return alarmOn; }
+
+void setButtonHeld(bool held) { buttonHeld = held; }
+
+void setButtonFired() {
+  buttonFired = true;
+  lastFrame = 0;  // paint immediately, do not wait for the next frame
+}
 
 void loop() {
   const uint32_t now = millis();
   if (now - lastFrame < FRAME_MS) return;
   lastFrame = now;
 
-  // Alarm first: it has to be visible regardless of what the network is doing.
+  // The button owns the LED while it is being held: keeping the user informed
+  // about what their own thumb is about to cause beats every other state.
+  if (buttonFired) {
+    write(LEVEL, LEVEL, LEVEL);  // solid white - it has happened
+    return;
+  }
+  if (buttonHeld) {
+    // Magenta, fast. Unlike anything else here, so "something is building" is
+    // unmistakable.
+    const bool on = blink(now, 200, 100);
+    write(on ? LEVEL : 0, 0, on ? LEVEL : 0);
+    return;
+  }
+
+  // Alarm next: it has to be visible regardless of what the network is doing.
   // Twice a second, which reads as urgent next to everything else here.
-  if (alarmActive) {
+  if (alarmOn) {
     write(blink(now, 500, 250) ? LEVEL : 0, 0, 0);
     return;
   }

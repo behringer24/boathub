@@ -37,4 +37,9 @@ void save(const Config &incoming);
 // Last three bytes of the MAC as lower-case hex, e.g. "a4f2c1".
 const String &macSuffix();
 
+// Puts the access point password back to the MAC-derived default. The only
+// real lockout this design allows is forgetting it - everything else stays
+// reachable, because the access point is never switched off.
+void resetApPassword();
+
 }  // namespace config

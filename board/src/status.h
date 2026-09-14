@@ -17,8 +17,15 @@ namespace status {
 void begin();
 void loop();
 
-// Alarm overrides every other state. Nothing calls this yet - the alarm and
-// threshold logic is a later package - but the indicator is ready for it.
+// Alarm overrides every other state. Nothing raises one yet - the threshold
+// logic is a later package - but the indicator and the acknowledgement are
+// ready for it.
 void setAlarm(bool on);
+bool alarmActive();
+
+// Feedback while the BOOT button is held, so that a long press is visibly
+// building rather than a guess about how long to keep pressing.
+void setButtonHeld(bool held);
+void setButtonFired();
 
 }  // namespace status

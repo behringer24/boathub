@@ -150,6 +150,30 @@ left on".
 
 Write the table on the inside of the enclosure lid, next to the wire colours.
 
+### The BOOT button
+
+GPIO0 also selects the boot mode while the chip is resetting, so "hold it during power-up" already
+means something else. What follows applies only after boot.
+
+| Press | Effect |
+|-------|--------|
+| short, under 1 s, while an alarm shows | acknowledge it |
+| short, otherwise | publish a telemetry message immediately |
+| held for 8 s | put the access point password back to its MAC-derived default and restart |
+
+The short press is one idea rather than two: *I am here, and I am responding to what you are
+showing me.* Standing at the box during installation, pressing and watching the message arrive at
+the server is the fastest proof that the whole chain works.
+
+Eight seconds is deliberately uncomfortable. Anything shorter eventually happens by accident while
+feeling for the box in the dark. **The LED blinks magenta from one second in**, so the press is
+visibly building rather than a guess, and goes solid white the moment it fires.
+
+Resetting the access point password is the only lockout recovery this design needs: everything else
+stays reachable, because the access point is never switched off. Wi-Fi and broker credentials are
+deliberately left alone - there is no factory reset on a button that somebody might lean on inside
+a locker.
+
 ## 6. Failure modes
 
 | Case | Detection | Reaction |
