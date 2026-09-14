@@ -6,7 +6,7 @@
 | **Stage** | 1, phases A and C |
 | **Roadmap package** | A.1, C.2 |
 | **Created** | 2026-09-13 |
-| **Last changed** | 2026-09-13 |
+| **Last changed** | 2026-09-14 |
 | **Touches hardware** | yes |
 
 ## 1. Goal
@@ -21,14 +21,14 @@ assumption there that the board is an ESP32-S3-WROOM-1**U**.
 
 Heemol set, Amazon ASIN **B0GJZS3P1J**, "ESP32-S3 N16R8 DevKitC-1 with expansion board".
 
-Source: the seller's own product images. The Amazon listing itself could not be retrieved
+Source: the seller's own product images, with the module line since confirmed against the board in hand. The Amazon listing itself could not be retrieved
 programmatically, so **everything below should be confirmed against the physical board** on the
 first bench evening - particularly the pin order on the carrier terminals, which is transcribed
 from a photograph.
 
 | Item | Detail |
 |------|--------|
-| Module | Marked **sparkleIoT XH-S3E**, WiFi+BT, N16R8. The listing calls it "ESP32-S3-WROOM-1-N16R8", but the silkscreen shows a **third-party module**, not a genuine Espressif WROOM-1. Pin-compatible. |
+| Module | **Verified on the delivered board 2026-09-14.** The shield reads only `ESP32-S3-N16R8` / `WIFI+BT Model` / `ISM 2.4G 802.11 b/g/n` - no manufacturer, no WROOM designation. An **unbranded third-party module**, pin-compatible with the WROOM-1 and carrying the same 16 MB flash / 8 MB octal PSRAM. |
 | Antenna | **Both** a PCB antenna and a U.FL/IPEX socket, selected by a solder jumper. See section 4. |
 | Regulator | AMS1117-3.3 (SOT-223) |
 | USB | **Two** Type-C ports: one native ESP32-S3 USB/OTG on GPIO19/20, one USB-serial via **CH343P** |
@@ -37,12 +37,17 @@ from a photograph.
 | Carrier | MRD076A "Terminal Adapter for ESP32-S3", 84.5 x 73.7 mm, all pins on screw terminals |
 | In the box | DevKit, carrier board, U.FL-to-SMA pigtail, 2 dBi SMA antenna |
 
-### The module is a clone
+### The module is an unbranded clone
 
 Not a problem in itself - it is pin-compatible and carries the same N16R8 configuration - but it
 means the Espressif datasheet is a **reference, not a guarantee** for this specific board. RF
 performance and the seller's "2 dB" antenna gain claim are unverified. If anything RF-related
 behaves oddly, this is the first thing to suspect.
+
+**The seller's photos showed two different modules** - one labelled `sparkleIoT XH-S3E`, one
+generic. The delivered board is the generic one. Practical consequence: **the label cannot be used
+to look up which antenna variant this is.** There is no datasheet to consult, so the antenna
+question in section 4 has to be answered by looking at the board itself.
 
 ## 3. Pin plan mapped to the carrier terminals
 
@@ -184,7 +189,8 @@ The guide's rule stands for both ports: **external 5 V off while USB is connecte
 
 ## 6. Test
 
-- [ ] Read the module silkscreen and confirm N16R8
+- [x] Read the module silkscreen and confirm N16R8 - done 2026-09-14, reads `ESP32-S3-N16R8`
+- [ ] Locate the U.FL socket and the antenna solder jumper, and record which position it ships in
 - [ ] **Verify the carrier terminal order against section 3** - it was transcribed from a product
       photo, not from the board in hand
 - [ ] Blink and serial test over the CH343P port
@@ -198,6 +204,7 @@ The guide's rule stands for both ports: **external 5 V off while USB is connecte
 
 | Point | Decide by | Who |
 |-------|-----------|-----|
+| Which position the antenna jumper ships in on this board | first bench evening | Andreas |
 | Onboard antenna sufficient, or do the rework? | after the RSSI measurement | both |
 | Which GPIO carries the WS2812 | first bench evening | both |
 | Whether to fit the carrier at all, or keep the original all-perfboard plan | before drilling the enclosure | both |
