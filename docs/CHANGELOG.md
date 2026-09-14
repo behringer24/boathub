@@ -97,6 +97,15 @@ find when rebuilding the system or revising the board.
   protection. Deliberately no clamping diodes - their capacitance would cost more in edge quality
   than they buy at 3.3 V (I3).
 
+- Bill of materials audited against every design document and restructured: a **Phase** column says
+  when each part is first needed, review additions folded into the functional sections, and an
+  "order now" summary at the top. Gaps closed that the design documents had introduced without
+  reaching the list - most importantly the **1 kΩ series resistor into ADS1115 A0**, which is the
+  safety part that makes reverse polarity survivable (B3).
+- Inventory update 2026-09-14: 2 x DevKit sets, 3 x ADS1115, 3 x SHT3x, 3 x DS18B20 and a soldering
+  iron in stock. The only remaining phase A purchase is a resistor assortment - without a 1-Wire
+  pull-up the DS18B20 cannot work at all.
+
 ### Security
 
 - Recorded that SeaTalk TX has no fail-safe in the original design: an ESP32 GPIO is

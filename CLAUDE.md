@@ -22,6 +22,7 @@
   | anything notable | `docs/CHANGELOG.md` (hardware marked **[HW]**) |
   | work package status | `docs/ROADMAP.md` |
   | parts, prices, sources, order status | `docs/MATERIAL.md` |
+  | a design document's own parts table | reconcile it into `docs/MATERIAL.md` in the same commit - the design doc is the rationale, MATERIAL.md is the single orderable list |
   | new or changed feature | design document in `docs/design/` plus its index |
   | pin assignment, architecture, safety rules | `README.md` |
 

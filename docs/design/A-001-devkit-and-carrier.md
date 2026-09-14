@@ -132,6 +132,12 @@ sufficient. The honest way to decide is to measure rather than to assume.
 Doing it in this order means the risky rework is only attempted when there is evidence it is
 needed, and there is a before/after number to prove it worked.
 
+**Two boards make this much better.** With a second identical DevKit on hand, the rework stops
+being a one-way bet: rework one board, leave the other stock, and measure both at the same spot at
+the same time. That is a direct A/B comparison instead of a before/after one, so it is not confused
+by the marina AP changing channel or a neighbour's boat moving between the two measurements. It
+also means a botched rework costs nothing - the stock board is still there.
+
 ## 5. Consequences for the rest of the build
 
 ### The carrier replaces part of the perfboard
