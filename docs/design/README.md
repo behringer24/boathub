@@ -71,6 +71,29 @@ In reading order.
 | then | [A-006](A-006-telemetry-storage.md) | Telemetry storage and dashboard |
 | last, on the bench | [B-001](B-001-power-supply.md) | Power supply and battery measurement |
 
+## Checking a board
+
+The firmware reports flash size and PSRAM on every boot, and writes and reads a megabyte of PSRAM
+to prove the figure rather than trust it:
+
+```
+chip:  ESP32-S3 rev 0, 2 cores, 240 MHz
+flash: 16 MB
+psram: 8 MB, write/read ok
+```
+
+Anything else and the board is not the configuration these documents assume - most likely a
+different module in a set sold under the same description, or a changed build setting.
+
+A separate `bringup` firmware goes further: it dumps the partition table and identifies the RGB LED
+pin. Two occasions justify it. **A board you have not used before**, because sets sold as "ESP32-S3
+N16R8 DevKitC-1" vary. And **a board whose firmware will not run**, because `bringup` needs neither
+Wi-Fi nor a broker nor stored configuration, so it separates a hardware fault from a firmware one.
+
+```
+pio run -d board -e bringup -t upload -t monitor
+```
+
 ## Writing a new one
 
 1. Copy [TEMPLATE.md](TEMPLATE.md).
