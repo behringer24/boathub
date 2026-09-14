@@ -2,7 +2,8 @@
 
 | | |
 |---|---|
-| **Stage** | 1, phase A |
+| **Phase** | A |
+| **Software version** | v1 |
 | **Touches hardware** | yes (breadboard only) |
 
 > Design documents are numbered in creation order. This one is **the first thing to build** -
