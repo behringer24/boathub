@@ -44,7 +44,7 @@ deliberate: they cover later stages and mistakes.
 | Part | Qty | Purpose / requirement | Price | Status | Source |
 |------|-----|-----------------------|-------|--------|--------|
 | 82 kΩ 0.1 % + 10 kΩ 0.1 % | 1 each | battery voltage divider, factor 9.2 | ~5-10 (pack) | needed | [Amazon search](https://www.amazon.de/s?k=82k+10k+0.1%25+Praezisionswiderstand) |
-| 4.7 kΩ resistors | 3-4 | DS18B20 pull-ups to 3.3 V | from assortment | needed | [Amazon search](https://www.amazon.de/s?k=Metallschicht+Widerstand+Sortiment+1%25) |
+| 4.7 kΩ resistors | 3-4 | DS18B20 pull-ups per the original guide - **superseded by 2.2 kΩ below** for the 5 m probes (I3) | from assortment | needed | [Amazon search](https://www.amazon.de/s?k=Metallschicht+Widerstand+Sortiment+1%25) |
 
 ### Assembly and enclosure
 
@@ -74,7 +74,8 @@ deliberate: they cover later stages and mistakes.
 
 | Part | Qty | Purpose / requirement | Price | Status | Finding |
 |------|-----|-----------------------|-------|--------|---------|
-| 2.2 kΩ and 3.3 kΩ resistors | 3-4 each | alternative 1-Wire pull-ups; 4.7 kΩ is marginal on 5 m probes | from assortment | needed | I3 |
+| 2.2 kΩ resistors | 3-4 | **1-Wire pull-ups, the value to fit** - 4.7 kΩ is the textbook value but marginal at 5 m | from assortment | needed | I3 |
+| 3.3 kΩ resistors | 3-4 | 1-Wire pull-up fallback, if 2.2 kΩ ever proves too strong | from assortment | needed | I3 |
 | 100 Ω resistors | 3-4 | series protection in the DS18B20 DATA lines | from assortment | needed | I3 |
 | 4-core twisted/shielded cable, max 3 m | 1 | I2C run to the SHT31 outside box and cabinet: 3.3 V, GND, SDA, SCL | ~5-10 | needed | I1a |
 | Pressure-equalisation vent membrane (Gore-type) | 1 | stops condensation inside the sealed box | ~8-15 | needed | I7 |
