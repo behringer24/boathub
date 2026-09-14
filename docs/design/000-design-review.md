@@ -340,7 +340,7 @@ Answered 2026-09-13.
 | 1 | Is there shore power / a charger at the berth? | **Yes - the boat is permanently on shore power while unattended.** | B1 resolved: continuous operation, no duty cycling. But see B1a below - this changes what the battery voltage *means*. |
 | 2 | How far is the SHT31 mounting point from the enclosure? | Not fixed yet; it will sit **outside the box and outside the cabinet** that holds the S1. | Keep the I2C run to **2 m maximum** and stiffen the pull-up - see I1a below. Fix the exact point before the cable gland is drilled. |
 | 3 | Minimum supply voltage of the 4-20 mA probe? | Unknown - the probe is not bought yet. | Becomes a **purchase criterion**: pick a probe specified from 9-10 V up. Default to the **50 Ω shunt** regardless, which makes the question far less critical. |
-| 4 | Is the DevKit a WROOM-1**U** with a U.FL connector? | **Neither.** It is a third-party module (sparkleIoT XH-S3E) carrying **both** a PCB antenna and a U.FL socket, selected by a solder jumper - and it ships set to the PCB antenna. | Resolved in [002-devkit-and-carrier.md](002-devkit-and-carrier.md). The supplied external antenna **does nothing until the jumper is moved** - see M9a. |
+| 4 | Is the DevKit a WROOM-1**U** with a U.FL connector? | **Neither.** It is a third-party module (sparkleIoT XH-S3E) carrying **both** a PCB antenna and a U.FL socket, selected by a solder jumper - and it ships set to the PCB antenna. | Resolved in [A-001-devkit-and-carrier.md](A-001-devkit-and-carrier.md). The supplied external antenna **does nothing until the jumper is moved** - see M9a. |
 | 5 | Is the bilge probe's stainless sheath bonded to GND internally? | Unknown. | **Bench check with a multimeter** - see below. Now more urgent, see I8a. |
 
 ### M9a - the external antenna is not connected as delivered (new, supersedes M9)
@@ -358,7 +358,7 @@ always be fitted before transmitting.
 
 The guide's assumption that an external antenna would be mounted high in the compartment is
 therefore **not free**. Decision and measurement procedure: see
-[002-devkit-and-carrier.md](002-devkit-and-carrier.md) section 4 - assemble with the onboard
+[A-001-devkit-and-carrier.md](A-001-devkit-and-carrier.md) section 4 - assemble with the onboard
 antenna, measure RSSI at the real mounting point, and only rework if it falls short.
 
 ### How to answer 5 on the bench
@@ -381,13 +381,13 @@ What the measurement now delivers instead is the single most valuable alarm in t
 That is worth more than the original trend monitoring, and it only works because of fix B3: a
 drifting ±80 mV error would sit right on top of the charging/on-battery decision threshold, which
 is only about 0.3 V wide. The threshold values themselves live in
-[001-power-supply.md](001-power-supply.md) and are tuned to the AGM bank - they are deliberately
+[B-001-power-supply.md](B-001-power-supply.md) and are tuned to the AGM bank - they are deliberately
 not repeated here, so they cannot drift apart.
 
 The runtime estimate from B1 also flips from a warning into a specification: after shore power
 fails, the BoatHub keeps monitoring **for roughly four to six weeks** before it becomes a burden on
 the battery. The low-voltage cutoff is still needed, but as a backstop rather than a normal
-operating mode - see [001-power-supply.md](001-power-supply.md).
+operating mode - see [B-001-power-supply.md](B-001-power-supply.md).
 
 ### I1a - how long the I2C run to the SHT31 may actually be (new)
 

@@ -1,10 +1,10 @@
-# 001 - Power supply and battery measurement
+# B-001 - Power supply and battery measurement
 
 | | |
 |---|---|
 | **Status** | Draft |
-| **Stage** | 1, phase 1B |
-| **Roadmap package** | 1B.1 - 1B.5 |
+| **Stage** | 1, phase B |
+| **Roadmap package** | B.1 - B.5 |
 | **Created** | 2026-09-13 |
 | **Last changed** | 2026-09-13 |
 | **Touches hardware** | yes |
@@ -21,7 +21,7 @@ B1a (what the voltage means under a charger) from [000-design-review.md](000-des
 from the DevKit's onboard regulator, which has ample headroom for the <20 mA the sensors draw).
 
 > **This is not the first thing to build.** The sensor set and the whole network stack are proven
-> on USB power first - see [003-bench-setup-usb.md](003-bench-setup-usb.md). Everything here comes
+> on USB power first - see [A-002-bench-setup-usb.md](A-002-bench-setup-usb.md). Everything here comes
 > at the *end* of the bench phase, so that a brownout later can be blamed on the converter rather
 > than on the firmware. The changeover procedure is in 003, section 8.
 

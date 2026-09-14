@@ -44,7 +44,7 @@ network.
 
 - **Controller:** 1 x ESP32-S3 N16R8 DevKitC-1 (third-party module, on a screw-terminal carrier
   board). Ships with an onboard PCB antenna; the bundled external antenna needs a solder rework to
-  activate - see [docs/design/002-devkit-and-carrier.md](docs/design/002-devkit-and-carrier.md)
+  activate - see [docs/design/A-001-devkit-and-carrier.md](docs/design/A-001-devkit-and-carrier.md)
 - **Temperature:** 3 x DS18B20 (engine bay, bilge water, fridge), each on its own 1-Wire GPIO
 - **Cabin climate:** SHT31-D (I2C, address 0x44)
 - **Analog:** 3 x ADS1115 (0x48 / 0x49 / 0x4A) on the shared I2C bus
@@ -94,7 +94,7 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
   failed - the remaining capacity belongs to the bilge pump.
 - The shore-power-loss alarm is gated on at least 6 hours of prior charging, so it stays quiet
   underway where running on the battery is normal. See
-  [docs/design/001-power-supply.md](docs/design/001-power-supply.md).
+  [docs/design/B-001-power-supply.md](docs/design/B-001-power-supply.md).
 
 ## Repository layout
 
@@ -103,10 +103,11 @@ docs/
 ├── ROADMAP.md          stages, acceptance criteria, build evenings
 ├── CHANGELOG.md        project change log
 ├── MATERIAL.md         bill of materials and tools
-├── design/             per-feature design documents (+ TEMPLATE.md)
-│   ├── 000-design-review.md   spec validation of the whole design
-│   ├── 001-power-supply.md    12 V input, protection, battery measurement
-│   └── 002-devkit-and-carrier.md   DevKit, carrier board and antenna
+├── design/             per-feature design documents, named <PHASE>-NNN-* (+ TEMPLATE.md)
+│   ├── 000-design-review.md          spec validation of the whole design
+│   ├── A-001-devkit-and-carrier.md   DevKit, carrier board and antenna
+│   ├── A-002-bench-setup-usb.md      the USB bench build - start here
+│   └── B-001-power-supply.md         12 V input, protection, battery measurement
 └── reference/          source documents (project guide PDF)
 ```
 
@@ -114,10 +115,10 @@ Conventions for working in this repository: [CLAUDE.md](CLAUDE.md)
 
 ## Next step
 
-**Phase 1A** - the bench build on USB power: ESP32 over the CH343P port, then DS18B20, SHT31 and
+**Phase A** - the bench build on USB power: ESP32 over the CH343P port, then DS18B20, SHT31 and
 ADS1115, then Wi-Fi and the server uplink. **No 12 V anywhere yet.** Start here:
-[docs/design/003-bench-setup-usb.md](docs/design/003-bench-setup-usb.md).
+[docs/design/A-002-bench-setup-usb.md](docs/design/A-002-bench-setup-usb.md).
 
-The 12 V supply (phase 1B) is built only once the whole sensor and network stack has run 24 hours
+The 12 V supply (phase B) is built only once the whole sensor and network stack has run 24 hours
 on USB without intervention - so that a brownout later can be blamed on the converter rather than
 on the firmware.

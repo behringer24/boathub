@@ -1,10 +1,10 @@
-# 002 - DevKit, carrier board and antenna
+# A-001 - DevKit, carrier board and antenna
 
 | | |
 |---|---|
 | **Status** | Draft |
-| **Stage** | 1, phases 1A and 1C |
-| **Roadmap package** | 1A.1, 1C.2 |
+| **Stage** | 1, phases A and C |
+| **Roadmap package** | A.1, C.2 |
 | **Created** | 2026-09-13 |
 | **Last changed** | 2026-09-13 |
 | **Touches hardware** | yes |
@@ -148,7 +148,7 @@ guide asked for ("do not solder the DevKit in permanently").
 | Perfboard (smaller than planned) | fuse, TVS, 1N5822, DC/DC, bulk caps, battery divider, 1-Wire pull-ups and series resistors, 4-20 mA shunt |
 
 The perfboard still earns its place: **the carrier's terminals connect straight to bare GPIOs with
-no protection**, so every pull-up, series resistor and filter from [001](001-power-supply.md) and
+no protection**, so every pull-up, series resistor and filter from [B-001](B-001-power-supply.md) and
 the sensor documents still has to live somewhere.
 
 ### Mechanical
@@ -166,7 +166,7 @@ Two items to fold into the B1 estimate:
 
 This does not change the conclusion - shore power is confirmed - but it does mean the DevKit
 overhead is nearer 10-18 mA than the 5-8 mA assumed in B1. The measurement in the
-[001](001-power-supply.md) test plan settles it either way.
+[B-001](B-001-power-supply.md) test plan settles it either way.
 
 For a permanent installation the PWR LED and the CH343P are wasted current and can be removed, but
 with shore power there is no reason to bother.
@@ -199,5 +199,5 @@ The guide's rule stands for both ports: **external 5 V off while USB is connecte
 ## 8. References
 
 - [000-design-review.md](000-design-review.md) - open question 4, findings M8, M9, M5
-- [001-power-supply.md](001-power-supply.md) - 5 V feed and current budget
+- [B-001-power-supply.md](B-001-power-supply.md) - 5 V feed and current budget
 - [ESP32-S3-DevKitC-1 hardware reference](https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32s3/hw-reference/esp32s3/user-guide-devkitc-1.html)

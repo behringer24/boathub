@@ -28,11 +28,11 @@ find when rebuilding the system or revising the board.
 
 - `docs/design/000-design-review.md`: validation of the whole design against the component
   datasheets - 3 blockers, 8 important findings, 11 minor ones, plus the missing parts per stage.
-- `docs/design/001-power-supply.md`: 12 V input protection, battery measurement, and the battery
+- `docs/design/B-001-power-supply.md`: 12 V input protection, battery measurement, and the battery
   state machine including shore-power-loss detection.
 - Shore-power-loss alarm as a work package (1.6a). With a charger running, the battery voltage no
   longer reports state of charge - what it reports instead is whether the charger is still there.
-- `docs/design/002-devkit-and-carrier.md`: identifies the actually-delivered board (a third-party
+- `docs/design/A-001-devkit-and-carrier.md`: identifies the actually-delivered board (a third-party
   sparkleIoT XH-S3E module on an MRD076A screw-terminal carrier), maps the project pin plan onto
   the carrier's terminals, and lists the terminals that must not be used.
 
@@ -75,13 +75,18 @@ find when rebuilding the system or revising the board.
 - Recorded that a current shunt for Ah counting was considered and rejected: bus-based monitors are
   NMEA2000 devices ("SeaTalkNG" is not SeaTalk1) and are unpowered exactly when the marina alarm
   matters.
-- `docs/design/003-bench-setup-usb.md`: the USB-powered bench build - power path, current budget,
+- `docs/design/A-002-bench-setup-usb.md`: the USB-powered bench build - power path, current budget,
   how to prove the ADS1115 without a 12 V supply, deliberate failure-mode tests, and the USB-to-12 V
   changeover procedure.
-- Stage 1 restructured into three phases: **1A** bench on USB power, **1B** power supply, **1C**
+- Stage 1 restructured into three phases: **A** bench on USB power, **B** power supply, **C**
   installation. The 12 V work moves to the end of the bench phase, matching the sequence the
-  project guide already specified. Package numbers now carry the phase (1A.1, 1B.2, ...) so the
+  project guide already specified. Package numbers now carry the phase (A.1, B.2, ...) so the
   table reads as build order.
+- Design documents renamed to `<PHASE>-NNN-*` with numbering restarting per phase, so an insertion
+  into one phase never renumbers another. Done now, while nothing outside the repository cites
+  them: `001-power-supply` → `B-001-power-supply`, `002-devkit-and-carrier` → `A-001-…`,
+  `003-bench-setup-usb` → `A-002-…`. The design review keeps the bare `000` as project-wide
+  reference material with no phase.
 
 ### Security
 

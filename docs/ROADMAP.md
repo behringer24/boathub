@@ -25,48 +25,48 @@ browns out later, you already know it is not the firmware.
 
 Package numbers carry the phase, so they stay readable as build order.
 
-#### Phase 1A - bench build on USB power
+#### Phase A - bench build on USB power
 
 No 12 V anywhere. The ESP is powered from the CH343P USB-C port, the sensors from its 3.3 V rail.
 
 | # | Package | Status | Design doc |
 |---|---------|--------|------------|
-| 1A.0 | Decide the power concept (B1) | **done** - permanently on shore power in the marina, 2 x 100 Ah AGM, no solar or wind | [000](design/000-design-review.md) |
-| 1A.1 | Toolchain set up, blink and serial test on the CH343P port; confirm N16R8 and carrier pinout | open | [002](design/002-devkit-and-carrier.md), [003](design/003-bench-setup-usb.md) |
-| 1A.2 | DS18B20 engine bay / bilge / fridge (GPIO4/5/6), pull-up value chosen with the real 5 m cables (I3) | open | [003](design/003-bench-setup-usb.md) |
-| 1A.3 | SHT31-D cabin climate (I2C 0x44) | open | [003](design/003-bench-setup-usb.md) |
-| 1A.4 | ADS1115 x3 (0x48/0x49/0x4A) against a known reference voltage, PGA fixed (M2) | open | [003](design/003-bench-setup-usb.md) |
-| 1A.5 | SoftAP BOOT-NETZ plus local configuration web UI | open | planned |
-| 1A.6 | Station mode, Wi-Fi credentials in NVS (home Wi-Fi for now, not the marina) | open | planned |
-| 1A.7 | Server uplink: MQTT over TLS, telemetry, heartbeat, last will | open | planned |
-| 1A.8 | Alarm and threshold logic for the sensors that exist yet - frost, fridge too warm, humidity | open | planned |
-| 1A.9 | Fault handling and watchdog: decouple sensor failures from the network path | open | planned |
+| A.0 | Decide the power concept (B1) | **done** - permanently on shore power in the marina, 2 x 100 Ah AGM, no solar or wind | [000](design/000-design-review.md) |
+| A.1 | Toolchain set up, blink and serial test on the CH343P port; confirm N16R8 and carrier pinout | open | [A-001](design/A-001-devkit-and-carrier.md), [A-002](design/A-002-bench-setup-usb.md) |
+| A.2 | DS18B20 engine bay / bilge / fridge (GPIO4/5/6), pull-up value chosen with the real 5 m cables (I3) | open | [A-002](design/A-002-bench-setup-usb.md) |
+| A.3 | SHT31-D cabin climate (I2C 0x44) | open | [A-002](design/A-002-bench-setup-usb.md) |
+| A.4 | ADS1115 x3 (0x48/0x49/0x4A) against a known reference voltage, PGA fixed (M2) | open | [A-002](design/A-002-bench-setup-usb.md) |
+| A.5 | SoftAP BOOT-NETZ plus local configuration web UI | open | planned |
+| A.6 | Station mode, Wi-Fi credentials in NVS (home Wi-Fi for now, not the marina) | open | planned |
+| A.7 | Server uplink: MQTT over TLS, telemetry, heartbeat, last will | open | planned |
+| A.8 | Alarm and threshold logic for the sensors that exist yet - frost, fridge too warm, humidity | open | planned |
+| A.9 | Fault handling and watchdog: decouple sensor failures from the network path | open | planned |
 
 **Milestone:** a working monitor that runs off any USB charger and reports to the server. Not the
 final system - no battery measurement, no 12 V robustness - but a real, testable deliverable.
 
-#### Phase 1B - power supply, still on the bench
+#### Phase B - power supply, still on the bench
 
 Only now does anything get built for 12 V.
 
 | # | Package | Status | Design doc |
 |---|---------|--------|------------|
-| 1B.1 | 12 V supply board: fuse, **TVS ahead of the Schottky (B2)**, reverse-polarity protection, DC/DC | open | [001](design/001-power-supply.md) |
-| 1B.2 | Battery divider 82k/10k, **tapped upstream of the Schottky (B3)**, calibration | open | [001](design/001-power-supply.md) |
-| 1B.3 | Battery state machine, AGM thresholds, debouncing (B1a) | open | [001](design/001-power-supply.md) |
-| 1B.4 | Shore-power-loss alarm gated on ≥6 h prior charging, so it stays quiet underway | open | [001](design/001-power-supply.md) |
-| 1B.5 | **Changeover from USB to 12 V** - never both at once | open | [001](design/001-power-supply.md) |
-| 1B.6 | Optional: bilge level 4-20 mA, calibrated, shunt value per compliance budget (I2) | open | planned |
+| B.1 | 12 V supply board: fuse, **TVS ahead of the Schottky (B2)**, reverse-polarity protection, DC/DC | open | [B-001](design/B-001-power-supply.md) |
+| B.2 | Battery divider 82k/10k, **tapped upstream of the Schottky (B3)**, calibration | open | [B-001](design/B-001-power-supply.md) |
+| B.3 | Battery state machine, AGM thresholds, debouncing (B1a) | open | [B-001](design/B-001-power-supply.md) |
+| B.4 | Shore-power-loss alarm gated on ≥6 h prior charging, so it stays quiet underway | open | [B-001](design/B-001-power-supply.md) |
+| B.5 | **Changeover from USB to 12 V** - never both at once | open | [B-001](design/B-001-power-supply.md) |
+| B.6 | Optional: bilge level 4-20 mA, calibrated, shunt value per compliance budget (I2) | open | planned |
 
-#### Phase 1C - installation in the boat
+#### Phase C - installation in the boat
 
 | # | Package | Status | Design doc |
 |---|---------|--------|------------|
-| 1C.1 | Enclosure, cable labelling, vent membrane against condensation (I7) | open | - |
-| 1C.2 | RSSI measurement at the real mounting point; solder the antenna jumper only if it falls short (M9a) | open | [002](design/002-devkit-and-carrier.md) |
-| 1C.3 | Marina Wi-Fi credentials, server reachable from home | open | planned |
-| 1C.4 | Deferred: NAPT/NAT so clients reach the internet through the ESP | deferred | planned |
-| 1C.5 | Deferred: water tank temperature (GPIO7) | deferred | - |
+| C.1 | Enclosure, cable labelling, vent membrane against condensation (I7) | open | - |
+| C.2 | RSSI measurement at the real mounting point; solder the antenna jumper only if it falls short (M9a) | open | [A-001](design/A-001-devkit-and-carrier.md) |
+| C.3 | Marina Wi-Fi credentials, server reachable from home | open | planned |
+| C.4 | Deferred: NAPT/NAT so clients reach the internet through the ESP | deferred | planned |
+| C.5 | Deferred: water tank temperature (GPIO7) | deferred | - |
 
 ### Acceptance criteria
 
