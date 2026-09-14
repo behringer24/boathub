@@ -13,6 +13,30 @@ namespace {
 WebServer server(80);
 DNSServer dns;
 
+// The portal changes where telemetry goes and what the access point password
+// is, and it asks for no credentials of its own. Reachable from the station
+// side that would mean anyone on the marina network could point the boat at
+// their own broker or lock us out of BOOT-NETZ. So: access point only.
+bool fromAccessPoint() {
+  const IPAddress peer = server.client().remoteIP();
+  const IPAddress ap = WiFi.softAPIP();
+  const IPAddress mask = WiFi.softAPSubnetMask();
+  for (int i = 0; i < 4; i++) {
+    if ((peer[i] & mask[i]) != (ap[i] & mask[i])) return false;
+  }
+  return true;
+}
+
+// Returns false when the request has already been answered with a refusal.
+bool allowed() {
+  if (fromAccessPoint()) return true;
+  Serial.printf("[portal] refused %s - not on the access point\n",
+                server.client().remoteIP().toString().c_str());
+  server.send(403, "text/plain",
+              "Configuration is only available on the BOOT-NETZ access point.\n");
+  return false;
+}
+
 String esc(const String &in) {
   String out;
   out.reserve(in.length() + 8);
@@ -50,6 +74,7 @@ String field(const char *name, const char *label, const String &value, const cha
 }
 
 void handleRoot() {
+  if (!allowed()) return;
   const Config &c = config::get();
 
   String h = F("<!doctype html><meta charset=utf-8>"
@@ -93,6 +118,7 @@ void handleRoot() {
 }
 
 void handleSave() {
+  if (!allowed()) return;
   Config in = config::get();
 
   if (server.hasArg("boat_id")) in.boatId = server.arg("boat_id");
@@ -129,6 +155,7 @@ void handleSave() {
 }
 
 void handleStatus() {
+  if (!allowed()) return;
   const Config &c = config::get();
   String j = "{\"state\":\"";
   j += net::stateName();
@@ -158,6 +185,7 @@ void begin() {
   server.on("/save", HTTP_POST, handleSave);
   server.on("/status", HTTP_GET, handleStatus);
   server.onNotFound([]() {
+    if (!allowed()) return;
     server.sendHeader("Location", "http://192.168.4.1/", true);
     server.send(302, "text/plain", "");
   });

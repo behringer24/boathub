@@ -100,8 +100,19 @@ query with the AP's own address so that a phone offers the page by itself. Brows
 an empty field on save means "keep what is stored", so the page can be used to change the SSID
 without retyping the password.
 
-The page is served over plain HTTP on the local access point. That is acceptable because the
-access point itself is WPA2-protected and the page is not reachable from the station side.
+### Access point only
+
+The portal asks for no credentials of its own, and it can change where telemetry goes and what the
+`BOOT-NETZ` password is. **Every route therefore refuses requests that do not come from the access
+point subnet**, comparing the peer address against `softAPIP()` masked with `softAPSubnetMask()`,
+and answering 403 otherwise.
+
+Without that the page would be reachable from the station side as well, because the web server
+binds to every interface. In a marina that means anyone on the same network could point the boat at
+their own broker or lock the owner out of the local network.
+
+What remains is plain HTTP over a WPA2-protected access point, with physical proximity as the
+access control. That is proportionate for a configuration page on a boat.
 
 ### What the page must not do
 
@@ -128,6 +139,7 @@ access point, which is exactly the behaviour the rest of the design works to avo
 - [ ] A reflash keeps the configuration - NVS survives, because the partition layout is fixed
 - [ ] Wrong password: the board keeps retrying and the portal is still reachable
 - [ ] `GET /status` reports station address and RSSI
+- [ ] The same page requested from the station side is refused with 403, and the refusal is logged
 
 ## 7. References
 
