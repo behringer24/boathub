@@ -9,6 +9,7 @@
 
 #include <Arduino.h>
 
+#include "button.h"
 #include "config.h"
 #include "net.h"
 #include "portal.h"
@@ -32,6 +33,7 @@ void setup() {
   portal::begin();
   uplink::begin();
   status::begin();
+  button::begin();
 }
 
 void loop() {
@@ -42,6 +44,7 @@ void loop() {
   portal::loop();
   uplink::loop();
   status::loop();
+  button::loop();
 
   static uint32_t lastReport = 0;
   const uint32_t now = millis();

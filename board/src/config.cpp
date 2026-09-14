@@ -57,6 +57,14 @@ void begin() {
 
 Config &get() { return cfg; }
 
+void resetApPassword() {
+  cfg.apPass = "boathub-" + suffix;
+  prefs.begin(NS, /*readOnly=*/false);
+  prefs.putString("ap_pass", cfg.apPass);
+  prefs.end();
+  Serial.printf("[config] access point password reset to \"%s\"\n", cfg.apPass.c_str());
+}
+
 const String &macSuffix() { return suffix; }
 
 void save(const Config &incoming) {

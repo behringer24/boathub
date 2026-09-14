@@ -16,6 +16,10 @@ void loop();
 
 bool connected();
 
+// Publish at the next opportunity instead of waiting for the interval. Used by
+// the BOOT button: stand at the box, press, and watch the server.
+void publishNow();
+
 // Short human-readable state for the configuration page and the serial log.
 const char *statusText();
 
