@@ -36,8 +36,29 @@ find when rebuilding the system or revising the board.
   sparkleIoT XH-S3E module on an MRD076A screw-terminal carrier), maps the project pin plan onto
   the carrier's terminals, and lists the terminals that must not be used.
 
+- `board/`: PlatformIO firmware project for the ESP32-S3 N16R8, in its own subdirectory so the
+  telemetry server can later live beside it in `server/`. PlatformIO ships no board definition for
+  this module, so `esp32-s3-devkitc-1` - the N8 variant without PSRAM - is used with explicit
+  overrides: 16 MB flash and `board_build.arduino.memory_type = qio_opi` for the octal PSRAM.
+- `board/partitions.csv`: 16 MB layout - two 5 MB app slots, 6 MB LittleFS for the later track
+  logger, 64 kB core dump. Pinned down before the first flash on purpose, because changing the
+  layout afterwards erases NVS, which is where the Wi-Fi and server credentials are to live.
+- `board/src/main.cpp`: bring-up firmware for A.1. It verifies flash size, PSRAM and the partition
+  table over the CH343P port rather than only blinking an LED, so a wrong board configuration
+  cannot pass as success.
+- `boathub.code-workspace`: multi-root workspace, so the PlatformIO extension picks up the project
+  in `board/` while the documentation stays open at the repository root.
+
 ### Changed
 
+- Toolchain question resolved: **PlatformIO, not the Arduino IDE** (A-002 section 9,
+  `docs/MATERIAL.md`). The N16R8 overrides have to be checked in and reviewable, which IDE menu
+  settings cannot provide.
+- **[HW]** WS2812 RGB LED confirmed on **GPIO48** of the delivered board, added to the pin table in
+  the README as reserved.
+- **[HW]** Octal PSRAM confirmed working on the delivered board (8 386 279 bytes usable, 1 MB
+  write/read test passed). This is the empirical proof that GPIO33-37 are occupied and must stay
+  off the project pin plan - until now that was only derived from the datasheet.
 - Documentation language switched to English; only the source PDF stays German until it is
   rewritten.
 - **[HW]** Input protection reordered: the TVS now sits **ahead of** the 1N5822 instead of behind

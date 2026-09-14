@@ -196,9 +196,13 @@ costs a board.
 
 | Point | Decide by | Who |
 |-------|-----------|-----|
-| Arduino IDE or PlatformIO | before A.1 | Andreas |
 | Whether an adjustable bench PSU is available for the level 2 divider test | before A.4 | Andreas |
 | MQTT broker and TLS certificate set up on the Docker host | before A.7 | Andreas |
+
+**Resolved 2026-09-14 - PlatformIO, not the Arduino IDE.** The firmware project lives in `board/`
+with `framework = arduino` on platform 7.1.3 (Arduino core 2.0.17). The deciding argument is that
+the N16R8 needs explicit flash, PSRAM and partition overrides, and PlatformIO keeps those in a
+checked-in, reviewable `platformio.ini` instead of in IDE menu settings.
 
 ## 10. References
 

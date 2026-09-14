@@ -193,9 +193,11 @@ The guide's rule stands for both ports: **external 5 V off while USB is connecte
 - [ ] Locate the U.FL socket and the antenna solder jumper, and record which position it ships in
 - [ ] **Verify the carrier terminal order against section 3** - it was transcribed from a product
       photo, not from the board in hand
-- [ ] Blink and serial test over the CH343P port
-- [ ] Confirm the board boots and PSRAM is detected (proves IO35-37 are in use and off limits)
-- [ ] Verify which GPIO drives the WS2812
+- [x] Blink and serial test over the CH343P port - done 2026-09-14 on COM9 (CH343, `1A86:55D3`)
+- [x] Confirm the board boots and PSRAM is detected (proves IO35-37 are in use and off limits) -
+      done 2026-09-14, `psramInit(): PSRAM enabled`, 8 386 279 bytes usable and a 1 MB write/read
+      test passed. The octal PSRAM is therefore real: IO35-37 stay off the pin plan
+- [x] Verify which GPIO drives the WS2812 - **GPIO48**, confirmed 2026-09-14 by a green blink
 - [ ] Continuity-check each project terminal on the carrier through to the right DevKit pin before
       wiring sensors
 - [ ] RSSI measurement per section 4, in the closed enclosure at the real mounting point

@@ -143,7 +143,7 @@ Many small parts remain over for later stages.
 |------|-------|------|
 | Multimeter with DC voltage measurement | A | also the calibration reference for the battery divider, and used to meter out the probe wire colours before connecting anything (M7) |
 | Breadboard and Dupont cables | A | phase A is built entirely on a breadboard |
-| Laptop with Arduino IDE or PlatformIO | A | which of the two is still open ([A-002](design/A-002-bench-setup-usb.md) section 9) |
+| Laptop with PlatformIO | A | decided 2026-09-14 ([A-002](design/A-002-bench-setup-usb.md) section 9): VS Code with the PlatformIO IDE extension. The firmware project is `board/` |
 | Adjustable bench supply, 0-15 V, current-limited | A | strictly optional, but it allows the battery divider and its calibration factor to be proven in phase A instead of waiting for phase B ([A-002](design/A-002-bench-setup-usb.md) section 4) |
 | Soldering iron approx. 320-350 °C, electronics solder, desoldering braid | **A** | in stock. Needed earlier than expected: the SHT31 and ADS1115 breakouts ship with loose pin headers that must be soldered on before they will sit in a breadboard or a terminal |
 | Side cutters, wire strippers, small pliers, screwdrivers | B | |
