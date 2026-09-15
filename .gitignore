@@ -37,3 +37,7 @@ PROGRESS.md
 
 # --- MQTT broker credentials (hashes, but still not ours to publish) ---
 server/mosquitto/config/passwd
+
+# --- Go build output ---
+server/ingest/ingest
+server/ingest/ingest.exe

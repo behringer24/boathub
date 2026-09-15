@@ -70,18 +70,53 @@ has to require the boat to stay unreachable for a sustained period, not merely t
 once. The genuine case is distinguishable in the broker log: a real outage disconnects with
 `exceeded timeout` after the keepalive lapses, not with `session taken over`.
 
+### The message is an aggregate
+
+The board **measures every 10 s and publishes every 5 min**. A message therefore covers a window
+rather than an instant:
+
+| Field | Meaning |
+|-------|---------|
+| `<sensor>` | the **mean** over the window |
+| `<sensor>_min`, `<sensor>_max` | the extremes within it |
+| `window_s` | how long the window actually covered |
+| `n` | how many measurements went into it - 30 for a full window |
+
+**A mean alone would hide what matters.** The fridge compressor cycles, the bilge pump starts, the
+battery sags under both: those are excursions inside a window, invisible in an average and exactly
+what you want to see. Keeping min and max costs two numbers and preserves them.
+
+**A spot reading is the same shape with `n: 1` and no extremes** - the bare field carries the
+reading. That is what the BOOT button produces and what the first message after a restart looks
+like. There is deliberately no second message format.
+
+Three rates, deliberately independent:
+
+| | Rate | Why |
+|---|---|---|
+| Measuring | 10 s | alarms have to react, and [B-001](B-001-power-supply.md)'s battery state machine decides on a median over minutes |
+| Publishing | 5 min | nothing here changes faster, and these have to be buffered at sea |
+| Alarms | immediate, on `events` | a rising bilge level waits for no interval |
+
+That separation is what lets the bilge be sampled often without storing it often.
+
 ### First payload
 
 ```json
 {
   "ts": "2026-09-14T13:05:00Z",
   "time_valid": true,
+  "window_s": 300,
+  "n": 30,
   "uptime_s": 1234,
   "heap_free": 370244,
   "rssi_dbm": -58,
   "reset_reason": "POWERON"
 }
 ```
+
+Diagnostics are **instantaneous at the moment the window closed**, not aggregated. An averaged
+uptime would be meaningless.
 
 These are not filler. They are the four numbers that explain everything a growing system does
 wrong: `uptime_s` exposes silent restarts, `heap_free` exposes a leak long before it crashes
@@ -118,13 +153,39 @@ an ordering requirement, not a circular one.
 
 ## 5. Publishing
 
-Interval from `pub_secs` in NVS, default **10 s**. A heartbeat rather than a measurement rate -
-nothing in the system changes fast enough to need more.
+Measurement interval `sample_secs`, publish interval `pub_secs`, both in NVS. Defaults **10 s** and
+**300 s**. The BOOT button closes the current window early and sends it - a spot reading with
+`n: 1`.
 
 **Nothing in the publish path blocks.** Connection attempts are polled with the same backoff as the
-station connection, and a broker that is down slows nothing else. If the connection is not up the
-message is dropped rather than queued: telemetry is a heartbeat, and a stale reading delivered
-minutes later is worse than none.
+station connection, and a broker that is down slows nothing else.
+
+### Reversed: unsent messages are buffered, not dropped
+
+An earlier version of this document said the opposite - that a message was dropped when the
+connection was down, because *"telemetry is a heartbeat, and a stale reading delivered minutes
+later is worse than none"*.
+
+**That reasoning was right for a boat lying at a pontoon and wrong for a boat that sails.** Under
+way there is no marina Wi-Fi at all, and Starlink only in phases on longer trips. Dropping would
+mean the entire passage - the part of the record that is not re-measurable - is exactly the part
+that never arrives. A day-old cabin temperature is not worth much; a day-old record of the trip is
+the whole point.
+
+So telemetry stops being only a heartbeat and becomes a **record**:
+
+- every aggregate is written to the buffer in LittleFS, always
+- the uplink drains the buffer whenever a connection exists
+- "live" is simply the case where the buffer is empty and the aggregate goes straight out
+
+One code path, and being offline stops being a mode. The device side of this - buffer format, ring
+buffer behaviour, batching, resumable drain - is its own document, **A-007**, and is not built yet.
+The server side is ready for it: see the delivery guarantees in
+[A-006](A-006-telemetry-storage.md).
+
+What does *not* change: a **stale reading must still be recognisable as stale**. Every record
+carries its own `ts`, and the server stores that alongside its own `received_at`, so a backfilled
+window never masquerades as current.
 
 **PubSubClient's default buffer is 256 bytes** and a full payload will exceed that once the sensors
 are in. Call `setBufferSize()` explicitly rather than discovering the limit as silent message loss.
