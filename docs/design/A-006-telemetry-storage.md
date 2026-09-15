@@ -124,6 +124,11 @@ acknowledgement it sees comes from the *broker*, not from this service. So a mes
 accepts and this service never stores is a measurement gone for good, with nothing anywhere
 reporting a problem.
 
+> **The board cannot hold up its end of this yet.** PubSubClient publishes at QoS 0 only, so today
+> it gets no acknowledgement at all and the chain is open at its very first hop. Replacing the MQTT
+> client is part of [A-007](A-007-store-and-forward.md); everything below is what the server side
+> contributes, and it is in place.
+
 Three settings close that gap:
 
 | Setting | Without it |

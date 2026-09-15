@@ -51,6 +51,13 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   resolution is kept. Thinning is the board's problem, with its 6 MB of flash, not this table's.
   PostGIS is unused so far and present so the track logger needs no migration of the whole
   database.
+- Design **A-007**: the board buffers every aggregate in LittleFS and drains it when a connection
+  exists, so a passage without marina Wi-Fi is recorded rather than lost. Segment files with
+  fixed 64-byte records, a reserved share so track points cannot evict temperature history, and a
+  drain that sends the current state first and the backlog second. Not implemented yet, and it
+  surfaced a blocker: **PubSubClient publishes at QoS 0 only**, so the board gets no acknowledgement
+  and cannot know when a buffered record is safe to delete. The MQTT client has to be replaced
+  before any of it is built.
 - `server/ingest`: a Go service that subscribes to the broker and writes rows. It ignores fields it
   does not know so newer firmware cannot stop it, drops malformed payloads with a log line rather
   than exiting, and retries broker and database independently.
