@@ -15,8 +15,8 @@ The board opens its own access point `BOOT-NETZ` and serves a configuration page
 enter there goes into NVS and survives both a restart and a reflash.
 
 **Out of scope:** the telemetry itself and the broker, which are
-[A-005](A-005-server-uplink.md). NAPT/NAT so clients reach the internet through the ESP - the
-BoatHub is not a router.
+[A-005](A-005-server-uplink.md). NAPT/NAT so that clients on `BOOT-NETZ` reach the internet
+through the ESP - section 2 says why the board does not route.
 
 ## 2. Starting point
 
@@ -37,6 +37,32 @@ every client on `BOOT-NETZ` is disconnected.
 
 This is normal behaviour and has to be designed for rather than fixed: clients must tolerate
 reconnects, and no local UI may treat a dropped socket as anything but routine.
+
+### Not a router
+
+Clients on `BOOT-NETZ` reach the board and each other. They do not reach the internet. The two
+interfaces are not bridged and NAPT is not enabled, so a phone on the access point is given an
+address, a gateway and the configuration page - and nothing beyond it. Phones report that as "no
+internet" and fall back to mobile data. That is the designed behaviour, not a fault to chase.
+
+- **The radio is already the bottleneck.** Access point and station share one antenna on one
+  channel, so every forwarded packet crosses the same airtime twice. Whatever routing costs is
+  taken straight out of the telemetry the board exists to deliver.
+- **The portal depends on answering DNS falsely.** Every name lookup on the access point is
+  answered with the board's own address, which is what makes a phone offer the configuration page
+  by itself. Routing needs a resolver that tells the truth, and the captive-portal behaviour goes
+  with it.
+- **Marina networks usually have a captive portal of their own.** A headless board cannot log into
+  one, and a client behind the board's NAT only awkwardly. In practice the arrangement fails here,
+  before any of the rest matters.
+- **It couples what the rest of the design keeps apart.** As a router the board would owe service
+  to traffic that has nothing to do with its job, and a firmware fault would take the crew's
+  internet access down together with the telemetry.
+
+Where internet access aboard is wanted it belongs on a travel router with two radios, joining the
+marina network as a repeater. The BoatHub then connects to that router as an ordinary station,
+which has the further advantage of a channel that stays put, so `BOOT-NETZ` no longer follows the
+marina around.
 
 ## 3. Behaviour
 
@@ -181,6 +207,7 @@ a locker.
 | Station credentials wrong | association fails repeatedly | stay in `CONNECTING`, keep retrying, portal stays reachable to correct them |
 | Marina access point gone | association lost | back to `CONNECTING` with backoff, no restart |
 | Marina changes channel | clients on `BOOT-NETZ` drop | expected, clients reconnect on their own |
+| A phone on `BOOT-NETZ` reports no internet | - | expected, the board does not route - see section 2 |
 | NVS empty or corrupt | no SSID readable | `PORTAL` - the board is always configurable |
 | Somebody sets an unusable AP password | - | shorter than 8 characters is rejected by the form; WPA2 requires 8 |
 
@@ -188,6 +215,7 @@ a locker.
 
 - [ ] With NVS cleared, `BOOT-NETZ` appears and the serial port prints the generated password
 - [ ] `http://192.168.4.1` serves the form on a phone
+- [ ] A client on `BOOT-NETZ` reaches `192.168.4.1` and nothing beyond it
 - [ ] Saving credentials stores them and the board comes up associated after the restart
 - [ ] Pulling the station network drops the board to `CONNECTING`, and `BOOT-NETZ` stays up
 - [ ] Restoring the network reconnects without a power cycle

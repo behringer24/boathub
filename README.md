@@ -38,7 +38,9 @@ Sensors (1-Wire / I2C / 4-20 mA)
                                               └── Grafana / web dashboard
 ```
 
-The ESP opens the internet connection outbound. No inbound ports are needed in the marina network.
+The ESP opens the internet connection outbound. No inbound ports are needed in the marina network,
+and the board does not route between its two networks - `BOOT-NETZ` reaches the board, not the
+internet.
 
 **The two networks share one radio.** In AP+STA mode the SoftAP is forced onto whatever channel the
 station connects to, so when the marina access point changes channel - many do so automatically -
