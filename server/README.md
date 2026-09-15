@@ -105,7 +105,18 @@ docker exec -it boathub-db psql -U boathub -d boathub
 ```
 
 ```sql
-SELECT received_at, boat_id, uptime_s, heap_free, rssi_dbm FROM telemetry ORDER BY received_at DESC LIMIT 10;
+-- Most recent aggregates. n is how many measurements went into each window.
+SELECT received_at, boat_id, n, window_s, uptime_s, heap_free, rssi_dbm
+  FROM telemetry ORDER BY received_at DESC LIMIT 10;
+
+-- Sensors: the bare column is the mean, _min/_max the extremes in that window.
+SELECT received_at, battery_v_min, battery_v, battery_v_max
+  FROM telemetry WHERE battery_v IS NOT NULL ORDER BY received_at DESC LIMIT 10;
+
+-- Windows that were not full: the board missed measurements.
+SELECT received_at, n, window_s FROM telemetry
+  WHERE n IS NOT NULL AND n < 30 ORDER BY received_at DESC LIMIT 20;
+
 SELECT * FROM boat_status ORDER BY received_at DESC LIMIT 10;
 ```
 
@@ -118,13 +129,23 @@ docker exec -it boathub-mqtt mosquitto_sub -h localhost -p 1883 -u boathub -P '<
 ## Topics
 
 ```
-boathub/<boat-id>/telemetry     measurements, every 10 s by default
+boathub/<boat-id>/telemetry     one aggregate every 5 min by default
 boathub/<boat-id>/status        "online" / "offline", retained
 boathub/<boat-id>/events        alarms and state changes
 ```
 
 The board is the only publisher, and ingest only ever subscribes. No control path from the server
 exists or is planned.
+
+A telemetry message covers a **window**, not an instant: the board measures every 10 s and
+publishes every 5 min. The bare field is the mean, `_min`/`_max` the extremes, `n` the number of
+measurements behind it. A press of the BOOT button sends a spot reading - same shape, `n: 1`, no
+extremes.
+
+Delivery is lossless on purpose, because the board will delete buffered measurements once they are
+acknowledged: ingest uses a **persistent session**, subscribes at **QoS 1**, and acknowledges only
+**after the row is committed**. Stopping ingest for a redeploy costs no data - the broker holds its
+messages until it comes back.
 
 ## Backups
 
@@ -138,7 +159,26 @@ docker exec boathub-db pg_dump -U boathub boathub | gzip > boathub-$(date +%F).s
 Put it somewhere that is not this machine, and restore it into an empty database once so you know
 the file is good.
 
+## Changing the schema
+
+`db/init/01-schema.sql` runs **only** when the data directory is created. Editing it does nothing
+to a database that already exists. While the contents are still test data, the simplest way to pick
+up a schema change is to throw the volume away:
+
+```
+docker compose down
+docker volume rm server_db-data
+docker compose up -d
+```
+
+That deletes every measurement. Once there is anything worth keeping - and certainly once the
+logbook exists - this stops being acceptable and the change needs a migration instead.
+
 ## Not yet, but planned
 
 TLS on 8883 once the server is reachable from outside the home network. Until then this belongs on
 a trusted LAN only: on port 1883 the credentials cross the network in the clear.
+
+Device-side buffering (**A-007**): the board stores every aggregate in flash and drains the buffer
+when it finds a connection, so a passage without marina Wi-Fi is recorded rather than lost. The
+server side is already prepared for it - that is what the delivery guarantees above are for.

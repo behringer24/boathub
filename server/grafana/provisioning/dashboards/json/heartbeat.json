@@ -1,21 +1,40 @@
 {
   "uid": "boathub-heartbeat",
   "title": "BoatHub - heartbeat",
-  "tags": ["boathub"],
+  "tags": [
+    "boathub"
+  ],
   "timezone": "utc",
   "schemaVersion": 39,
   "editable": true,
   "refresh": "30s",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "panels": [
     {
       "type": "timeseries",
       "title": "Uptime",
       "description": "Drops to zero on every restart. A sawtooth here is the first sign of something rebooting at night.",
-      "datasource": { "type": "postgres", "uid": "boathub" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
       "fieldConfig": {
-        "defaults": { "unit": "s", "custom": { "lineWidth": 2, "fillOpacity": 5 } },
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5
+          }
+        },
         "overrides": []
       },
       "targets": [
@@ -31,10 +50,24 @@
       "type": "timeseries",
       "title": "Free heap",
       "description": "Flat is healthy. A downward trend over days is a leak, long before it crashes anything.",
-      "datasource": { "type": "postgres", "uid": "boathub" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
       "fieldConfig": {
-        "defaults": { "unit": "bytes", "custom": { "lineWidth": 2, "fillOpacity": 5 } },
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5
+          }
+        },
         "overrides": []
       },
       "targets": [
@@ -50,10 +83,25 @@
       "type": "timeseries",
       "title": "Wi-Fi signal",
       "description": "Separates a radio problem from a firmware problem. Below about -75 dBm expect dropouts.",
-      "datasource": { "type": "postgres", "uid": "boathub" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
       "fieldConfig": {
-        "defaults": { "unit": "dBm", "max": -30, "custom": { "lineWidth": 2, "fillOpacity": 5 } },
+        "defaults": {
+          "unit": "dBm",
+          "max": -30,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5
+          }
+        },
         "overrides": []
       },
       "targets": [
@@ -67,12 +115,28 @@
     },
     {
       "type": "timeseries",
-      "title": "Messages per minute",
-      "description": "Six at a ten second interval. A dip is a gap in the uplink - the panel that shows an outage you slept through.",
-      "datasource": { "type": "postgres", "uid": "boathub" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "title": "Messages per hour",
+      "description": "The board publishes one aggregate every 5 min, so 12 an hour is healthy. A short spike is the BOOT button or a backlog being uploaded after a trip; a dip is a connection that was down.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short", "min": 0, "custom": { "lineWidth": 2, "fillOpacity": 20, "drawStyle": "bars" } },
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "drawStyle": "bars"
+          }
+        },
         "overrides": []
       },
       "targets": [
@@ -80,7 +144,42 @@
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT time_bucket('1 minute', received_at) AS time, count(*) AS messages FROM telemetry WHERE $__timeFilter(received_at) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT time_bucket('1 hour', received_at) AS time, count(*) AS messages FROM telemetry WHERE $__timeFilter(received_at) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Samples per window",
+      "description": "How many measurements went into each aggregate. At 10 s measuring and a 5 min window the answer is 30. Consistently fewer means the board is missing measurements; 1 marks a spot reading from the BOOT button or the first message after a restart.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "drawStyle": "points",
+            "pointSize": 5
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, n FROM telemetry WHERE $__timeFilter(received_at) AND n IS NOT NULL ORDER BY 1"
         }
       ]
     }

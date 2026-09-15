@@ -54,19 +54,33 @@ boathub/<boat-id>/events
 ```json
 {
   "ts": "2026-09-13T08:15:00Z",
-  "battery_v": 12.73,
-  "cabin_temp_c": 8.4,
+  "window_s": 300,
+  "n": 30,
+  "battery_v": 12.73, "battery_v_min": 12.41, "battery_v_max": 12.79,
+  "cabin_temp_c": 8.4, "cabin_temp_c_min": 8.1, "cabin_temp_c_max": 8.6,
   "cabin_rh": 72.1,
   "engine_temp_c": 7.9,
   "bilge_temp_c": 6.1,
-  "fridge_temp_c": 5.2,
+  "fridge_temp_c": 5.2, "fridge_temp_c_min": 3.8, "fridge_temp_c_max": 6.9,
   "bilge_level_cm": 1.3,
   "seatalk_online": false
 }
 ```
 
-Heartbeat roughly every minute. Critical events such as a rising bilge level go out immediately,
-not at the next regular interval.
+**A message is an aggregate, not a reading.** The board measures every **10 s** and publishes every
+**5 min**: the bare field is the mean over the window, `_min`/`_max` are the extremes. A mean alone
+would hide exactly what matters - the fridge compressor cycling, the battery sagging under it.
+
+A spot reading is the same shape with `n: 1` and no extremes. That is what the **BOOT button**
+produces, and what the first message after a restart looks like.
+
+Three rates that have nothing to do with each other:
+
+| | Rate | Why |
+|---|---|---|
+| Measuring | 10 s | alarms have to react, and the battery state machine needs samples for its median |
+| Storing and publishing | 5 min | nothing here changes faster, and the board has to buffer these at sea |
+| Alarms | immediate | a rising bilge level waits for no interval |
 
 ### Done when
 
@@ -123,7 +137,11 @@ Record trips offline and sync them once back in the marina. Requires GPS data fr
 
 ### Done when
 
-- Interval 5-10 s, with flash write cycles visibly reduced by the RAM buffer
+- A point every **25 m**, or on a course change, or after 60 s at the latest - not a fixed interval.
+  At 5 kn a 6 s interval would put a point every 15 m, which is below chart resolution and actively
+  harms the logged distance: GPS jitter accumulates over every segment, so a boat lying at anchor
+  logs phantom miles
+- Flash write cycles visibly reduced by the RAM buffer
 - A complete trip is recorded without internet and afterwards uploaded in full
 - Transferred tracks are discarded first when space runs low, current ones never
 - The server shows start, destination, duration, distance, average and maximum speed

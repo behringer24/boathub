@@ -3,6 +3,16 @@
 // Subscribes to the broker and writes rows. It publishes nothing and can make
 // no boat do anything - it is a subscriber and only a subscriber.
 //
+// Delivery is deliberately lossless end to end. The board buffers measurements
+// while it is at sea and deletes them once the broker acknowledges them, so a
+// message the broker accepts but this service never stores would be a
+// measurement lost without anyone noticing. Three things prevent that:
+//
+//   - a persistent session (clean session off), so the broker queues messages
+//     while this service is restarting instead of discarding them
+//   - QoS 1 subscriptions, so delivery is acknowledged rather than fire-and-forget
+//   - manual acknowledgement, sent only after the row is committed
+//
 // Design: ../../docs/design/A-006-telemetry-storage.md
 package main
 
@@ -27,29 +37,75 @@ import (
 // Fields the firmware sends that are not listed here are ignored by
 // encoding/json. That is deliberate - new firmware must never be able to stop
 // ingest just by sending something this server has not been taught yet.
+//
+// A row is normally an aggregate over a measurement window: the bare field is
+// the mean, `_min`/`_max` are the extremes. A spot reading is the same shape
+// with N = 1 and no extremes.
 type telemetry struct {
-	TS            *time.Time `json:"ts"`
-	TimeValid     *bool      `json:"time_valid"`
-	UptimeS       *int32     `json:"uptime_s"`
-	HeapFree      *int32     `json:"heap_free"`
-	RSSIdBm       *int16     `json:"rssi_dbm"`
-	ResetReason   *string    `json:"reset_reason"`
-	BatteryV      *float32   `json:"battery_v"`
-	CabinTempC    *float32   `json:"cabin_temp_c"`
-	CabinRH       *float32   `json:"cabin_rh"`
-	EngineTempC   *float32   `json:"engine_temp_c"`
-	BilgeTempC    *float32   `json:"bilge_temp_c"`
-	FridgeTempC   *float32   `json:"fridge_temp_c"`
-	BilgeLevelCm  *float32   `json:"bilge_level_cm"`
-	SeatalkOnline *bool      `json:"seatalk_online"`
+	TS        *time.Time `json:"ts"`
+	TimeValid *bool      `json:"time_valid"`
+	WindowS   *int32     `json:"window_s"`
+	N         *int16     `json:"n"`
+
+	UptimeS     *int32  `json:"uptime_s"`
+	HeapFree    *int32  `json:"heap_free"`
+	RSSIdBm     *int16  `json:"rssi_dbm"`
+	ResetReason *string `json:"reset_reason"`
+
+	BatteryV    *float32 `json:"battery_v"`
+	BatteryVMin *float32 `json:"battery_v_min"`
+	BatteryVMax *float32 `json:"battery_v_max"`
+
+	CabinTempC    *float32 `json:"cabin_temp_c"`
+	CabinTempCMin *float32 `json:"cabin_temp_c_min"`
+	CabinTempCMax *float32 `json:"cabin_temp_c_max"`
+
+	CabinRH    *float32 `json:"cabin_rh"`
+	CabinRHMin *float32 `json:"cabin_rh_min"`
+	CabinRHMax *float32 `json:"cabin_rh_max"`
+
+	EngineTempC    *float32 `json:"engine_temp_c"`
+	EngineTempCMin *float32 `json:"engine_temp_c_min"`
+	EngineTempCMax *float32 `json:"engine_temp_c_max"`
+
+	BilgeTempC    *float32 `json:"bilge_temp_c"`
+	BilgeTempCMin *float32 `json:"bilge_temp_c_min"`
+	BilgeTempCMax *float32 `json:"bilge_temp_c_max"`
+
+	FridgeTempC    *float32 `json:"fridge_temp_c"`
+	FridgeTempCMin *float32 `json:"fridge_temp_c_min"`
+	FridgeTempCMax *float32 `json:"fridge_temp_c_max"`
+
+	BilgeLevelCm    *float32 `json:"bilge_level_cm"`
+	BilgeLevelCmMin *float32 `json:"bilge_level_cm_min"`
+	BilgeLevelCmMax *float32 `json:"bilge_level_cm_max"`
+
+	SeatalkOnline *bool `json:"seatalk_online"`
 }
 
 const insertTelemetry = `
 INSERT INTO telemetry (
-  boat_id, ts, time_valid, uptime_s, heap_free, rssi_dbm, reset_reason,
-  battery_v, cabin_temp_c, cabin_rh, engine_temp_c, bilge_temp_c,
-  fridge_temp_c, bilge_level_cm, seatalk_online
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`
+  boat_id, ts, time_valid, window_s, n,
+  uptime_s, heap_free, rssi_dbm, reset_reason,
+  battery_v, battery_v_min, battery_v_max,
+  cabin_temp_c, cabin_temp_c_min, cabin_temp_c_max,
+  cabin_rh, cabin_rh_min, cabin_rh_max,
+  engine_temp_c, engine_temp_c_min, engine_temp_c_max,
+  bilge_temp_c, bilge_temp_c_min, bilge_temp_c_max,
+  fridge_temp_c, fridge_temp_c_min, fridge_temp_c_max,
+  bilge_level_cm, bilge_level_cm_min, bilge_level_cm_max,
+  seatalk_online
+) VALUES (
+  $1,$2,$3,$4,$5,
+  $6,$7,$8,$9,
+  $10,$11,$12,
+  $13,$14,$15,
+  $16,$17,$18,
+  $19,$20,$21,
+  $22,$23,$24,
+  $25,$26,$27,
+  $28,$29,$30,
+  $31)`
 
 const insertStatus = `INSERT INTO boat_status (boat_id, online) VALUES ($1, $2)`
 
@@ -91,6 +147,25 @@ func connectDB(ctx context.Context, url string) *pgxpool.Pool {
 	}
 }
 
+// insertWithRetry rides out a brief database hiccup. It deliberately gives up
+// quickly: an unacknowledged message is redelivered by the broker on the next
+// reconnect, and a handler that blocks for minutes would stall every other
+// message behind it.
+func insertWithRetry(ctx context.Context, pool *pgxpool.Pool, sql string, args ...any) error {
+	var err error
+	delay := 200 * time.Millisecond
+	for attempt := 1; attempt <= 3; attempt++ {
+		if _, err = pool.Exec(ctx, sql, args...); err == nil {
+			return nil
+		}
+		if attempt < 3 {
+			time.Sleep(delay)
+			delay *= 2
+		}
+	}
+	return err
+}
+
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
 
@@ -110,7 +185,13 @@ func main() {
 		SetAutoReconnect(true).
 		SetConnectRetry(true).
 		SetConnectRetryInterval(5 * time.Second).
-		SetKeepAlive(30 * time.Second)
+		SetKeepAlive(30 * time.Second).
+		// A persistent session. While this service is down the broker holds
+		// messages for it instead of dropping them, which is what makes a
+		// restart or a redeploy cost nothing. Requires a stable client id.
+		SetCleanSession(false).
+		// Acknowledge only after the row is written - see the file header.
+		SetAutoAckDisabled(true)
 
 	// Subscribing from OnConnect rather than after Connect() means the
 	// subscriptions come back by themselves after a broker restart.
@@ -120,7 +201,9 @@ func main() {
 			"boathub/+/telemetry": func(_ mqtt.Client, m mqtt.Message) { onTelemetry(ctx, pool, m) },
 			"boathub/+/status":    func(_ mqtt.Client, m mqtt.Message) { onStatus(ctx, pool, m) },
 		} {
-			if tok := c.Subscribe(topic, 0, handler); tok.Wait() && tok.Error() != nil {
+			// QoS 1: at-least-once. The board deletes buffered measurements once
+			// they are acknowledged, so fire-and-forget would lose them silently.
+			if tok := c.Subscribe(topic, 1, handler); tok.Wait() && tok.Error() != nil {
 				log.Printf("subscribe %s failed: %v", topic, tok.Error())
 			} else {
 				log.Printf("subscribed to %s", topic)
@@ -145,40 +228,58 @@ func onTelemetry(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {
 	id, ok := boatID(m.Topic())
 	if !ok {
 		log.Printf("ignoring unexpected topic %q", m.Topic())
+		m.Ack() // nothing here will ever parse; redelivering it forever helps nobody
 		return
 	}
 
 	var t telemetry
 	if err := json.Unmarshal(m.Payload(), &t); err != nil {
-		// Logged with the raw payload and dropped. One bad message must never
-		// be able to stop ingest.
+		// Logged with the raw payload and acknowledged. A message that cannot be
+		// parsed will not parse on redelivery either, and leaving it unacknowledged
+		// would block every message behind it.
 		log.Printf("bad payload on %s: %v: %s", m.Topic(), err, m.Payload())
+		m.Ack()
 		return
 	}
 
-	_, err := pool.Exec(ctx, insertTelemetry,
-		id, t.TS, t.TimeValid, t.UptimeS, t.HeapFree, t.RSSIdBm, t.ResetReason,
-		t.BatteryV, t.CabinTempC, t.CabinRH, t.EngineTempC, t.BilgeTempC,
-		t.FridgeTempC, t.BilgeLevelCm, t.SeatalkOnline)
+	err := insertWithRetry(ctx, pool, insertTelemetry,
+		id, t.TS, t.TimeValid, t.WindowS, t.N,
+		t.UptimeS, t.HeapFree, t.RSSIdBm, t.ResetReason,
+		t.BatteryV, t.BatteryVMin, t.BatteryVMax,
+		t.CabinTempC, t.CabinTempCMin, t.CabinTempCMax,
+		t.CabinRH, t.CabinRHMin, t.CabinRHMax,
+		t.EngineTempC, t.EngineTempCMin, t.EngineTempCMax,
+		t.BilgeTempC, t.BilgeTempCMin, t.BilgeTempCMax,
+		t.FridgeTempC, t.FridgeTempCMin, t.FridgeTempCMax,
+		t.BilgeLevelCm, t.BilgeLevelCmMin, t.BilgeLevelCmMax,
+		t.SeatalkOnline)
 	if err != nil {
-		log.Printf("insert telemetry for %s failed: %v", id, err)
+		// Deliberately NOT acknowledged. The broker redelivers on the next
+		// reconnect, and its inflight limit becomes backpressure rather than
+		// this service quietly dropping measurements it could not store.
+		log.Printf("insert telemetry for %s failed, leaving unacknowledged: %v", id, err)
+		return
 	}
+	m.Ack()
 }
 
 func onStatus(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {
 	id, ok := boatID(m.Topic())
 	if !ok {
+		m.Ack()
 		return
 	}
 	payload := strings.TrimSpace(string(m.Payload()))
 	if payload == "" {
-		return // a cleared retained message, not a state
+		m.Ack() // a cleared retained message, not a state
+		return
 	}
 
 	online := payload == "online"
-	if _, err := pool.Exec(ctx, insertStatus, id, online); err != nil {
-		log.Printf("insert status for %s failed: %v", id, err)
+	if err := insertWithRetry(ctx, pool, insertStatus, id, online); err != nil {
+		log.Printf("insert status for %s failed, leaving unacknowledged: %v", id, err)
 		return
 	}
+	m.Ack()
 	log.Printf("%s is %s", id, payload)
 }
