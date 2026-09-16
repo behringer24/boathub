@@ -13,6 +13,7 @@
 #include "config.h"
 #include "net.h"
 #include "portal.h"
+#include "sht31.h"
 #include "status.h"
 #include "uplink.h"
 
@@ -77,6 +78,7 @@ void setup() {
   Serial.printf("boat id: %s\n", config::get().boatId.c_str());
 
   net::begin();
+  sht31::begin();
   portal::begin();
   uplink::begin();
   status::begin();
@@ -88,6 +90,7 @@ void loop() {
   // must not stall the portal, and a marina outage must not stall either of
   // them - the same rule the sensors will follow.
   net::loop();
+  sht31::loop();
   portal::loop();
   uplink::loop();
   status::loop();
@@ -97,8 +100,13 @@ void loop() {
   const uint32_t now = millis();
   if (now - lastReport >= 30000) {
     lastReport = now;
-    Serial.printf("[status] wifi %s %s | broker %s | heap %lu\n", net::stateName(),
-                  net::stationIp().c_str(), uplink::statusText(),
+    const sht31::Reading climate = sht31::latest();
+    char cabin[32] = "cabin --";
+    if (climate.valid) {
+      snprintf(cabin, sizeof(cabin), "cabin %.1fC %.0f%%", climate.tempC, climate.rh);
+    }
+    Serial.printf("[status] wifi %s %s | broker %s | %s (%s) | heap %lu\n", net::stateName(),
+                  net::stationIp().c_str(), uplink::statusText(), cabin, sht31::statusText(),
                   (unsigned long)ESP.getFreeHeap());
   }
 

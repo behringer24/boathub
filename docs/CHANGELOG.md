@@ -48,6 +48,21 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   `window_s` and `n` describe the window - `n` below 30 means measurements were missed, a fault
   that otherwise hides behind a plausible average. A BOOT-button press sends the same shape with
   `n: 1` and no extremes, so there is no second message format.
+- SHT31 cabin climate on the shared I2C bus at 0x44, measured every 10 s and reported as
+  `cabin_temp_c` and `cabin_rh`. Single shot rather than free-running, because continuous
+  measurement warms the sensor and a warm humidity sensor reads low; and the non-stretching command,
+  because clock stretching would hold SCL low for the three ADS1115 sharing the bus as well. Both
+  CRCs are checked, and a reading outside a plausible range or jumping implausibly is discarded
+  rather than averaged in.
+- SHT31 heater, on by default: condensation on the sensor leaves it stuck at 100 %RH long after the
+  air has dried, which reads like a measurement rather than a fault. Above 95 %RH for 30 minutes it
+  heats for 10 s and then waits 120 s to cool, taking no samples in either window - so `n` dips in a
+  window containing a cycle, by design. All five numbers are in NVS, including the off switch.
+- `i2cbus`: the bus is owned centrally rather than by whichever sensor starts first, so the order of
+  `begin()` calls cannot matter once the ADS1115s join it.
+- Telemetry payload is checked against the buffer with `measureJson` before publishing. Serialising
+  into a buffer that is too small truncates silently and publishes invalid JSON, which looks like a
+  healthy system until somebody checks the server.
 - `server/`: Mosquitto broker as a Docker Compose service on port 1883, authenticated, with
   persistence so retained messages survive a restart.
 - Telemetry storage: PostgreSQL with TimescaleDB and PostGIS. The `telemetry` hypertable is
