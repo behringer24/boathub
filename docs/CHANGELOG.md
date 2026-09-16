@@ -82,6 +82,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 - `server/ingest`: a Go service that subscribes to the broker and writes rows. It ignores fields it
   does not know so newer firmware cannot stop it, drops malformed payloads with a log line rather
   than exiting, and retries broker and database independently.
+- Ingest checks the telemetry table's columns at startup. `db/init` only runs when the data
+  directory is created, so a database that predates a schema change keeps the old columns and every
+  insert fails with the same error indefinitely. Said once at startup it is a diagnosis; found
+  through the insert log it is an afternoon. It does not exit on a mismatch - a service that dies on
+  a bad environment is one somebody has to watch.
 - Delivery from broker to database is **lossless**: a persistent session so the broker queues while
   ingest restarts, QoS 1 subscriptions, and acknowledgement only after the row is committed. A
   failed insert is left unacknowledged for redelivery, turning the broker's inflight limit into
