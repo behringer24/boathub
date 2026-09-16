@@ -53,6 +53,20 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   `window_s` and `n` describe the window - `n` below 30 means measurements were missed, a fault
   that otherwise hides behind a plausible average. A BOOT-button press sends the same shape with
   `n: 1` and no extremes, so there is no second message format.
+- Three DS18B20 probes on GPIO4/5/6, reported as `engine_temp_c`, `bilge_temp_c` and
+  `fridge_temp_c`. All three buses are started back to back and waited on once, so the set costs one
+  375 ms conversion rather than three - and the wait happens across loop passes rather than in a
+  delay, which would otherwise stall Wi-Fi and every other sensor for a third of a second each
+  cycle. 11-bit resolution: 0.125 C is finer than anything here needs.
+- Each probe's ROM address is recorded the first time it is seen and compared on every start. The
+  realistic failure is not a broken sensor but three identical cables unplugged for service and two
+  put back the wrong way round, after which engine bay temperature silently reports bilge water. A
+  mismatch is reported and does not stop the reading, since a legitimately replaced probe must not
+  take the channel down with it.
+- A reading is rejected unless it passes in order: the library's own scratchpad CRC, not the
+  disconnected sentinel, **not exactly 85.0 C** - the scratchpad's power-on value, and a legal
+  temperature, which is what makes it dangerous - a plausibility range per location, and a jump
+  limit against the previous reading.
 - SHT31 cabin climate on the shared I2C bus at 0x44, measured every 10 s and reported as
   `cabin_temp_c` and `cabin_rh`. Single shot rather than free-running, because continuous
   measurement warms the sensor and a warm humidity sensor reads low; and the non-stretching command,

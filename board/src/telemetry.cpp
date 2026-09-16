@@ -1,6 +1,7 @@
 #include "telemetry.h"
 
 #include "config.h"
+#include "ds18b20.h"
 #include "sht31.h"
 
 namespace {
@@ -30,6 +31,11 @@ void collectInto(telemetry::Aggregate &agg) {
     agg.cabinTemp.add(climate.tempC);
     agg.cabinRh.add(climate.rh);
   }
+
+  ds18b20::Reading probe;
+  if (ds18b20::takeFresh(ds18b20::Engine, probe)) agg.engineTemp.add(probe.tempC);
+  if (ds18b20::takeFresh(ds18b20::Bilge, probe)) agg.bilgeTemp.add(probe.tempC);
+  if (ds18b20::takeFresh(ds18b20::Fridge, probe)) agg.fridgeTemp.add(probe.tempC);
 }
 
 // The current state rather than a new measurement: a spot message must not
@@ -40,6 +46,13 @@ void snapshotInto(telemetry::Aggregate &agg) {
     agg.cabinTemp.add(climate.tempC);
     agg.cabinRh.add(climate.rh);
   }
+
+  const ds18b20::Reading engine = ds18b20::latest(ds18b20::Engine);
+  if (engine.valid) agg.engineTemp.add(engine.tempC);
+  const ds18b20::Reading bilge = ds18b20::latest(ds18b20::Bilge);
+  if (bilge.valid) agg.bilgeTemp.add(bilge.tempC);
+  const ds18b20::Reading fridge = ds18b20::latest(ds18b20::Fridge);
+  if (fridge.valid) agg.fridgeTemp.add(fridge.tempC);
 }
 
 // How many samples to claim for the window as a whole.
@@ -54,7 +67,8 @@ uint16_t countFor(const telemetry::Aggregate &agg) {
   uint16_t lowest = 0;
   bool any = false;
 
-  const telemetry::Channel *channels[] = {&agg.cabinTemp, &agg.cabinRh};
+  const telemetry::Channel *channels[] = {&agg.cabinTemp,  &agg.cabinRh,   &agg.engineTemp,
+                                         &agg.bilgeTemp, &agg.fridgeTemp};
   for (const telemetry::Channel *c : channels) {
     if (!c->has()) continue;
     if (!any || c->n < lowest) lowest = c->n;
