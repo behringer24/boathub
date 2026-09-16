@@ -55,7 +55,7 @@ pin plan except GPIO21 sits on the top row.**
 | Terminal | Row | Function | Stage |
 |----------|-----|----------|-------|
 | `5V` | top | DC/DC 5 V feed in, routes to the DevKit 5Vin pin | 1 |
-| `3.3V` x2 | top | sensor rail for DS18B20, SHT31, ADS1115 | 1 |
+| `3.3V` x2 | top | sensor rail for DS18B20, SHT31, ADS1115, IMU | 1 |
 | `GND` x4 | both | star point | 1 |
 | `IO4` | top | DS18B20 engine bay | 1 |
 | `IO5` | top | DS18B20 bilge water | 1 |
@@ -67,6 +67,7 @@ pin plan except GPIO21 sits on the top row.**
 | `IO16` | top | reserved, SeaTalk TX | 2B |
 | `IO17` | top | reserved, TWAI TX | 3 |
 | `IO18` | top | reserved, TWAI RX | 3 |
+| `IO2` | bottom | IMU interrupt line ([A-009](A-009-imu-heel-and-motion.md)) | 1 |
 | `IO21` | bottom | spare, optional buzzer via a transistor | 1 |
 | `RX` / `TX` | bottom | debug UART (GPIO44/43), keep free for service | - |
 
@@ -123,7 +124,11 @@ terminals, which makes them tempting - **label them off or note it on the enclos
 
 ### Genuinely free spares
 
-`IO1` `IO2` `IO10` `IO11` `IO12` `IO13` `IO14` `IO38` `IO39` `IO40` `IO41` `IO42` `IO47` `IO48`
+`IO1` `IO10` `IO11` `IO12` `IO13` `IO14` `IO38` `IO39` `IO40` `IO41` `IO42` `IO47` `IO48`
+
+`IO2` is spoken for: the IMU's interrupt line
+([A-009](A-009-imu-heel-and-motion.md)). `IO10`-`IO13` are the ESP32-S3's default SPI pins, so they
+are the natural choice if anything ever needs SPI.
 
 That is plenty of expansion headroom. Note that the **WS2812 RGB LED is wired to either GPIO38 or
 GPIO48** depending on board revision - determine which by test before using either as a spare.

@@ -27,9 +27,10 @@ and not the firmware.
 | 6 | Station mode, Wi-Fi credentials in NVS | [A-004](A-004-wifi-and-configuration-portal.md) |
 | 7 | Server uplink: MQTT, telemetry, heartbeat, last will | [A-005](A-005-server-uplink.md) |
 | 8 | Store the telemetry and put it on a dashboard | [A-006](A-006-telemetry-storage.md) |
-| 9 | Buffer measurements in flash and drain them when a connection exists | [A-007](A-007-store-and-forward.md) |
-| 10 | Alarm and threshold logic for the sensors that exist by then | planned |
-| 11 | Fault handling and watchdog: a dead sensor must not take the network path with it | planned |
+| 9 | IMU: heel and pitch under sail, motion and impact at the berth | [A-009](A-009-imu-heel-and-motion.md) |
+| 10 | Buffer measurements in flash and drain them when a connection exists | [A-007](A-007-store-and-forward.md) |
+| 11 | Alarm and threshold logic for the sensors that exist by then | planned |
+| 12 | Fault handling and watchdog: a dead sensor must not take the network path with it | planned |
 
 The milestone is a monitor that runs off any USB charger and reports to the server. Not the final
 system - no battery measurement, no 12 V robustness - but a real, testable one.
@@ -71,6 +72,7 @@ In reading order.
 | then | [A-004](A-004-wifi-and-configuration-portal.md) | Wi-Fi operation and configuration portal |
 | then | [A-005](A-005-server-uplink.md) | Server uplink |
 | then | [A-006](A-006-telemetry-storage.md) | Telemetry storage and dashboard |
+| then | [A-009](A-009-imu-heel-and-motion.md) | IMU: heel, pitch and motion |
 | then | [A-007](A-007-store-and-forward.md) | Store and forward |
 | last, on the bench | [B-001](B-001-power-supply.md) | Power supply and battery measurement |
 
