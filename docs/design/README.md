@@ -21,7 +21,7 @@ and not the firmware.
 |---|------|----------|
 | 1 | Toolchain, blink and serial over the CH343P port; confirm the module is an N16R8 and check the carrier terminals | [A-001](A-001-devkit-and-carrier.md), [A-002](A-002-bench-setup-usb.md) |
 | 2 | Three DS18B20 on GPIO4/5/6, pull-ups proven with the real 5 m cables | [A-003](A-003-ds18b20-temperature-sensors.md) |
-| 3 | SHT31-D cabin climate on I2C 0x44 | [A-002](A-002-bench-setup-usb.md) |
+| 3 | SHT31-D cabin climate on I2C 0x44 | [A-002](A-002-bench-setup-usb.md), [A-008](A-008-sht31-cabin-climate.md) |
 | 4 | Three ADS1115 on 0x48/0x49/0x4A against a known reference voltage, PGA fixed | [A-002](A-002-bench-setup-usb.md) |
 | 5 | SoftAP `BOOT-NETZ` and the local configuration web UI | [A-004](A-004-wifi-and-configuration-portal.md) |
 | 6 | Station mode, Wi-Fi credentials in NVS | [A-004](A-004-wifi-and-configuration-portal.md) |
