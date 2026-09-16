@@ -154,8 +154,12 @@ an ordering requirement, not a circular one.
 ## 5. Publishing
 
 Measurement interval `sample_secs`, publish interval `pub_secs`, both in NVS. Defaults **10 s** and
-**300 s**. The BOOT button closes the current window early and sends it - a spot reading with
-`n: 1`.
+**300 s**. A window shorter than a sample would close before anything went into it, so the portal
+clamps it.
+
+**The BOOT button sends a spot reading and leaves the running window alone.** You press it to prove
+the chain works while standing at the box, not to cut a measurement short. The first message after
+connecting is the same thing, so a working link shows itself at once instead of after five minutes.
 
 **Nothing in the publish path blocks.** Connection attempts are polled with the same backoff as the
 station connection, and a broker that is down slows nothing else.

@@ -17,7 +17,12 @@ struct Config {
   String mqttUser;
   String mqttPass;
   uint16_t mqttPort = 1883;
-  uint16_t pubSecs = 10;
+
+  // Three rates that have nothing to do with each other: measuring has to be
+  // fast enough for alarms to react, publishing only fast enough to follow a
+  // cabin, and an alarm waits for neither. See A-005.
+  uint16_t sampleSecs = 10;
+  uint16_t pubSecs = 300;
 
   // SHT31 heater. Condensation on the sensor leaves it stuck at 100 %RH long
   // after the air has dried; a short pulse drives the water off. The numbers

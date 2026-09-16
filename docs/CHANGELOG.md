@@ -63,6 +63,15 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 - Telemetry payload is checked against the buffer with `measureJson` before publishing. Serialising
   into a buffer that is too small truncates silently and publishes invalid JSON, which looks like a
   healthy system until somebody checks the server.
+- Sampling and aggregation split out of the uplink into `telemetry`: measurements are taken every
+  `sample_secs` and summarised over `pub_secs`, defaults 10 s and 300 s. The module sits between the
+  sensors and the uplink deliberately - the buffer in A-007 will sit in the same place, and an
+  aggregate is what it stores. `n` is the smallest count behind any reported channel, so a sensor
+  that missed half the window cannot hide behind one that did not.
+- The extremes are written only when more than one sample is behind them, so a spot reading carries
+  the bare value alone rather than claiming a range it never measured. A window that closes while
+  the uplink is not ready is counted and logged - until the buffer exists, that count is the honest
+  measure of what was lost.
 - `server/`: Mosquitto broker as a Docker Compose service on port 1883, authenticated, with
   persistence so retained messages survive a restart.
 - Telemetry storage: PostgreSQL with TimescaleDB and PostGIS. The `telemetry` hypertable is

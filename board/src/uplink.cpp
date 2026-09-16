@@ -8,7 +8,7 @@
 
 #include "config.h"
 #include "net.h"
-#include "sht31.h"
+#include "telemetry.h"
 
 namespace {
 
@@ -23,7 +23,6 @@ const time_t TIME_SANE_AFTER = 1700000000;
 
 uint32_t retryDelay = RETRY_MIN_MS;
 uint32_t nextAttempt = 0;
-uint32_t nextPublish = 0;
 bool publishRequested = false;
 const char *status = "not connected";
 
@@ -91,7 +90,29 @@ bool tryConnect() {
   return false;
 }
 
-void publish() {
+// Rounded to the sensor's own accuracy. Seven digits of float noise in every
+// message would cost bytes and imply a precision that is not there.
+float round2(float v) { return roundf(v * 100.0f) / 100.0f; }
+
+// One channel becomes one, or three, fields.
+//
+// The extremes are written only when there is more than one sample behind
+// them. A spot reading therefore carries the bare value alone - the same
+// message shape as a window, without pretending to a range it never measured.
+//
+// A channel with no samples writes nothing at all. On the server "no sensor"
+// and "measured zero" must not look the same.
+void putChannel(JsonDocument &doc, const char *name, const telemetry::Channel &c) {
+  if (!c.has()) return;
+
+  doc[name] = round2(c.mean());
+  if (c.n > 1) {
+    doc[String(name) + "_min"] = round2(c.lo);
+    doc[String(name) + "_max"] = round2(c.hi);
+  }
+}
+
+void publish(const telemetry::Aggregate &agg) {
   JsonDocument doc;
 
   if (timeValid()) {
@@ -100,22 +121,19 @@ void publish() {
   } else {
     doc["time_valid"] = false;
   }
+
+  doc["n"] = agg.n;
+  if (agg.windowS > 0) doc["window_s"] = agg.windowS;
+
+  // Diagnostics are read here, at the moment the message is built, rather than
+  // averaged over the window. An averaged uptime would mean nothing.
   doc["uptime_s"] = millis() / 1000;
   doc["heap_free"] = ESP.getFreeHeap();
   doc["rssi_dbm"] = net::rssi();
   doc["reset_reason"] = resetReason();
 
-  // A field with no reading is left out entirely, never sent as zero: on the
-  // server "no sensor" and "measured zero" must not look the same. latest()
-  // already returns invalid for a stale reading, which covers both a sensor
-  // that has stopped answering and the window in which the heater runs.
-  const sht31::Reading climate = sht31::latest();
-  if (climate.valid) {
-    // Rounded to the sensor's own accuracy. Seven digits of float noise in
-    // every message would cost bytes and imply a precision that is not there.
-    doc["cabin_temp_c"] = roundf(climate.tempC * 100.0f) / 100.0f;
-    doc["cabin_rh"] = roundf(climate.rh * 100.0f) / 100.0f;
-  }
+  putChannel(doc, "cabin_temp_c", agg.cabinTemp);
+  putChannel(doc, "cabin_rh", agg.cabinRh);
 
   char payload[512];
   // measureJson is the length the document *wants*. serializeJson would
@@ -167,7 +185,9 @@ void loop() {
     if ((int32_t)(now - nextAttempt) < 0) return;
     if (tryConnect()) {
       retryDelay = RETRY_MIN_MS;
-      nextPublish = now;  // first message immediately, so the link is visible at once
+      // A spot reading straight away. Waiting out a five minute window before
+      // the first message would make a working link look like a broken one.
+      publish(telemetry::spot());
     } else {
       nextAttempt = now + retryDelay;
       retryDelay = min(retryDelay * 2, RETRY_MAX_MS);
@@ -177,11 +197,16 @@ void loop() {
 
   mqtt.loop();
 
-  if (publishRequested || (int32_t)(now - nextPublish) >= 0) {
+  // The BOOT button: the current state, now. It deliberately does not close
+  // the running window - you press it to prove the chain works, not to cut a
+  // measurement short.
+  if (publishRequested) {
     publishRequested = false;
-    nextPublish = now + (uint32_t)c.pubSecs * 1000;
-    publish();
+    publish(telemetry::spot());
   }
+
+  telemetry::Aggregate agg;
+  if (telemetry::take(agg)) publish(agg);
 }
 
 bool connected() { return mqtt.connected(); }
