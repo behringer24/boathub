@@ -68,6 +68,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   sensors and the uplink deliberately - the buffer in A-007 will sit in the same place, and an
   aggregate is what it stores. `n` is the smallest count behind any reported channel, so a sensor
   that missed half the window cannot hide behind one that did not.
+- Sensors hand each measurement over exactly once rather than being polled. `telemetry` has no
+  clock of its own: a second timer would drift against the sensors' timers, so a reading would
+  sometimes be counted twice and sometimes skipped, and the sample count in the message would
+  quietly stop meaning the number of measurements. The measurement rate is now the sensor's own,
+  configured by `sample_secs`.
 - The extremes are written only when more than one sample is behind them, so a spot reading carries
   the bare value alone rather than claiming a range it never measured. A window that closes while
   the uplink is not ready is counted and logged - until the buffer exists, that count is the honest
