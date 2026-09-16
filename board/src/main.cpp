@@ -11,6 +11,7 @@
 
 #include "button.h"
 #include "config.h"
+#include "ds18b20.h"
 #include "net.h"
 #include "portal.h"
 #include "sht31.h"
@@ -80,6 +81,7 @@ void setup() {
 
   net::begin();
   sht31::begin();
+  ds18b20::begin();
   telemetry::begin();
   portal::begin();
   uplink::begin();
@@ -93,6 +95,7 @@ void loop() {
   // them - the same rule the sensors will follow.
   net::loop();
   sht31::loop();
+  ds18b20::loop();
   telemetry::loop();
   portal::loop();
   uplink::loop();

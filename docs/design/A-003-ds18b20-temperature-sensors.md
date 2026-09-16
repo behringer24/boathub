@@ -45,7 +45,7 @@ The cost is three pins, and the pin plan has them spare. Keep it.
 | Part | Qty | Purpose | Note |
 |------|-----|---------|------|
 | DS18B20-compatible potted probe, 5 m | 3 | engine bay, bilge, fridge | sold in 3-packs |
-| 2.2 kΩ resistor | 3 | 1-Wire pull-up, one per bus | **not** 4.7 kΩ - see below |
+| 2.0-2.2 kΩ resistor | 3 | 1-Wire pull-up, one per bus | **not** 4.7 kΩ - see below |
 | 100 Ω resistor | 3 | series protection in each DATA line | |
 | 3-pole screw terminal | 3 | detachable probe connection, on the perfboard | cables must come off for service |
 | Clamp-on ferrite | 3 | optional, conducted noise at the box entry | |
@@ -86,23 +86,26 @@ incorrectly, so pin it off explicitly in firmware rather than letting the librar
 
 4.7 kΩ is the standard value for a bus a few centimetres long. At 5 m it is thin:
 
-| Pull-up | Cable ~500 pF | τ = RC | Rise to threshold | Margin in the 15 µs read slot |
-|---------|---------------|--------|-------------------|-------------------------------|
-| 4.7 kΩ | 5 m | 2.35 µs | ~2.8 µs | works, little headroom |
-| 3.3 kΩ | 5 m | 1.65 µs | ~2.0 µs | comfortable |
-| **2.2 kΩ** | 5 m | **1.10 µs** | **~1.3 µs** | **generous** |
+| Pull-up | Cable ~500 pF | τ = RC | Rise to threshold | Sink current | Margin in the 15 µs read slot |
+|---------|---------------|--------|-------------------|--------------|-------------------------------|
+| 4.7 kΩ | 5 m | 2.35 µs | ~2.8 µs | 0.70 mA | works, little headroom |
+| 3.3 kΩ | 5 m | 1.65 µs | ~2.0 µs | 1.00 mA | comfortable |
+| **2.2 kΩ** | 5 m | 1.10 µs | ~1.3 µs | 1.50 mA | generous |
+| **2.0 kΩ** | 5 m | 1.00 µs | ~1.2 µs | 1.65 mA | generous |
 
-Sink current at 2.2 kΩ is 1.5 mA, well inside the DS18B20's 4 mA rating, so there is no downside.
-Do not go below ~1.5 kΩ: at 1 kΩ the sink current reaches 3.3 mA and the low level starts to lift.
+**Anything from about 1.5 kΩ to 3.3 kΩ is right**, so fit whatever the assortment holds - the value
+is not critical, only the order of magnitude is. Every one of them is well inside the DS18B20's
+4 mA sink rating. Do not go below ~1.5 kΩ: at 1 kΩ the sink current reaches 3.3 mA and the low
+level starts to lift.
 
-**Start at 2.2 kΩ, and verify on the bench with the real 5 m cables** (section 7). Testing with
-short jumpers proves nothing - the cable capacitance that makes 4.7 kΩ marginal simply is not there.
+**Verify on the bench with the real 5 m cables** (section 7). Testing with short jumpers proves
+nothing - the cable capacitance that makes 4.7 kΩ marginal simply is not there.
 
 ### Electrical constraints
 
-- The 100 Ω series resistor adds `1.5 mA × 100 Ω = 0.15 V` to the low level seen by the GPIO. With
-  the sensor's own V<sub>OL</sub> of ~0.4 V that is ~0.55 V, against the ESP32's V<sub>IL</sub>
-  limit of 0.825 V. Valid, with margin.
+- The 100 Ω series resistor adds the sink current times 100 Ω to the low level seen by the GPIO -
+  0.17 V at 2.0 kΩ. With the sensor's own V<sub>OL</sub> of ~0.4 V that is ~0.57 V, against the
+  ESP32's V<sub>IL</sub> limit of 0.825 V. Valid across the whole pull-up range above.
 - **Do not add clamping diodes** on the data lines. A 3.3 V zener or TVS adds tens of pF, which
   costs more in edge quality than it buys in protection at these voltages.
 - The 100 Ω will not save a GPIO from a cable shorted to 12 V. **Route the probe cables away from

@@ -134,6 +134,9 @@ void publish(const telemetry::Aggregate &agg) {
 
   putChannel(doc, "cabin_temp_c", agg.cabinTemp);
   putChannel(doc, "cabin_rh", agg.cabinRh);
+  putChannel(doc, "engine_temp_c", agg.engineTemp);
+  putChannel(doc, "bilge_temp_c", agg.bilgeTemp);
+  putChannel(doc, "fridge_temp_c", agg.fridgeTemp);
 
   char payload[512];
   // measureJson is the length the document *wants*. serializeJson would

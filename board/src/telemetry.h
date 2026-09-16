@@ -44,6 +44,9 @@ struct Aggregate {
 
   Channel cabinTemp;
   Channel cabinRh;
+  Channel engineTemp;
+  Channel bilgeTemp;
+  Channel fridgeTemp;
   // Further channels land here as the sensors arrive.
 };
 
