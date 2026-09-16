@@ -19,6 +19,16 @@ struct Config {
   uint16_t mqttPort = 1883;
   uint16_t pubSecs = 10;
 
+  // SHT31 heater. Condensation on the sensor leaves it stuck at 100 %RH long
+  // after the air has dried; a short pulse drives the water off. The numbers
+  // are here rather than compiled in because a sensor mounted somewhere that
+  // never condenses does not need any of it - see A-008.
+  bool sht31Heater = true;
+  uint16_t sht31HeatAboveRh = 95;  // %RH that counts as saturated
+  uint16_t sht31SoakMins = 30;     // how long it must stay there first
+  uint16_t sht31HeatSecs = 10;     // how long to heat
+  uint16_t sht31CoolSecs = 120;    // how long to wait before trusting it again
+
   bool hasStation() const { return wifiSsid.length() > 0; }
   bool hasBroker() const { return mqttHost.length() > 0; }
 };

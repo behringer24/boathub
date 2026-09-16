@@ -8,6 +8,7 @@
 
 #include "config.h"
 #include "net.h"
+#include "sht31.h"
 
 namespace {
 
@@ -104,7 +105,26 @@ void publish() {
   doc["rssi_dbm"] = net::rssi();
   doc["reset_reason"] = resetReason();
 
-  char payload[256];
+  // A field with no reading is left out entirely, never sent as zero: on the
+  // server "no sensor" and "measured zero" must not look the same. latest()
+  // already returns invalid for a stale reading, which covers both a sensor
+  // that has stopped answering and the window in which the heater runs.
+  const sht31::Reading climate = sht31::latest();
+  if (climate.valid) {
+    // Rounded to the sensor's own accuracy. Seven digits of float noise in
+    // every message would cost bytes and imply a precision that is not there.
+    doc["cabin_temp_c"] = roundf(climate.tempC * 100.0f) / 100.0f;
+    doc["cabin_rh"] = roundf(climate.rh * 100.0f) / 100.0f;
+  }
+
+  char payload[512];
+  // measureJson is the length the document *wants*. serializeJson would
+  // silently truncate into a shorter buffer and publish invalid JSON, which
+  // looks like a healthy system until somebody checks the server.
+  if (measureJson(doc) >= sizeof(payload)) {
+    Serial.printf("[mqtt] payload too large: %u bytes\n", (unsigned)measureJson(doc));
+    return;
+  }
   const size_t n = serializeJson(doc, payload, sizeof(payload));
 
   if (!mqtt.publish(topicTelemetry.c_str(), payload, n)) {

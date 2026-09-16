@@ -22,6 +22,10 @@ uint16_t u16(const char *key, uint16_t fallback) {
   return prefs.isKey(key) ? prefs.getUShort(key) : fallback;
 }
 
+bool flag(const char *key, bool fallback) {
+  return prefs.isKey(key) ? prefs.getBool(key) : fallback;
+}
+
 void readMacSuffix() {
   uint8_t mac[6] = {0};
   // Works before Wi-Fi is started, unlike WiFi.macAddress().
@@ -52,6 +56,12 @@ void begin() {
   cfg.mqttPort = u16("mqtt_port", 1883);
   cfg.pubSecs = u16("pub_secs", 10);
 
+  cfg.sht31Heater = flag("sht_heat", true);
+  cfg.sht31HeatAboveRh = u16("sht_rh", 95);
+  cfg.sht31SoakMins = u16("sht_soak", 30);
+  cfg.sht31HeatSecs = u16("sht_on", 10);
+  cfg.sht31CoolSecs = u16("sht_cool", 120);
+
   prefs.end();
 }
 
@@ -74,6 +84,11 @@ void save(const Config &incoming) {
   cfg.mqttUser = incoming.mqttUser;
   cfg.mqttPort = incoming.mqttPort;
   cfg.pubSecs = incoming.pubSecs;
+  cfg.sht31Heater = incoming.sht31Heater;
+  cfg.sht31HeatAboveRh = incoming.sht31HeatAboveRh;
+  cfg.sht31SoakMins = incoming.sht31SoakMins;
+  cfg.sht31HeatSecs = incoming.sht31HeatSecs;
+  cfg.sht31CoolSecs = incoming.sht31CoolSecs;
 
   // An empty password field means "leave it alone". Without this the form
   // would have to send the stored passwords to the browser just to save an
@@ -92,6 +107,11 @@ void save(const Config &incoming) {
   prefs.putString("mqtt_pass", cfg.mqttPass);
   prefs.putUShort("mqtt_port", cfg.mqttPort);
   prefs.putUShort("pub_secs", cfg.pubSecs);
+  prefs.putBool("sht_heat", cfg.sht31Heater);
+  prefs.putUShort("sht_rh", cfg.sht31HeatAboveRh);
+  prefs.putUShort("sht_soak", cfg.sht31SoakMins);
+  prefs.putUShort("sht_on", cfg.sht31HeatSecs);
+  prefs.putUShort("sht_cool", cfg.sht31CoolSecs);
   prefs.end();
 }
 
