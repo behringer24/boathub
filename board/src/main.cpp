@@ -14,6 +14,7 @@
 #include "net.h"
 #include "portal.h"
 #include "sht31.h"
+#include "telemetry.h"
 #include "status.h"
 #include "uplink.h"
 
@@ -79,6 +80,7 @@ void setup() {
 
   net::begin();
   sht31::begin();
+  telemetry::begin();
   portal::begin();
   uplink::begin();
   status::begin();
@@ -91,6 +93,7 @@ void loop() {
   // them - the same rule the sensors will follow.
   net::loop();
   sht31::loop();
+  telemetry::loop();
   portal::loop();
   uplink::loop();
   status::loop();

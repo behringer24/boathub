@@ -77,6 +77,11 @@ so there is one row shape rather than two.
 means the board is missing measurements, which is a fault that would otherwise be invisible behind
 a perfectly plausible average.
 
+Channels within one window can have different counts - the SHT31 takes no samples while its heater
+runs, while a 1-Wire probe beside it carries on. The row holds one number, so it holds the
+**smallest**: it answers "is any average in this row built on fewer samples than it should be?".
+Overstating it would hide the fault the column exists to expose.
+
 `seatalk_online` is a boolean and is taken at window close - there is nothing to average.
 
 ### Missing is not zero

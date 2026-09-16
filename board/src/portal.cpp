@@ -109,6 +109,7 @@ void handleRoot() {
   h += field("mqtt_port", "Port", String(c.mqttPort), "number");
   h += field("mqtt_user", "User", c.mqttUser);
   h += field("mqtt_pass", "Password", "", "password", "unchanged");
+  h += field("smpl_secs", "Measure every ... seconds", String(c.sampleSecs), "number");
   h += field("pub_secs", "Publish every ... seconds", String(c.pubSecs), "number");
   h += F("</fieldset><fieldset><legend>This access point</legend>");
   h += field("ap_pass", "BOOT-NETZ password", "", "password", "unchanged, min. 8 characters");
@@ -126,6 +127,7 @@ void handleSave() {
   if (server.hasArg("mqtt_host")) in.mqttHost = server.arg("mqtt_host");
   if (server.hasArg("mqtt_user")) in.mqttUser = server.arg("mqtt_user");
   if (server.hasArg("mqtt_port")) in.mqttPort = server.arg("mqtt_port").toInt();
+  if (server.hasArg("smpl_secs")) in.sampleSecs = server.arg("smpl_secs").toInt();
   if (server.hasArg("pub_secs")) in.pubSecs = server.arg("pub_secs").toInt();
 
   in.wifiPass = server.arg("wifi_pass");
@@ -141,7 +143,10 @@ void handleSave() {
     return;
   }
   if (in.mqttPort == 0) in.mqttPort = 1883;
-  if (in.pubSecs == 0) in.pubSecs = 10;
+  if (in.sampleSecs == 0) in.sampleSecs = 10;
+  if (in.pubSecs == 0) in.pubSecs = 300;
+  // A window shorter than a sample would close before anything went into it.
+  if (in.pubSecs < in.sampleSecs) in.pubSecs = in.sampleSecs;
 
   config::save(in);
 
