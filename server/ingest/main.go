@@ -166,6 +166,70 @@ func insertWithRetry(ctx context.Context, pool *pgxpool.Pool, sql string, args .
 	return err
 }
 
+// The columns the insert above names. Kept next to it deliberately: the two
+// have to agree, and a mismatch is otherwise only discovered as a failing
+// insert on every single message.
+var required = []string{
+	"boat_id", "ts", "time_valid", "window_s", "n",
+	"uptime_s", "heap_free", "rssi_dbm", "reset_reason",
+	"battery_v", "battery_v_min", "battery_v_max",
+	"cabin_temp_c", "cabin_temp_c_min", "cabin_temp_c_max",
+	"cabin_rh", "cabin_rh_min", "cabin_rh_max",
+	"engine_temp_c", "engine_temp_c_min", "engine_temp_c_max",
+	"bilge_temp_c", "bilge_temp_c_min", "bilge_temp_c_max",
+	"fridge_temp_c", "fridge_temp_c_min", "fridge_temp_c_max",
+	"bilge_level_cm", "bilge_level_cm_min", "bilge_level_cm_max",
+	"seatalk_online",
+}
+
+// db/init only runs when the data directory is created, so a database that
+// predates a schema change keeps the old columns and every insert fails with
+// the same error, forever. Said once at startup it is a diagnosis; discovered
+// through the insert log it is an afternoon.
+//
+// This does not exit. A service that dies on a bad environment is a service
+// somebody has to watch, and nobody watches a boat server - so it says what is
+// wrong as loudly as it can and carries on.
+func checkSchema(ctx context.Context, pool *pgxpool.Pool) {
+	const q = `SELECT column_name FROM information_schema.columns WHERE table_name = 'telemetry'`
+
+	rows, err := pool.Query(ctx, q)
+	if err != nil {
+		log.Printf("could not inspect the telemetry table: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	have := map[string]bool{}
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err == nil {
+			have[name] = true
+		}
+	}
+
+	if len(have) == 0 {
+		log.Println("!!! there is no telemetry table - did db/init run?")
+		return
+	}
+
+	var missing []string
+	for _, c := range required {
+		if !have[c] {
+			missing = append(missing, c)
+		}
+	}
+	if len(missing) == 0 {
+		log.Printf("schema ok, %d columns", len(have))
+		return
+	}
+
+	log.Printf("!!! the telemetry table is missing %d column(s): %s",
+		len(missing), strings.Join(missing, ", "))
+	log.Println("!!! this database predates the current schema and every insert will fail")
+	log.Println("!!! see \"Changing the schema\" in server/README.md")
+}
+
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
 
@@ -174,6 +238,8 @@ func main() {
 
 	pool := connectDB(ctx, env("DATABASE_URL", ""))
 	defer pool.Close()
+
+	checkSchema(ctx, pool)
 
 	broker := fmt.Sprintf("tcp://%s:%s", env("MQTT_HOST", "mosquitto"), env("MQTT_PORT", "1883"))
 
