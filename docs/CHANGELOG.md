@@ -25,6 +25,12 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   track logger, 64 kB core dump.
 - Bring-up firmware: verifies flash size, PSRAM and the partition table over the serial port, so a
   wrong board configuration cannot pass as a successful build.
+- `i2cscan` build environment: a bench scanner that first checks the bus electrically - whether the
+  pull-ups are there at all, and whether either line is stuck low - and only then reports which
+  addresses answer, naming the ones this project expects. It rescans every two seconds so a module
+  can be plugged in and watched appearing. Most "the sensor does not work" sessions are a wire
+  rather than a sensor, and a scanner that only lists addresses reports the same "nothing found"
+  for both.
 - `play` build environment with an LED sandbox for working out patterns on the onboard WS2812 and
   BOOT button, without touching the firmware.
 - Wi-Fi: access point `BOOT-NETZ` and station run at the same time, with the station retried under
