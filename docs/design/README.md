@@ -67,9 +67,11 @@ In reading order.
 | first | [A-001](A-001-devkit-and-carrier.md) | DevKit, carrier board and antenna |
 | **start building** | [A-002](A-002-bench-setup-usb.md) | Bench setup on USB power |
 | then | [A-003](A-003-ds18b20-temperature-sensors.md) | DS18B20 temperature sensors |
+| then | [A-008](A-008-sht31-cabin-climate.md) | SHT31 cabin climate |
 | then | [A-004](A-004-wifi-and-configuration-portal.md) | Wi-Fi operation and configuration portal |
 | then | [A-005](A-005-server-uplink.md) | Server uplink |
 | then | [A-006](A-006-telemetry-storage.md) | Telemetry storage and dashboard |
+| then | [A-007](A-007-store-and-forward.md) | Store and forward |
 | last, on the bench | [B-001](B-001-power-supply.md) | Power supply and battery measurement |
 
 ## Checking a board
@@ -116,7 +118,6 @@ They take the next free number in their phase when written.
 
 **Phase A**
 
-- SHT31-D cabin climate on the shared I2C bus
 - ADS1115 channel allocation and value conditioning
 - Alarm and threshold logic
 - Fault handling and watchdog: decoupling sensor and network failures
