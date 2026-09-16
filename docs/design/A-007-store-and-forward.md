@@ -17,13 +17,13 @@ is independent of this.
 
 ## 2. Starting point
 
-[A-005](A-005-server-uplink.md) originally dropped a message when the connection was down, on the
-grounds that telemetry is a heartbeat and a stale reading is worth less than none. **That was right
-for a boat at a pontoon and wrong for a boat that sails.** Under way there is no marina Wi-Fi at
-all, and Starlink only in phases on longer trips. Dropping discards precisely the part of the
-record that cannot be measured again.
+**A boat at a pontoon and a boat that sails need opposite things from the uplink.** At the berth a
+measurement is a heartbeat: if it cannot be delivered now, the next one is along in five minutes
+and the old one is worth little. At sea there is no marina Wi-Fi at all, and Starlink only in
+phases on longer trips - and a measurement dropped there is part of a passage that cannot be
+measured again.
 
-So the buffer stops being a special case:
+The passage wins, because it is the irreplaceable one. So the buffer is not a special case:
 
 > Every aggregate is written to flash. The uplink drains the buffer when it can. **"Live" is simply
 > the case where the buffer is empty** and the record goes straight back out again.
@@ -49,9 +49,10 @@ acknowledgement** that the broker accepted the message. A buffer whose whole pur
 record once it is safely delivered has nothing to trigger the deletion. Either it deletes on a
 guess - and loses data whenever a publish is dropped in flight - or it never deletes and fills up.
 
-It also quietly undermines the work already done on the server: [A-006](A-006-telemetry-storage.md)
-makes delivery lossless from broker to database on the assumption that the board publishes at
-QoS 1. Without that, the chain is sound from the broker onwards and open at the very first hop.
+It also leaves the rest of the chain pointless. [A-006](A-006-telemetry-storage.md) makes delivery
+lossless from broker to database - persistent session, QoS 1, acknowledgement after the row is
+committed - and all of that rests on the board publishing at QoS 1. With a QoS 0 publisher the
+chain is sound from the broker onwards and **open at the very first hop**.
 
 **So the MQTT client has to change before any of this is built.**
 
@@ -88,10 +89,10 @@ index, and a torn write at the tail is detectable and discardable rather than co
 | `seq` | 4 | monotonic per boat, never reused |
 | `boot_id` | 2 | incremented in NVS on every boot |
 | `t_mono_s` | 4 | seconds since boot - always known |
-| `t_wall` | 4 | unix seconds, **0 when the clock was never set** |
+| `t_wall` | 4 | unix seconds, **0 when the clock was never set**; see section 5 |
 | `window_s` | 2 | |
 | `n` | 1 | measurements in the window; 1 marks a spot reading |
-| `flags` | 1 | time valid, spot reading, sensor-fault bits |
+| `flags` | 1 | time source (2 bits, section 5), spot reading, sensor-fault bits |
 | `rssi` | 1 | dBm, signed |
 | `heap_kb` | 2 | |
 | 7 channels x mean/min/max | 42 | scaled integers, see below |
@@ -124,19 +125,79 @@ the rest and evict among themselves.
 
 ## 5. Time
 
-A buffered record is worth much less if it cannot be dated, and under way there is no NTP and -
-before stage 2 - no GPS either.
+A buffered record is worth much less if it cannot be dated, and at sea there is no NTP - and,
+before stage 2, no GPS either.
 
-- `t_mono_s` is **always** written. Ordering within one boot is therefore always recoverable.
+### The board has no battery-backed clock
+
+What it does have is a system time that runs off the module's 40 MHz crystal while the chip is
+awake, and an RTC domain that survives deep sleep. **Neither survives losing power**: after an
+interruption the clock restarts at 1970. There is no coin cell anywhere on this board.
+
+Drift, though, is a non-problem. At the 10-20 ppm typical of the module crystal:
+
+| Drift | per day | over a two-week trip |
+|-------|---------|----------------------|
+| 10 ppm | 0.9 s | 12 s |
+| 20 ppm | 1.7 s | 24 s |
+| 50 ppm, a poor crystal | 4.3 s | 60 s |
+
+Against a 5 min aggregate window even the worst of those is a fifth of one record. Sync at the dock,
+sail for a fortnight, and the timestamps are still good. The much less accurate internal RC
+oscillator only takes over in **deep sleep**, which here is the exceptional `BATTERY_CRITICAL`
+state rather than normal running.
+
+**So the thing to design for is a power interruption, not drift.**
+
+### What a record carries
+
+- `t_mono_s` is **always** written. Ordering within one boot is therefore always recoverable, no
+  matter what the wall clock did or did not know.
 - `t_wall` is written when the clock is known, and is 0 otherwise.
 - When the clock becomes known mid-boot, the offset `t_wall - t_mono_s` is recorded once and
   applied to earlier records of the same boot **as they are encoded for upload**. Records on flash
   are never rewritten.
-- A boot that never learns the time uploads with `time_valid: false`. The server keeps its own
-  `received_at`, which is what that column is for.
-- `boot_id` lets the server group and order records from such a boot even with no absolute time.
+- `boot_id` lets the server group and order records from one boot even with no absolute time at all.
 
-From stage 2, GPS is the time source at sea, which is what the project guide already assumed.
+### Surviving a restart: a persisted floor
+
+The drain already writes its cursor to NVS after each batch. **The last known wall time goes
+alongside it**, which costs nothing extra.
+
+On boot that value is restored as a *lower bound*: the clock is at least that late. Combined with
+`t_mono_s` the records of the new boot are then dated to within the length of the outage - seconds
+for a watchdog reset, and only genuinely wrong after a long lay-up. That turns the common case from
+"undated" into "approximately dated", which is the difference between a record that can be read and
+one that cannot.
+
+### Three states, not two
+
+| `time_source` | `time_valid` | Meaning |
+|---------------|--------------|---------|
+| `ntp` / `gps` | true | synced, trust it |
+| `restored` | false | the NVS floor plus elapsed time - ordering is right, absolute time is a lower bound |
+| `none` | false | no clock this boot; only `boot_id` and `t_mono_s` order these |
+
+`time_valid` stays the field to filter on; `time_source` says why, which is what turns "this
+timestamp looks odd" into a diagnosis.
+
+### If exactness matters
+
+A **DS3231** on the existing I2C bus is about 3 EUR and needs no extra pin: address 0x68 clashes
+with neither the SHT31 at 0x44 nor the ADS1115s at 0x48/0x49/0x4A. Temperature-compensated to
+±2 ppm - about a minute a year - with a coin cell that lasts years.
+
+Note that the cheap ZS-042 modules carry a **charging circuit for rechargeable LIR2032 cells**.
+Fitted with an ordinary CR2032 they will try to charge it; the usual remedy is to remove the
+charging resistor or its diode.
+
+An external 32.768 kHz crystal on the ESP itself is **not** the answer. `XTAL_32K_P`/`XTAL_32K_N`
+are GPIO15 and GPIO16 - exactly the SeaTalk reservation - and it would only improve accuracy, not
+survive the power loss that is the actual problem.
+
+From stage 2, GPS is the time source at sea, which is what the project guide already assumed. That
+leaves one narrow gap: stage 1, at sea, after an interruption - and the persisted floor covers it
+well enough that hardware is optional.
 
 ## 6. Draining
 
@@ -157,7 +218,8 @@ After that, oldest first, so the record stays contiguous.
   whether a window is enough.
 - **QoS 1**, and the read cursor advances **only on PUBACK**.
 - The cursor (`segment`, `index`) is persisted in NVS after each batch, not each record - roughly a
-  hundred writes a day, which NVS wear levelling does not notice.
+  hundred writes a day, which NVS wear levelling does not notice. **The last known wall time is
+  written with it** (section 5), so a restart starts from a floor rather than from 1970.
 - A segment whose every record is acknowledged is deleted.
 - The window closing mid-drain costs nothing: the cursor is where it was, and the next connection
   continues there.
@@ -172,7 +234,7 @@ one shape, and the ingest needs one code path rather than two.
 Within a quota, the oldest segment is deleted - acknowledged ones first, and only then
 unacknowledged ones.
 
-Thinning old records instead is tempting and deliberately not done in v2. At 34 days of combined
+Thinning old records instead is tempting, and deliberately left out of v2. At 34 days of combined
 recording the case barely arises, and decimation is real code with real edge cases.
 
 What is **not** optional is admitting it: a counter of dropped records goes into the payload and to
@@ -181,12 +243,13 @@ overflows quietly would reintroduce it at the other end.
 
 ## 8. What this needs elsewhere
 
-Not yet done. All three belong to implementing this document:
+Implementing this document means three changes outside the board firmware:
 
 | Where | Change |
 |-------|--------|
 | `server/ingest` | accept a **JSON array** of records, not only a single object |
 | `server/db` | `boot_id` and `seq` columns, plus a unique index on `(boat_id, boot_id, seq)`. QoS 1 is at-least-once, so a redelivered batch **will** arrive twice; insert with `ON CONFLICT DO NOTHING` |
+| `server/db`, `server/ingest` | a `time_source` column and field - `ntp`, `gps`, `restored` or `none` (section 5). `time_valid` stays the boolean to filter on |
 | `board` | replace PubSubClient - section 3 |
 
 The duplicate case is not theoretical. Without the unique index a reconnect mid-batch double-counts
@@ -202,6 +265,7 @@ rows, and the first place it shows is the dashboard.
 | Filesystem will not mount | mount fails | **keep publishing live** and log loudly. Losing the buffer must not cost the live path as well |
 | Broker acknowledges, ingest never stores | - | out of scope here; that is what [A-006](A-006-telemetry-storage.md)'s persistent session and manual acknowledgement are for |
 | Clock jumps when NTP arrives | offset recorded once | earlier records of the boot are dated at encode time, not rewritten |
+| Power lost, clock back to 1970 | restored floor is older than `t_mono_s` implies | records go out as `time_source: restored`, ordered correctly and dated to within the outage |
 
 ## 10. Verification
 
@@ -213,14 +277,17 @@ rows, and the first place it shows is the dashboard.
 - [ ] Fill the buffer past its quota: oldest go first, the dropped counter rises and reaches the
       dashboard
 - [ ] Boot with no NTP, buffer, then let NTP arrive: earlier records upload with plausible times
-- [ ] Boot that never sees NTP: records arrive with `time_valid: false` and are still ordered
+- [ ] Power-cycle with no network at all, buffer, reconnect: records carry `time_source: restored`
+      and times within the length of the outage, not 1970
+- [ ] Erase NVS and boot with no network: records arrive with `time_source: none`, `time_valid`
+      false, and are still correctly ordered within the boot
 - [ ] BOOT button with no connection: a spot reading is buffered rather than refused
 - [ ] Corrupt a segment file by hand: it is skipped and counted, ingest is unaffected
 - [ ] 24 h unattended with the network flapping: no gap, no duplicate, no reset
 
 ## 11. References
 
-- [A-005-server-uplink.md](A-005-server-uplink.md) - the payload, and the decision this reverses
+- [A-005-server-uplink.md](A-005-server-uplink.md) - the payload and the publish path
 - [A-006-telemetry-storage.md](A-006-telemetry-storage.md) - the delivery guarantees this depends on
 - [A-004-wifi-and-configuration-portal.md](A-004-wifi-and-configuration-portal.md) - connection state
 - [../ROADMAP.md](../ROADMAP.md) - stage 2.5, the track logger that shares this buffer
