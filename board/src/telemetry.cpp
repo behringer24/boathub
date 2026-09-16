@@ -9,16 +9,32 @@ telemetry::Aggregate filling;  // the window being filled
 telemetry::Aggregate ready;  // a closed window waiting to be collected
 
 uint32_t windowStart = 0;
-uint32_t nextSample = 0;
 uint32_t droppedWindows = 0;
 char state[40] = "starting";
 
-// Read every sensor once and add what it gave to the window.
+// Collect whatever the sensors have produced since the last pass.
 //
-// A sensor with nothing to offer simply adds nothing: its channel keeps a
-// count of zero and is left out of the message entirely. "No sensor fitted"
-// and "measured zero" must not look the same anywhere in this system.
-void sampleInto(telemetry::Aggregate &agg) {
+// There is deliberately no clock here. Each sensor measures on its own
+// schedule and hands each result over exactly once, so the window counts
+// measurements rather than polls. A timer of its own would drift against the
+// sensors' timers, and a reading would sometimes be counted twice and
+// sometimes skipped - which would quietly make the sample count in every
+// message a different thing from what it claims to be.
+//
+// A sensor with nothing new adds nothing: its channel keeps a count of zero
+// and is left out of the message entirely. "No sensor fitted" and "measured
+// zero" must not look the same anywhere in this system.
+void collectInto(telemetry::Aggregate &agg) {
+  sht31::Reading climate;
+  if (sht31::takeFresh(climate)) {
+    agg.cabinTemp.add(climate.tempC);
+    agg.cabinRh.add(climate.rh);
+  }
+}
+
+// The current state rather than a new measurement: a spot message must not
+// wait for the next one to come round.
+void snapshotInto(telemetry::Aggregate &agg) {
   const sht31::Reading climate = sht31::latest();
   if (climate.valid) {
     agg.cabinTemp.add(climate.tempC);
@@ -54,7 +70,6 @@ namespace telemetry {
 void begin() {
   const uint32_t now = millis();
   windowStart = now;
-  nextSample = now;
   filling = Aggregate{};
   snprintf(state, sizeof(state), "window filling");
 }
@@ -63,13 +78,9 @@ void loop() {
   const Config &c = config::get();
   const uint32_t now = millis();
 
-  const uint32_t sampleMs = (uint32_t)c.sampleSecs * 1000UL;
   const uint32_t windowMs = (uint32_t)c.pubSecs * 1000UL;
 
-  if ((int32_t)(now - nextSample) >= 0) {
-    nextSample = now + sampleMs;
-    sampleInto(filling);
-  }
+  collectInto(filling);
 
   if ((now - windowStart) < windowMs) return;
 
@@ -104,7 +115,7 @@ bool take(Aggregate &out) {
 
 Aggregate spot() {
   Aggregate one;
-  sampleInto(one);
+  snapshotInto(one);
   one.n = countFor(one);
   one.windowS = 0;
   one.valid = true;

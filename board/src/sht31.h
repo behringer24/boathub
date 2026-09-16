@@ -24,7 +24,18 @@ void loop();
 // fresh enough. Staleness covers two cases with one mechanism: a sensor that
 // has stopped answering, and the heater cycle during which samples are
 // deliberately not taken.
+//
+// This does not consume anything: it answers "what is it now" and may return
+// the same reading repeatedly. For the status line and for a spot message.
 Reading latest();
+
+// Consumes the reading: true **once** per accepted measurement, never twice.
+//
+// This is what an aggregator has to use. Polling latest() on a clock of its
+// own would mean two independent timers drifting against each other, so a
+// measurement could be counted twice or skipped entirely - and the sample
+// count in the message would stop meaning what it claims to mean.
+bool takeFresh(Reading &out);
 
 // Has the sensor ever acknowledged? Distinguishes "not fitted" from "fitted
 // and currently unhappy" in the status line.

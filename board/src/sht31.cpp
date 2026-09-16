@@ -25,12 +25,19 @@ const uint16_t CMD_CLEAR_STATUS = 0x3041;
 // nothing here because the wait happens in the background.
 const uint32_t MEASURE_WAIT_MS = 20;
 
-const uint32_t SAMPLE_MS = 10000;
+// A reading older than three and a half sample intervals counts as no
+// reading: one missed measurement is tolerated, a stopped sensor is not
+// reported as current data. Floored so that a very short interval does not
+// make every reading stale before anything can use it.
+uint32_t staleMs() {
+  const uint32_t scaled = (uint32_t)config::get().sampleSecs * 3500UL;
+  return scaled < 30000UL ? 30000UL : scaled;
+}
 
-// A reading older than this counts as no reading. Three and a half sample
-// intervals, so one missed measurement is tolerated and a stopped sensor is
-// not reported as current data.
-const uint32_t STALE_MS = 35000;
+uint32_t sampleMs() {
+  const uint16_t secs = config::get().sampleSecs;
+  return (secs == 0 ? 1u : secs) * 1000UL;
+}
 
 const uint32_t STATUS_CHECK_MS = 300000;  // 5 min
 
@@ -43,6 +50,7 @@ uint32_t nextStatusCheck = 0;
 
 sht31::Reading last;
 uint32_t lastAt = 0;
+bool unread = false;  // a measurement nothing has consumed yet
 
 bool seen = false;
 const char *state = "not started";
@@ -138,6 +146,7 @@ void collect(uint32_t now) {
   last.tempC = tempC;
   last.rh = rh;
   lastAt = now;
+  unread = true;
   seen = true;
   state = "ok";
 }
@@ -220,7 +229,7 @@ void loop() {
       if ((now - phaseSince) < MEASURE_WAIT_MS) return;
       collect(now);
       setPhase(Phase::Idle, now);
-      nextSample = now + SAMPLE_MS;
+      nextSample = now + sampleMs();
       if (last.valid && lastAt == now) maybeStartHeater(now);
       return;
 
@@ -237,7 +246,7 @@ void loop() {
 
   if (!command(CMD_MEASURE)) {
     state = "no answer";
-    nextSample = now + SAMPLE_MS;
+    nextSample = now + sampleMs();
     return;
   }
   setPhase(Phase::Measuring, now);
@@ -245,8 +254,15 @@ void loop() {
 
 Reading latest() {
   if (!last.valid) return Reading{};
-  if ((millis() - lastAt) > STALE_MS) return Reading{};
+  if ((millis() - lastAt) > staleMs()) return Reading{};
   return last;
+}
+
+bool takeFresh(Reading &out) {
+  if (!unread) return false;
+  unread = false;
+  out = last;
+  return true;
 }
 
 bool present() { return seen; }
