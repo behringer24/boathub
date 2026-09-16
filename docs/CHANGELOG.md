@@ -31,6 +31,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   can be plugged in and watched appearing. Most "the sensor does not work" sessions are a wire
   rather than a sensor, and a scanner that only lists addresses reports the same "nothing found"
   for both.
+- `adsread` build environment: a bench meter that prints every channel of every ADS1115 it finds, in
+  volts, with a bar so a potentiometer swept across the 3.3 V rail shows the whole scale and any
+  dead patch in it. A bus scan proves an address answers; it cannot prove the converter converts.
+  Wanted again in phase B, to watch the battery divider against a multimeter before trusting a
+  calibration factor.
 - `play` build environment with an LED sandbox for working out patterns on the onboard WS2812 and
   BOOT button, without touching the firmware.
 - Wi-Fi: access point `BOOT-NETZ` and station run at the same time, with the station retried under
