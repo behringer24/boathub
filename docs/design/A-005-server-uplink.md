@@ -51,7 +51,7 @@ outbound **UDP 123**.
 ## 4. Topics and payload
 
 ```
-boathub/<boat-id>/telemetry     measurements, every pub_secs seconds
+boathub/<boat-id>/telemetry     one aggregate every pub_secs seconds
 boathub/<boat-id>/status        "online" / "offline", retained, last will
 boathub/<boat-id>/events        alarms and state changes, only when something happens
 ```
@@ -160,32 +160,24 @@ Measurement interval `sample_secs`, publish interval `pub_secs`, both in NVS. De
 **Nothing in the publish path blocks.** Connection attempts are polled with the same backoff as the
 station connection, and a broker that is down slows nothing else.
 
-### Reversed: unsent messages are buffered, not dropped
+### An unsent message is buffered, not dropped
 
-An earlier version of this document said the opposite - that a message was dropped when the
-connection was down, because *"telemetry is a heartbeat, and a stale reading delivered minutes
-later is worse than none"*.
-
-**That reasoning was right for a boat lying at a pontoon and wrong for a boat that sails.** Under
-way there is no marina Wi-Fi at all, and Starlink only in phases on longer trips. Dropping would
-mean the entire passage - the part of the record that is not re-measurable - is exactly the part
-that never arrives. A day-old cabin temperature is not worth much; a day-old record of the trip is
-the whole point.
-
-So telemetry stops being only a heartbeat and becomes a **record**:
+Telemetry is a **record**, not only a heartbeat. At the berth the distinction does not show: if a
+message cannot go out now, the next one is along in five minutes. At sea it is the whole point -
+there is no marina Wi-Fi at all, and Starlink only in phases on longer trips, so a dropped message
+is part of a passage that cannot be measured again.
 
 - every aggregate is written to the buffer in LittleFS, always
 - the uplink drains the buffer whenever a connection exists
 - "live" is simply the case where the buffer is empty and the aggregate goes straight out
 
-One code path, and being offline stops being a mode. The device side of this - buffer format, ring
-buffer behaviour, batching, resumable drain - is its own document, **A-007**, and is not built yet.
-The server side is ready for it: see the delivery guarantees in
-[A-006](A-006-telemetry-storage.md).
+One code path, and being offline is not a mode. The device side - buffer format, ring buffer
+behaviour, batching, resumable drain - is **[A-007](A-007-store-and-forward.md)**. The server side
+is ready for it: see the delivery guarantees in [A-006](A-006-telemetry-storage.md).
 
-What does *not* change: a **stale reading must still be recognisable as stale**. Every record
-carries its own `ts`, and the server stores that alongside its own `received_at`, so a backfilled
-window never masquerades as current.
+A **stale reading still has to be recognisable as stale**. Every record carries its own `ts` and
+the server stores that alongside its own `received_at`, so a backfilled window never masquerades as
+current.
 
 **PubSubClient's default buffer is 256 bytes** and a full payload will exceed that once the sensors
 are in. Call `setBufferSize()` explicitly rather than discovering the limit as silent message loss.

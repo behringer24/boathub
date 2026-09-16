@@ -117,17 +117,17 @@ Rules it follows:
   starting up are all normal; the service retries with backoff and never exits because of them.
 - It is a subscriber, nothing more. It publishes nothing and can make no boat do anything.
 
-### Delivery has to be lossless, and that is new
+### Delivery has to be lossless
 
 Once the board buffers measurements at sea it **deletes them when they are acknowledged**. The
 acknowledgement it sees comes from the *broker*, not from this service. So a message the broker
 accepts and this service never stores is a measurement gone for good, with nothing anywhere
 reporting a problem.
 
-> **The board cannot hold up its end of this yet.** PubSubClient publishes at QoS 0 only, so today
-> it gets no acknowledgement at all and the chain is open at its very first hop. Replacing the MQTT
-> client is part of [A-007](A-007-store-and-forward.md); everything below is what the server side
-> contributes, and it is in place.
+> **This requires a QoS 1 publisher on the board.** PubSubClient cannot do it - it publishes at
+> QoS 0 only, so the board receives no acknowledgement and the chain stands open at its very first
+> hop. Choosing the replacement is part of [A-007](A-007-store-and-forward.md). Everything below is
+> the server's half.
 
 Three settings close that gap:
 
@@ -137,10 +137,9 @@ Three settings close that gap:
 | **QoS 1** subscriptions | delivery is fire-and-forget; the broker may drop it and nobody is told |
 | **Manual acknowledgement**, after the row is committed | a database hiccup loses the row, because the message was acknowledged on arrival |
 
-The earlier version of this document said the opposite - *"the broker holds nothing, so those
-messages are lost by design"*. That was an acceptable trade while telemetry was a heartbeat on the
-same LAN and the next one came in ten seconds. It stops being acceptable the moment a message
-represents five minutes that cannot be measured again.
+Letting the broker hold nothing would be an acceptable trade for a heartbeat on the same LAN, where
+the next message is along in ten seconds. It is not one when a message represents five minutes that
+cannot be measured again.
 
 **A failed insert is deliberately left unacknowledged.** The broker redelivers it on the next
 reconnect, and its inflight limit becomes backpressure - a database outage slows ingest down
