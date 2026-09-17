@@ -103,9 +103,16 @@ nothing - the cable capacitance that makes 4.7 kΩ marginal simply is not there.
 
 ### Electrical constraints
 
-- The 100 Ω series resistor adds the sink current times 100 Ω to the low level seen by the GPIO -
-  0.17 V at 2.0 kΩ. With the sensor's own V<sub>OL</sub> of ~0.4 V that is ~0.57 V, against the
-  ESP32's V<sub>IL</sub> limit of 0.825 V. Valid across the whole pull-up range above.
+- The 100 Ω series resistor costs low-level margin in only one of the two directions, and the two
+  never coincide - whichever end is pulling, the other is not.
+
+  | Who pulls low | Current through the 100 Ω | Result |
+  |---------------|---------------------------|--------|
+  | The ESP | the full pull-up current, 1.65 mA at 2.0 kΩ | 0.17 V across it, so the sensor sees ~0.27 V against its V<sub>IL</sub> of 0.8 V |
+  | The sensor | none - the GPIO is a high-impedance input | the pin sees the sensor's V<sub>OL</sub> of ~0.4 V directly, against the ESP32's V<sub>IL</sub> limit of 0.825 V |
+
+  Valid across the whole pull-up range above; at 1.5 kΩ the drop is 0.22 V and the conclusion is
+  unchanged.
 - **Do not add clamping diodes** on the data lines. A 3.3 V zener or TVS adds tens of pF, which
   costs more in edge quality than it buys in protection at these voltages.
 - The 100 Ω will not save a GPIO from a cable shorted to 12 V. **Route the probe cables away from
