@@ -247,6 +247,140 @@
     },
     {
       "type": "timeseries",
+      "title": "Engine bay",
+      "description": "Mean with the range behind it. The width of the band is what separates a bay warming slowly in the sun from one heated by a running engine, which moves several degrees inside a single window.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "min"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 18
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "min"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, engine_temp_c AS mean, engine_temp_c_min AS min, engine_temp_c_max AS max FROM telemetry WHERE $__timeFilter(received_at) AND engine_temp_c IS NOT NULL ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Bilge water",
+      "description": "Mean with the range behind it. Bilge water has a large thermal mass and moves slowly, so a wide band is a probe being splashed or a pump running rather than the water changing temperature.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "min"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 18
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "min"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, bilge_temp_c AS mean, bilge_temp_c_min AS min, bilge_temp_c_max AS max FROM telemetry WHERE $__timeFilter(received_at) AND bilge_temp_c IS NOT NULL ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
       "title": "Cabin temperature",
       "description": "Mean with the range behind it. Empty until the SHT31 is wired.",
       "datasource": {
@@ -257,7 +391,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -324,7 +458,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 16
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
