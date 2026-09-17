@@ -46,13 +46,21 @@ The carrier is what the bench build wires into. In the finished system the main 
 ([B-002](B-002-main-board.md)) takes its place, socketing the DevKit directly and carrying the
 circuitry as well - but it has to match these same two rows, so the tables below outlive it.
 
-### Top row (left to right as printed)
+Both rows below are listed **starting at the USB end** of the DevKit. That is the only unambiguous
+reference point: "left" depends on which way up the board is held, while the two USB-C sockets sit
+at one end and the antenna at the other, and no amount of rotating changes which is which.
+
+### Top row - the column carrying IO4 to IO9
 
 `GND · 5V · IO14 · IO13 · IO12 · IO11 · IO10 · IO9 · IO46 · IO3 · IO8 · IO18 · IO17 · IO16 · IO15 · IO7 · IO6 · IO5 · IO4 · RST · 3.3V · 3.3V`
 
-### Bottom row
+### Bottom row - the column carrying IO19 to IO21 and IO2
 
 `GND · GND · IO19 · IO20 · IO21 · IO47 · IO48 · IO45 · IO0 · IO35 · IO36 · IO37 · IO38 · IO39 · IO40 · IO41 · IO42 · IO2 · IO1 · RX · TX · GND`
+
+So the `3.3V` pair and the lone `GND` sit at the **antenna** end, and `GND`/`5V` and the `GND` pair
+at the **USB** end. The carrier's own screw terminals may be silkscreened in either direction; the
+DevKit's numbering is the authority, because that is what a socket has to mate with.
 
 ### Project allocation
 

@@ -50,9 +50,14 @@ a rework. **Socket it.**
 | | |
 |---|---|
 | Row spacing | 22.86 mm nominal for the DevKitC-1 form factor, 2 x 22 pins at 2.54 mm |
-| Antenna | **no copper pour under the module's antenna end.** A ground plane beneath it detunes the antenna, and the board would be the reason for poor range |
-| USB sockets | both DevKit USB connectors must stay reachable at the board edge |
+| Orientation | **pin 1 of both sockets sits at the USB end.** J1.1 is the `GND` next to `5V`, J2.1 is the first of the `GND` pair - see [A-001](A-001-devkit-and-carrier.md) section 3 |
+| Antenna | **no copper pour at the far end from pin 1.** That is where the module's antenna sits; a ground plane beneath it detunes the antenna, and the board would be the reason for poor range |
+| USB sockets | both DevKit USB connectors must stay reachable at the board edge beside pin 1 |
 | Buttons | the DevKit's own BOOT and RESET buttons must stay pressable with the board installed |
+
+The orientation line is the one to get right. Both sockets run in the same direction, pin 1 to pin
+22 from the USB end towards the antenna. One socket footprint placed 180° out puts 5 V where GND
+belongs, and nothing in the netlist can catch it - the ratsnest is just as happy either way.
 
 **Measure the actual DevKit before the board is ordered.** [A-001](A-001-devkit-and-carrier.md)
 establishes that boards sold under this description vary, and a socket is unforgiving: a row
