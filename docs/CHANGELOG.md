@@ -138,8 +138,10 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   building from one second in.
 - Grafana with a provisioned data source and two dashboards. **Heartbeat** - uptime, free heap,
   signal strength, messages per hour and samples per window - shows a board restarting at night, a
-  leak, a radio degrading and an outage that happened while nobody was watching. **Sensors** plots
-  the mean as a line with the min/max range shaded behind it, so the band on the fridge panel *is*
-  the compressor cycle; it stays empty until the probes are wired.
+  leak, a radio degrading and an outage that happened while nobody was watching. **Sensors** gives
+  every measured quantity its own panel, plotting the mean as a line with the min/max range shaded
+  behind it, so the band on the fridge panel *is* the compressor cycle. The three probe
+  temperatures additionally share one overview panel, and that one carries the means alone - three
+  shaded bands on a single axis read as mush. Panels stay empty until their sensor is wired.
 - `bringup` build environment: the board verification firmware moved out of the way now that
   `boathub` carries the real application.
