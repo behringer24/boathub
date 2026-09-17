@@ -42,6 +42,10 @@ datasheet.** Section 4 answers that question by looking at the board instead.
 The carrier breaks every pin out to screw terminals in two rows. Conveniently, **the entire project
 pin plan except GPIO21 sits on the top row.**
 
+The carrier is what the bench build wires into. In the finished system the main board
+([B-002](B-002-main-board.md)) takes its place, socketing the DevKit directly and carrying the
+circuitry as well - but it has to match these same two rows, so the tables below outlive it.
+
 ### Top row (left to right as printed)
 
 `GND · 5V · IO14 · IO13 · IO12 · IO11 · IO10 · IO9 · IO46 · IO3 · IO8 · IO18 · IO17 · IO16 · IO15 · IO7 · IO6 · IO5 · IO4 · RST · 3.3V · 3.3V`

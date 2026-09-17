@@ -39,8 +39,8 @@ system - no battery measurement, no 12 V robustness - but a real, testable one.
 
 | # | Step | Document |
 |---|------|----------|
-| 1 | Build the perfboard: fuse, TVS, reverse-polarity protection, DC/DC, and the 1-Wire passives moved off the breadboard | [B-001](B-001-power-supply.md), [B-002](B-002-carrier-perfboard.md) |
-| 2 | Battery divider and its calibration factor | [B-001](B-001-power-supply.md), [B-002](B-002-carrier-perfboard.md) |
+| 1 | Main board: fuse, TVS, reverse-polarity protection, DC/DC, and the 1-Wire passives moved off the breadboard | [B-001](B-001-power-supply.md), [B-002](B-002-main-board.md) |
+| 2 | Battery divider and its calibration factor | [B-001](B-001-power-supply.md), [B-002](B-002-main-board.md) |
 | 3 | Battery state machine and debouncing | [B-001](B-001-power-supply.md) |
 | 4 | Shore-power-loss alarm, gated so it stays quiet underway | [B-001](B-001-power-supply.md) |
 | 5 | Changeover from USB to 12 V - never both at once | [B-001](B-001-power-supply.md) |
@@ -75,7 +75,7 @@ In reading order.
 | then | [A-009](A-009-imu-heel-and-motion.md) | IMU: heel, pitch and motion |
 | then | [A-007](A-007-store-and-forward.md) | Store and forward |
 | last, on the bench | [B-001](B-001-power-supply.md) | Power supply and battery measurement |
-| with it | [B-002](B-002-carrier-perfboard.md) | Carrier perfboard: nets and build |
+| with it | [B-002](B-002-main-board.md) | Main board: nets and build |
 
 ## Checking a board
 
