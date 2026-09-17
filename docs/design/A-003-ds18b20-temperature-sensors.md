@@ -218,9 +218,16 @@ None of these may reset the ESP or affect the network path.
 ### On the bench
 
 - [ ] **Wire colours metered out before connecting.** Red/black/yellow is common but not universal
-      on clones. In diode-test mode, the black lead on GND shows a forward drop to both other
-      wires; reversed it shows open. If a probe does not enumerate within a second of power-up,
-      disconnect immediately rather than leaving it mis-wired.
+      on clones, and swapping VDD and GND destroys the sensor. In diode-test mode the meter's
+      **positive lead on GND** shows a forward drop to both other wires, because the ESD diodes sit
+      with their anode there. Only a conducting reading proves anything: the blocking direction is
+      not a clean open circuit, since the chip part-powers itself through that path.
+- [ ] The same test will **not** separate VDD from DATA. The parasite-power diode between them sits
+      deeper in the die than the ESD structures, and a meter on a low resistance range often cannot
+      forward-bias it. With GND established, settle the other two by trying them: wired the wrong
+      way round the sensor takes its supply through the pull-up, browns out the moment it converts,
+      and reports nothing on that GPIO. That costs a restart, not a sensor. A probe that gets warm
+      is a different matter - pull it, GND is wrong.
 - [ ] Each probe enumerates, **ROM family code is 0x28**
 - [ ] ROM IDs recorded and written to NVS
 - [ ] CRC passes over a few hundred consecutive reads
