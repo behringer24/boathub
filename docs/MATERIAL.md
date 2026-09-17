@@ -79,10 +79,13 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 
 | Part | Qty | Phase | Purpose / requirement | Price | Source |
 |------|-----|-------|-----------------------|-------|--------|
-| Perfboard 2.54 mm, individual pads | 1 | B | protection and analog conditioning: TVS, diode, DC/DC, bulk caps, divider, 1-Wire pull-ups and series resistors, shunt. Component and net list in [B-002](design/B-002-carrier-perfboard.md). **Small** - the carrier already provides the DevKit socket and the GPIO terminals ([A-001](design/A-001-devkit-and-carrier.md)) | ~7-10 | [Amazon search](https://www.amazon.de/s?k=Punktrasterplatine+2.54mm) |
-| 3-pole screw terminals, 5.08 mm | 3 | B | detachable probe cables on the perfboard (J4-J6). GPIO breakout is handled by the carrier | ~7-12 | [Amazon search](https://www.amazon.de/s?k=Schraubklemme+5.08mm+PCB) |
-| 2-pole screw terminal, 5.08 mm | 1 | B | 12 V entry on the perfboard (J1) | with the above | as above |
-| Pin header strip 2.54 mm, straight | 1 strip | B | internal links on the perfboard: 5 V out, 3.3 V in, 1-Wire to the carrier, divider to the ADS1115 (J2, J3, J7, J8). Soldered wire does the same job if the board never has to come out | ~5-8 | [Amazon search](https://www.amazon.de/s?k=Stiftleiste+2.54mm+Sortiment) |
+| Fabricated main board, 2-layer | 5 (minimum run) | B | carries the protection, the DC/DC, the divider, the 1-Wire passives, the I2C distribution and the DevKit socket, and replaces the bundled carrier. Component and net list in [B-002](design/B-002-main-board.md) | ~30-60 | JLCPCB, Aisler, PCBWay |
+| 3-pole screw terminals, 5.08 mm | 3 | B | detachable probe cables (J4-J6) | ~7-12 | [Amazon search](https://www.amazon.de/s?k=Schraubklemme+5.08mm+PCB) |
+| 2-pole screw terminal, 5.08 mm | 1 | B | 12 V entry (J3) | with the above | as above |
+| 4-pole screw terminals, 5.08 mm | 2 | B | SHT31 cable and the ADS1115 analog inputs (J7, J8) | with the above | as above |
+| Socket strip 2.54 mm, 1x22 | 2 | B | the DevKit plugs into these (J1, J2). Sockets, not pin headers - the DevKit has to come out | ~6-10 | [Amazon search](https://www.amazon.de/s?k=Buchsenleiste+2.54mm+22polig) |
+| Socket strip 2.54 mm, 1x10 | 1 | B | ADS1115 breakout (U2) | with the above | as above |
+| Pin header strip 2.54 mm, straight | 1 strip | B | IMU, I2C expansion, and the reserved and spare GPIO headers (J9-J12) | ~5-8 | [Amazon search](https://www.amazon.de/s?k=Stiftleiste+2.54mm+Sortiment) |
 | ABS enclosure IP65/IP67, approx. 200 x 120 x 75 mm | 1 | C | electronics box; carrier is 84.5 x 73.7 mm and fits alongside the perfboard | ~12-20 | [Amazon search](https://www.amazon.de/s?k=ABS+Gehaeuse+IP65+200x120x75) |
 | Pressure-equalisation vent membrane (Gore-type) | 1 | C | stops condensation inside the sealed box; fitted pointing down | ~8-15 | [Amazon search](https://www.amazon.de/s?k=Druckausgleichselement+Gehaeuse+IP67+Membran) |
 | Cable glands M12/M16, IP68 | set | C | cable entries, fitted pointing down or sideways, with drip loops | ~7-10 | [Amazon search](https://www.amazon.de/s?k=Kabelverschraubung+IP68+M12+M16) |
