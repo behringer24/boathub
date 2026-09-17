@@ -79,8 +79,10 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 
 | Part | Qty | Phase | Purpose / requirement | Price | Source |
 |------|-----|-------|-----------------------|-------|--------|
-| Perfboard 2.54 mm, individual pads | 1 | B | protection and analog conditioning: fuse, TVS, diode, DC/DC, bulk caps, divider, 1-Wire pull-ups and series resistors, shunt. **Small** - the carrier already provides the DevKit socket and the GPIO terminals ([A-001](design/A-001-devkit-and-carrier.md)) | ~7-10 | [Amazon search](https://www.amazon.de/s?k=Punktrasterplatine+2.54mm) |
-| 3-pole screw terminals, 5.08 mm | 3-4 | B | detachable probe cables on the perfboard, plus the 12 V entry. GPIO breakout is handled by the carrier | ~7-12 | [Amazon search](https://www.amazon.de/s?k=Schraubklemme+5.08mm+PCB) |
+| Perfboard 2.54 mm, individual pads | 1 | B | protection and analog conditioning: TVS, diode, DC/DC, bulk caps, divider, 1-Wire pull-ups and series resistors, shunt. Component and net list in [B-002](design/B-002-carrier-perfboard.md). **Small** - the carrier already provides the DevKit socket and the GPIO terminals ([A-001](design/A-001-devkit-and-carrier.md)) | ~7-10 | [Amazon search](https://www.amazon.de/s?k=Punktrasterplatine+2.54mm) |
+| 3-pole screw terminals, 5.08 mm | 3 | B | detachable probe cables on the perfboard (J4-J6). GPIO breakout is handled by the carrier | ~7-12 | [Amazon search](https://www.amazon.de/s?k=Schraubklemme+5.08mm+PCB) |
+| 2-pole screw terminal, 5.08 mm | 1 | B | 12 V entry on the perfboard (J1) | with the above | as above |
+| Pin header strip 2.54 mm, straight | 1 strip | B | internal links on the perfboard: 5 V out, 3.3 V in, 1-Wire to the carrier, divider to the ADS1115 (J2, J3, J7, J8). Soldered wire does the same job if the board never has to come out | ~5-8 | [Amazon search](https://www.amazon.de/s?k=Stiftleiste+2.54mm+Sortiment) |
 | ABS enclosure IP65/IP67, approx. 200 x 120 x 75 mm | 1 | C | electronics box; carrier is 84.5 x 73.7 mm and fits alongside the perfboard | ~12-20 | [Amazon search](https://www.amazon.de/s?k=ABS+Gehaeuse+IP65+200x120x75) |
 | Pressure-equalisation vent membrane (Gore-type) | 1 | C | stops condensation inside the sealed box; fitted pointing down | ~8-15 | [Amazon search](https://www.amazon.de/s?k=Druckausgleichselement+Gehaeuse+IP67+Membran) |
 | Cable glands M12/M16, IP68 | set | C | cable entries, fitted pointing down or sideways, with drip loops | ~7-10 | [Amazon search](https://www.amazon.de/s?k=Kabelverschraubung+IP68+M12+M16) |
