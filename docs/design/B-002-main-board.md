@@ -49,7 +49,7 @@ a rework. **Socket it.**
 
 | | |
 |---|---|
-| Row spacing | 22.86 mm nominal for the DevKitC-1 form factor, 2 x 22 pins at 2.54 mm |
+| Row spacing | **25.4 mm**, 2 x 22 pins at 2.54 mm. That is 10 pitches, a full inch - not the 22.86 mm that a DevKitC-1 of the original width would give. Confirm it by counting: **nine free grid positions** between the two rows |
 | Orientation | **pin 1 of both sockets sits at the USB end.** J1.1 is the `GND` next to `5V`, J2.1 is the first of the `GND` pair - see [A-001](A-001-devkit-and-carrier.md) section 3 |
 | Antenna | **no copper pour at the far end from pin 1.** That is where the module's antenna sits; a ground plane beneath it detunes the antenna, and the board would be the reason for poor range |
 | USB sockets | both DevKit USB connectors must stay reachable at the board edge beside pin 1 |
@@ -288,8 +288,8 @@ compare the two. Two independent descriptions that agree are worth considerably 
 
 ### Before the board is ordered
 
-- [ ] Socket row spacing and pin order measured against the physical DevKit, not read off a
-      silkscreen
+- [ ] Socket row spacing counted on the physical DevKit - nine free grid positions between the
+      rows - and the pin order read off the DevKit rather than off the carrier's silkscreen
 - [ ] DC/DC module pinout confirmed against the part in hand
 - [ ] ADS1115 breakout pin order confirmed against the part in hand
 - [ ] No copper pour under the DevKit's antenna end
