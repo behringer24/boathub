@@ -138,7 +138,9 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   building from one second in.
 - Grafana with a provisioned data source and two dashboards. **Heartbeat** - uptime, free heap,
   signal strength, messages per hour and samples per window - shows a board restarting at night, a
-  leak, a radio degrading and an outage that happened while nobody was watching. **Sensors** gives
+  leak, a radio degrading and an outage that happened while nobody was watching. Its heap axis
+  starts at zero: left to autoscale, the few dozen bytes of ordinary variation fill the panel and
+  read as a collapse, which is indistinguishable at a glance from one that matters. **Sensors** gives
   every measured quantity its own panel, plotting the mean as a line with the min/max range shaded
   behind it, so the band on the fridge panel *is* the compressor cycle. The three probe
   temperatures additionally share one overview panel, and that one carries the means alone - three

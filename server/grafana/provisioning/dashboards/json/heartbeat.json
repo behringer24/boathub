@@ -49,7 +49,7 @@
     {
       "type": "timeseries",
       "title": "Free heap",
-      "description": "Flat is healthy. A downward trend over days is a leak, long before it crashes anything.",
+      "description": "Flat is healthy. A downward trend over days is a leak, long before it crashes anything. The axis starts at zero on purpose: autoscaled, the few dozen bytes of ordinary variation fill the whole panel and read as a cliff.",
       "datasource": {
         "type": "postgres",
         "uid": "boathub"
@@ -66,7 +66,8 @@
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 5
-          }
+          },
+          "min": 0
         },
         "overrides": []
       },
