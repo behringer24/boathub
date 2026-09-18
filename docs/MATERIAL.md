@@ -43,7 +43,7 @@ Values drawn from it:
 
 | Value | Qty | Phase | Purpose |
 |-------|-----|-------|---------|
-| **2.2 kΩ** | 3 | A | **1-Wire pull-ups, the value to fit.** 4.7 kΩ is the textbook value but marginal over 5 m ([A-003](design/A-003-ds18b20-temperature-sensors.md)) |
+| **2.0-2.2 kΩ** | 3 | A | **1-Wire pull-ups, the value to fit** - either works, take what the assortment holds. 4.7 kΩ is the textbook value but marginal over 5 m ([A-003](design/A-003-ds18b20-temperature-sensors.md)) |
 | 3.3 kΩ | 3 | A | 1-Wire pull-up fallback; also the extra I2C pull-up pair if the SHT31 run exceeds ~3 m |
 | 4.7 kΩ | 3 | A | 1-Wire fallback, the original guide's value. Keep a few, do not fit them first |
 | 100 Ω | 3 | A | series protection in each DS18B20 DATA line |
