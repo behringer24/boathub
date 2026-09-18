@@ -319,6 +319,9 @@ compare the two. Two independent descriptions that agree are worth considerably 
 - [ ] No copper pour under the DevKit's antenna end
 - [ ] Both DevKit USB sockets and both its buttons reachable once installed
 - [ ] Board outline and mounting holes checked against the enclosure
+- [ ] Every terminal that takes a cable - J3, J4, J5, J6, J7, J8 - sits at the board edge with its
+      opening facing outwards, and they are grouped towards the enclosure side that carries the
+      cable glands. A terminal facing inwards cannot be fixed after fabrication
 - [ ] Netlist compared against a second description - either the tables in section 5 read through
       by hand, or a schematic drawn independently
 
