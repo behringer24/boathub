@@ -243,7 +243,31 @@ branch by far.
 | C3, C4 | **minus stripe to GND** | electrolytics vent |
 | U1 | check the module's own IN/OUT silkscreen | 12 V into the 5 V output destroys it |
 
-In the netlist, **pin 1 of both diodes is the cathode**, following the standard KiCad symbol.
+In the netlist, **pin 1 of both diodes is the cathode**. D1 uses `Device:D_Zener` rather than
+`Device:D_TVS` for exactly that reason: a unidirectional TVS *is* a large zener, and the zener
+symbol has an unambiguous cathode on pin 1, where the TVS symbol is drawn back to back and numbers
+its pins as two anodes.
+
+### KiCad symbols and footprints
+
+| Ref | Symbol | Footprint |
+|-----|--------|-----------|
+| R1-R9 | `Device:R` | `Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal` |
+| C1, C2, C5 | `Device:C` | `Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm` |
+| C3 | `Device:CP` | `Capacitor_THT:CP_Radial_D8.0mm_P3.50mm` |
+| C4 | `Device:CP` | `Capacitor_THT:CP_Radial_D10.0mm_P5.00mm` |
+| D1 | `Device:D_Zener` | `Diode_THT:D_DO-201AD_P15.24mm_Horizontal` |
+| D2 | `Device:D_Schottky` | `Diode_THT:D_DO-201AD_P15.24mm_Horizontal` |
+| J1, J2 | `Connector_Generic:Conn_01x22` | `Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical` |
+| U2 | `Connector_Generic:Conn_01x10` | `Connector_PinSocket_2.54mm:PinSocket_1x10_P2.54mm_Vertical` |
+| J3-J12 | `Connector_Generic:Conn_01xNN` | `Connector_PinHeader_2.54mm:PinHeader_1xNN_P2.54mm_Vertical` |
+
+Two entries in that table are placeholders and have to be replaced before the board is ordered:
+
+- **The screw terminals.** Filter the footprint chooser to the `TerminalBlock*` libraries and
+  search for the pole count at `P5.08mm`. Which one fits depends on the part bought, and library
+  names in that family change between KiCad releases - which is why the netlist does not name one.
+- **The DC/DC module.** No standard footprint exists. Measure the module's pads and draw one.
 
 Three pinouts in this design are assumptions, not standards, and each has to be checked against the
 part actually bought before the board is ordered:
