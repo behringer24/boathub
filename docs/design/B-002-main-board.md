@@ -204,7 +204,7 @@ three different ways is a fault waiting for the first service visit.
 
 ## 6. What a netlist cannot say
 
-Three things decide whether this board works, and none is expressible as a net.
+Four things decide whether this board works, and none is expressible as a net.
 
 ### The 1-Wire passives sit at the cable, not at the pin
 
@@ -225,6 +225,34 @@ Share copper between them and the transmit peaks appear in the battery reading.
 So: the analog return - R2, C2 and the ADS1115 - joins the plane at **one point**, at the DC/DC
 output, rather than anywhere convenient. On a fabricated board this is a deliberate act during
 layout, not something that happens by itself.
+
+### Track width is set by the fault, not by the load
+
+In normal operation the 12 V side carries almost nothing. The ESP draws some 500 mA at 5 V while
+transmitting, which is about 245 mA at the 12 V input, against roughly 0.75 A that a 0.2 mm track
+in 35 µm copper handles at a 10 K rise. Threefold margin, and the drop over the whole board is tens
+of millivolts.
+
+The case that decides the width is **reverse polarity**. The TVS then conducts forward and shorts
+the input until the fuse clears - intended behaviour, see [B-001](B-001-power-supply.md) - and a
+200 Ah bank through a couple of metres of cable really does deliver the 200 A the 1.5KE20A is rated
+to pass for 8.3 ms.
+
+That current runs through exactly two paths: **J3 to D1, and D1 to ground.** A 0.2 mm track does
+not survive it, and it would fail in the one event the circuit exists to survive.
+
+| Net class | Nets | Width |
+|-----------|------|-------|
+| fault path | `+12V_FUSED`, and the ground return at the input | **1.5-2 mm** |
+| power | `+12V_PROT`, `+5V` | **1.0 mm** |
+| default | everything else | 0.2 mm |
+
+D1's return to the ground plane wants **several vias**, not one. At 200 A a single via is the new
+weakest point.
+
+`VBAT_SENSE` and `ADS_A0` stay at the default width: they carry 148 µA, and what they need is not
+copper but distance from the DC/DC module, which radiates into a deliberately high-impedance
+measurement path.
 
 ### The I2C bus is a bus, not a star
 
