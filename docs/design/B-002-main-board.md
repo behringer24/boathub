@@ -322,6 +322,11 @@ compare the two. Two independent descriptions that agree are worth considerably 
 - [ ] Every terminal that takes a cable - J3, J4, J5, J6, J7, J8 - sits at the board edge with its
       opening facing outwards, and they are grouped towards the enclosure side that carries the
       cable glands. A terminal facing inwards cannot be fixed after fabrication
+- [ ] Silkscreen carries what somebody needs in a dark locker with a torch: the cable label at each
+      terminal, the wire colours at the probe terminals, `5V`, `GND`, `3V3`, `IO4`-`IO6`, `SDA` and
+      `SCL` beside the sockets, a pin 1 marker on each socket, and the fuse rating at J3 with the
+      note that reversing the supply blows it. None of it under a module, where a fitted board
+      hides it
 - [ ] Netlist compared against a second description - either the tables in section 5 read through
       by hand, or a schematic drawn independently
 
