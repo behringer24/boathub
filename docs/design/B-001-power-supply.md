@@ -132,6 +132,33 @@ days**. That is the case where the shore-power-loss alarm earns its keep.
 | Battery tap third | Measuring ahead of the diode removes the ±80 mV of load- and temperature-dependent error that no calibration can take out. |
 | Schottky fourth | Reverse polarity protection for everything that follows. |
 
+### The negative side, and where it returns
+
+Battery negative is the system ground. The DC/DC module is **not isolated** - its input and output
+returns are the same node internally - so the converter's two returns, the DevKit's GND, every
+sensor ground and the divider's bottom leg are all one net. There is nothing to choose here.
+
+There is something to install correctly, though, and it decides whether the measurement is worth
+anything.
+
+The divider measures battery positive **against that net**. Any voltage drop between the battery's
+negative terminal and the board's ground appears in the reading as a battery that is flatter than
+it is. The board's own ~90 mA puts a few millivolts into a couple of metres of wire, which is
+nothing.
+
+It stops being nothing when the board's negative shares a conductor with a real load. A bilge pump
+or a windlass pulling tens of amps through the same return shifts the reference by hundreds of
+millivolts, and the battery reading follows it down - looking exactly like a bank sagging under
+load, which is the one thing it must never be confused with.
+
+**Run the negative back to the battery's negative bus on its own conductor**, not tapped off the
+nearest load's return.
+
+One consequence to keep in mind: with permanent shore power the boat's negative is tied to shore
+protective earth through the charger, so this net is not isolated from anything. That is the same
+fact behind the bilge probe's sheath check in
+[A-003](A-003-ds18b20-temperature-sensors.md).
+
 ### Consequence worth knowing: reverse polarity now blows the fuse
 
 With the TVS upstream of the diode, connecting the supply backwards makes the **unidirectional TVS
