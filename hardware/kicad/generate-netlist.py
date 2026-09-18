@@ -35,7 +35,8 @@ COMPONENTS = [
     # 12 V entry, protection and conversion, from B-001
     ("J3", "12V IN", HDR(2), "Connector_Generic", "Conn_01x02", 2,
      "12 V house supply, fused externally"),
-    ("D1", "1.5KE20A", D_FP, "Device", "D_TVS", 2, "transient clamp, unidirectional"),
+    ("D1", "1.5KE20A", D_FP, "Device", "D_Zener", 2,
+     "transient clamp, unidirectional - a zener symbol, so pin 1 is the cathode"),
     ("C1", "100n/50V", C_FP, "Device", "C", 2, "HF bypass at the input"),
     ("R1", "82k 0.1%", R_FP, "Device", "R", 2, "battery divider, top leg"),
     ("R2", "10k 0.1%", R_FP, "Device", "R", 2, "battery divider, bottom leg"),
