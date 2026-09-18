@@ -243,12 +243,14 @@ not survive it, and it would fail in the one event the circuit exists to survive
 
 | Net class | Nets | Width |
 |-----------|------|-------|
-| fault path | `+12V_FUSED`, and the ground return at the input | **1.5-2 mm** |
+| fault path | `+12V_FUSED` | **1.5-2 mm** |
 | power | `+12V_PROT`, `+5V` | **1.0 mm** |
 | default | everything else | 0.2 mm |
 
-D1's return to the ground plane wants **several vias**, not one. At 200 A a single via is the new
-weakest point.
+`GND` is not in that table, because it is a pour and a net class width says nothing about a pour.
+What carries the return at 200 A is the **number of vias at D1's anode** - four to six rather than
+one - and an unbroken plane beneath them. A ground plane sliced by other tracks at that point sends
+the current the long way round, and the via count stops mattering.
 
 `VBAT_SENSE` and `ADS_A0` stay at the default width: they carry 148 µA, and what they need is not
 copper but distance from the DC/DC module, which radiates into a deliberately high-impedance
