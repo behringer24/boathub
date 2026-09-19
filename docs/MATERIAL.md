@@ -81,9 +81,9 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 | Part | Qty | Phase | Purpose / requirement | Price | Source |
 |------|-----|-------|-----------------------|-------|--------|
 | Fabricated main board, 2-layer | 5 (minimum run) | B | carries the protection, the DC/DC, the divider, the 1-Wire passives, the I2C distribution and the DevKit socket, and replaces the bundled carrier. Component and net list in [B-002](design/B-002-main-board.md) | ~30-60 | JLCPCB, Aisler, PCBWay |
-| Screw terminals 5.08 mm, solderable | 3 x 3-pole, 1 x 2-pole, 2 x 4-pole | B | probe cables (J4-J6), 12 V entry (J3), SHT31 and the ADC inputs (J7, J8). **Check that a 3-pole exists in the series ordered** - some go 2, 4, 6, 8, and then a 4-pole with one pole unused is the fallback | 0,29-0,57 each | Reichelt `CTB0509-x` |
-| 2-pole screw terminal, 5.08 mm | 1 | B | 12 V entry (J3) | with the above | as above |
-| 4-pole screw terminals, 5.08 mm | 2 | B | SHT31 cable and the ADS1115 analog inputs (J7, J8) | with the above | as above |
+| Screw terminals **5.00 mm**, 3-pole | 4 | B | the three probe cables and the SeaTalk cable. One pitch for every terminal that leaves the enclosure, so there is nothing to confuse when ordering | ~0,50 each | Altech AK100 series or equivalent |
+| Screw terminal **5.00 mm**, 2-pole | 1 | B | 12 V entry | with the above | as above |
+| Screw terminal 2.54 mm, 4-pole | 1 | B | the SHT31 cable, whose four thin cores do not need 5 mm. The one terminal on the board at a different pitch - order it deliberately, not by accident | ~0,40 | Xinya XY308 series or equivalent |
 | Socket strip 2.54 mm, 1x40 | 2 | B | cut to 1x22 for the DevKit sockets (J1, J2); one strip yields one 22 and one 18, so two are needed. Sockets, not pin headers - the DevKit has to come out | 3,15 each | Reichelt `BKL 10120978` |
 | Socket strip 2.54 mm, 1x10 | 1 | B | ADS1115 breakout (U2) | with the above | as above |
 | Pin header strip 2.54 mm, straight | 1 strip | B | IMU, I2C expansion, and the reserved and spare GPIO headers (J9-J12) | ~5-8 | [Amazon search](https://www.amazon.de/s?k=Stiftleiste+2.54mm+Sortiment) |
@@ -147,7 +147,7 @@ have passed a bench test against a simulated bus.**
 
 | Part | Qty | Purpose |
 |------|-----|---------|
-| 3-pole screw terminal, 5.00 or 5.08 mm | 1 | SeaTalk +12 V / DATA / GND. Shared by both directions |
+| 3-pole screw terminal, 5.00 mm | 1 | SeaTalk +12 V / DATA / GND. Shared by both directions; same part as the probe terminals |
 | PC817 optocoupler (or 6N137) | 1-2 | galvanic isolation of SeaTalk RX; PC817's ~4 µs edges are fine against a 208 µs bit at 4800 baud |
 | 4.7 kΩ resistor | 1 | LED series resistor on the SeaTalk side of the opto. ~2.3 mA is plenty for a PC817 and keeps the load off the instrument bus, which is held high by pull-ups inside the instruments. A 6N137 would want 1-2 kΩ instead ([D-001](design/D-001-seatalk-rx-stage.md)) |
 | 10 kΩ resistor | 1 | pull-up on the ESP side of the opto output |
