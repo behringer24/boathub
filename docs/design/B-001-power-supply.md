@@ -44,7 +44,8 @@ draw by itself. That is why the converter is specified by part number rather tha
 follows that:
 
 - continuous operation, no duty cycling
-- a standard DC/DC module is fine; no low-quiescent-current part needed
+- the converter is chosen for its quiescent current, not for its current rating - 1 A against a
+  550 mA peak is already ample headroom
 - `BOOT-NETZ` and the immediate bilge alarm stay permanently available
 - **the low-voltage cutoff is still required** - as a backstop for the case shore power fails and
   stays failed, not as a normal operating mode
@@ -125,7 +126,7 @@ days**. That is the case where the shore-power-loss alarm earns its keep.
       +---- 470 uF ----------- GND
       +---- 100 nF ----------- GND
       +---- ESP32 5V/VIN
-                               GND common, star point in the box
+                               GND common - one plane on the board, see B-002
 ```
 
 ### Why this order
