@@ -61,17 +61,17 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 
 | Part | Qty | Phase | Purpose / requirement | Price | Source |
 |------|-----|-------|-----------------------|-------|--------|
-| 82 kΩ 0.1 % + 10 kΩ 0.1 % | 1 each | B | battery voltage divider, factor 9.2 | ~5-10 (pack) | [Amazon search](https://www.amazon.de/s?k=82k+10k+0.1%25+Praezisionswiderstand) |
+| 100 kΩ 0.1 % + 10 kΩ 0.1 % | 1 each | B | battery voltage divider, factor 11.0. **100 kΩ rather than 82 kΩ because both values are stocked as 0.1 % parts and 82 kΩ is not** - it costs 0.1 mV of resolution and saves a second order ([B-001](design/B-001-power-supply.md)) | 4,79 | Reichelt `WEL RC55Y-100KB`, `WEL RC55Y-10KBI` |
 | 100 Ω 0.1 % / 0.25 W | 2 | opt | 4-20 mA shunt into ADS1115 A1; **two in parallel give 50 Ω**, halving the burden voltage at identical resolution | ~5 (pack) | [Amazon search](https://www.amazon.de/s?k=100+Ohm+0.1%25+Praezisionswiderstand) |
 
 ### Power supply and protection
 
 | Part | Qty | Phase | Purpose / requirement | Price | Source |
 |------|-----|-------|-----------------------|-------|--------|
-| DC/DC converter 9-36 V to 5 V, min. 3 A | 1 | B | ESP supply, wide input for house-supply swings | ~9-15 | [Amazon search](https://www.amazon.de/s?k=9-36V+5V+3A+DC+DC+wasserdicht) |
+| **RECOM R-78K5.0-1.0** switching regulator | 1 | B | ESP supply. 6.5-36 V in, 5 V / 1 A out, **1 mA quiescent** - which is what keeps the standby draw down, since the converter would otherwise set the floor ([B-001](design/B-001-power-supply.md)). SIP-3, three pins at 2.54 mm | 3,55 | Reichelt `R-78K50-10` |
 | Automotive blade fuse holder + 2 A fuses | 1 set | B | cable protection close to the source | ~6-10 | [Amazon search](https://www.amazon.de/s?k=wasserdichter+KFZ+Flachsicherungshalter+2A) |
-| TVS diode 1.5KE20A | 1 (pack) | B | transient clamp, **fitted ahead of the Schottky**. 17.1 V standoff, clamps 27.7 V at 54 A | ~5-8 | [Amazon search](https://www.amazon.de/s?k=1.5KE20A+TVS) |
-| 1N5822 Schottky diode | 1 (pack) | B | reverse-polarity protection, 3 A / 40 V | ~4-7 | [Amazon search](https://www.amazon.de/s?k=1N5822+Schottky+Diode) |
+| TVS diode 1.5KE20A | 1 | B | transient clamp, **fitted ahead of the Schottky**. 17.1 V standoff, clamps 27.7 V at 54 A. Unidirectional - the bidirectional `CA` suffix is the wrong part | 0,37 | Reichelt `1,5KE20A` |
+| 1N5822 Schottky diode | 1 | B | reverse-polarity protection, 3 A / 40 V, DO-201AD | 0,15 | Reichelt `1N 5822` |
 | 100 nF / 50 V | **at least 5** | B | 12 V input, DC/DC output, ADS1115 A0, ADS1115 A1, and the SHT31 far end | ~8-15 (assortment) | [Amazon search](https://www.amazon.de/s?k=Kondensator+Sortiment+100nF+100uF+470uF) |
 | 100 µF / 35 V, **105 °C** | 1 | B | bulk at the DC/DC input. 105 °C, not 85 °C | with the above | as above |
 | 470 µF / 16 V, **105 °C** | 1 | B | bulk on the 5 V output | with the above | as above |
@@ -81,10 +81,10 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 | Part | Qty | Phase | Purpose / requirement | Price | Source |
 |------|-----|-------|-----------------------|-------|--------|
 | Fabricated main board, 2-layer | 5 (minimum run) | B | carries the protection, the DC/DC, the divider, the 1-Wire passives, the I2C distribution and the DevKit socket, and replaces the bundled carrier. Component and net list in [B-002](design/B-002-main-board.md) | ~30-60 | JLCPCB, Aisler, PCBWay |
-| 3-pole screw terminals, 5.08 mm | 3 | B | detachable probe cables (J4-J6) | ~7-12 | [Amazon search](https://www.amazon.de/s?k=Schraubklemme+5.08mm+PCB) |
+| Screw terminals 5.08 mm, solderable | 3 x 3-pole, 1 x 2-pole, 2 x 4-pole | B | probe cables (J4-J6), 12 V entry (J3), SHT31 and the ADC inputs (J7, J8). **Check that a 3-pole exists in the series ordered** - some go 2, 4, 6, 8, and then a 4-pole with one pole unused is the fallback | 0,29-0,57 each | Reichelt `CTB0509-x` |
 | 2-pole screw terminal, 5.08 mm | 1 | B | 12 V entry (J3) | with the above | as above |
 | 4-pole screw terminals, 5.08 mm | 2 | B | SHT31 cable and the ADS1115 analog inputs (J7, J8) | with the above | as above |
-| Socket strip 2.54 mm, 1x22 | 2 | B | the DevKit plugs into these (J1, J2). Sockets, not pin headers - the DevKit has to come out | ~6-10 | [Amazon search](https://www.amazon.de/s?k=Buchsenleiste+2.54mm+22polig) |
+| Socket strip 2.54 mm, 1x40 | 2 | B | cut to 1x22 for the DevKit sockets (J1, J2); one strip yields one 22 and one 18, so two are needed. Sockets, not pin headers - the DevKit has to come out | 3,15 each | Reichelt `BKL 10120978` |
 | Socket strip 2.54 mm, 1x10 | 1 | B | ADS1115 breakout (U2) | with the above | as above |
 | Pin header strip 2.54 mm, straight | 1 strip | B | IMU, I2C expansion, and the reserved and spare GPIO headers (J9-J12) | ~5-8 | [Amazon search](https://www.amazon.de/s?k=Stiftleiste+2.54mm+Sortiment) |
 | ABS enclosure IP65/IP67, approx. 200 x 120 x 75 mm | 1 | C | electronics box; the main board plus the DevKit standing in its sockets needs roughly 14 mm of height above the board | ~12-20 | [Amazon search](https://www.amazon.de/s?k=ABS+Gehaeuse+IP65+200x120x75) |

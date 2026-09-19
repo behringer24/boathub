@@ -89,13 +89,13 @@ Values and rationale are in [B-001](B-001-power-supply.md) section 3 and
 |-----|-------|----------|
 | D1 | 1.5KE20A | transient clamp, unidirectional, 17.1 V standoff |
 | C1 | 100 nF / 50 V | HF bypass at the input |
-| R1 | 82 kΩ 0.1 % | battery divider, top leg |
+| R1 | 100 kΩ 0.1 % | battery divider, top leg |
 | R2 | 10 kΩ 0.1 % | battery divider, bottom leg |
 | R3 | 1 kΩ | series into ADS1115 A0 - **do not omit**, this is what survives a reversed supply |
 | C2 | 100 nF / 50 V | at A0 to GND, also feeds the converter's switched-capacitor input |
 | D2 | 1N5822 | reverse polarity, 3 A / 40 V Schottky |
 | C3 | 100 µF / 35 V, 105 °C | bulk at the DC/DC input |
-| U1 | DC/DC 9-36 V → 5 V, min. 3 A | DevKit supply |
+| U1 | RECOM **R-78K5.0-1.0** | DevKit supply. 6.5-36 V in, 5 V / 1 A out, 1 mA quiescent, SIP-3 with three pins at 2.54 mm |
 | C4 | 470 µF / 16 V, 105 °C | bulk at the 5 V output |
 | C5 | 100 nF / 50 V | HF bypass at the output |
 | R4, R5, R6 | 2.0 kΩ | 1-Wire pull-ups, one per probe |
@@ -130,10 +130,10 @@ Thirty-seven nets. This is the complete electrical description of the board.
 
 | Net | Nodes |
 |-----|-------|
-| `GND` | J1.1, J2.1, J2.2, J2.22, J3.2, D1.2, C1.2, R2.2, C2.2, C3.2, U1.2, U1.4, C4.2, C5.2, J4.3, J5.3, J6.3, J7.4, U2.2, U2.5, J8.4, J9.2, J10.2, J11.8, J12.14 |
+| `GND` | J1.1, J2.1, J2.2, J2.22, J3.2, D1.2, C1.2, R2.2, C2.2, C3.2, U1.2, C4.2, C5.2, J4.3, J5.3, J6.3, J7.4, U2.2, U2.5, J8.4, J9.2, J10.2, J11.8, J12.14 |
 | `+12V_FUSED` | J3.1, D1.1, C1.1, R1.1, D2.2 |
-| `+12V_PROT` | D2.1, C3.1, U1.1 |
-| `+5V` | U1.3, C4.1, C5.1, J1.2 |
+| `+12V_PROT` | D2.1, C3.1, U1.1 (+VIN) |
+| `+5V` | U1.3 (+VOUT), C4.1, C5.1, J1.2 |
 | `+3V3` | J1.21, J1.22, R4.1, R5.1, R6.1, J4.1, J5.1, J6.1, J7.1, U2.1, J9.1, J10.1, J11.7, J12.13 |
 
 Read the power chain off the net names: the clamp and the battery tap sit on the **fused** net,
@@ -218,7 +218,7 @@ capacitance. Same parts, a worse edge, and CRC errors that look like a bad probe
 ### GND is a plane, and the job is not to cut it
 
 The DC/DC return carries the DevKit's supply current, which peaks at several hundred milliamps when
-the radio transmits. The divider's return carries 148 µA and is being measured to the millivolt. On
+the radio transmits. The divider's return carries 124 µA and is being measured to the millivolt. On
 a wired ground those two sharing a conductor would put the transmit peaks straight into the battery
 reading, and the classic answer is a star point.
 
@@ -265,7 +265,7 @@ What carries the return at 200 A is the **number of vias at D1's anode** - four 
 one - and an unbroken plane beneath them. A ground plane sliced by other tracks at that point sends
 the current the long way round, and the via count stops mattering.
 
-`VBAT_SENSE` and `ADS_A0` stay at the default width: they carry 148 µA, and what they need is not
+`VBAT_SENSE` and `ADS_A0` stay at the default width: they carry 124 µA, and what they need is not
 copper but distance from the DC/DC module, which radiates into a deliberately high-impedance
 measurement path.
 
@@ -284,7 +284,7 @@ branch by far.
 | D1 (TVS) | **banded end (cathode) to `+12V_FUSED`**, body to GND | conducts at 0.7 V and blows the fuse as soon as 12 V arrives |
 | D2 (1N5822) | banded end (cathode) to `+12V_PROT`, body to `+12V_FUSED` | no supply reaches the DC/DC - harmless but baffling |
 | C3, C4 | **minus stripe to GND** | electrolytics vent |
-| U1 | check the module's own IN/OUT silkscreen | 12 V into the 5 V output destroys it |
+| U1 | pin 1 = +VIN, 2 = GND, 3 = +VOUT, flat face and printed pin numbers to orient by | 12 V into the 5 V output destroys it |
 
 In the netlist, **pin 1 of both diodes is the cathode**. D1 uses `Device:D_Zener` rather than
 `Device:D_TVS` for exactly that reason: a unidirectional TVS *is* a large zener, and the zener
@@ -303,6 +303,7 @@ its pins as two anodes.
 | D2 | `Device:D_Schottky` | `Diode_THT:D_DO-201AD_P15.24mm_Horizontal` |
 | J1, J2 | `Connector_Generic:Conn_01x22` | `Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical` |
 | U2 | `Connector_Generic:Conn_01x10` | `Connector_PinSocket_2.54mm:PinSocket_1x10_P2.54mm_Vertical` |
+| U1 | `Connector_Generic:Conn_01x03` | `Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical` |
 | J3-J12 | `Connector_Generic:Conn_01xNN` | `Connector_PinHeader_2.54mm:PinHeader_1xNN_P2.54mm_Vertical` |
 
 Two entries in that table are placeholders and have to be replaced before the board is ordered:
@@ -310,18 +311,23 @@ Two entries in that table are placeholders and have to be replaced before the bo
 - **The screw terminals.** Filter the footprint chooser to the `TerminalBlock*` libraries and
   search for the pole count at `P5.08mm`. Which one fits depends on the part bought, and library
   names in that family change between KiCad releases - which is why the netlist does not name one.
-- **The DC/DC module.** No standard footprint exists. Measure the module's pads and draw one.
+- **The converter.** Three pads at 2.54 mm is geometrically correct and always resolves, which is
+  why the netlist names a pin header. If the installed libraries carry a RECOM R-78 footprint,
+  prefer it: same pads, but with the real body outline, courtyard and 3D model.
 
 Three pinouts in this design are assumptions, not standards, and each has to be checked against the
 part actually bought before the board is ordered:
 
 | Part | Assumed |
 |------|---------|
-| DC/DC module | 1 = IN+, 2 = IN−, 3 = OUT+, 4 = OUT− |
 | ADS1115 breakout | VDD, GND, SCL, SDA, ADDR, ALRT, A0, A1, A2, A3 |
 | DevKit socket | the row order printed in [A-001](A-001-devkit-and-carrier.md) section 3 |
 
-The last one is the expensive one. A mirrored row puts 5 V where GND belongs.
+The second is the expensive one. A mirrored row puts 5 V where GND belongs.
+
+The converter is no longer on that list. A catalogue part with a published drawing replaced the
+generic module whose pinout had to be guessed, which is one of the reasons it was chosen - see
+[B-001](B-001-power-supply.md).
 
 ## 8. The files
 
@@ -411,7 +417,6 @@ hand - a fine-pitch converter IC in place of the module, say. It does not.
 
 - [ ] Socket row spacing counted on the physical DevKit - nine free grid positions between the
       rows - and the pin order read off the DevKit rather than off the carrier's silkscreen
-- [ ] DC/DC module pinout confirmed against the part in hand
 - [ ] ADS1115 breakout pin order confirmed against the part in hand
 - [ ] No copper pour under the DevKit's antenna end
 - [ ] Both DevKit USB sockets and both its buttons reachable once installed
@@ -435,9 +440,9 @@ hand - a fine-pitch converter IC in place of the module, say. It does not.
 
 ### Populated, on a bench supply
 
-- [ ] Divider ratio measured across R1 and R2 in place: (R1+R2)/R2 within a percent of 9.2
+- [ ] Divider ratio measured across R1 and R2 in place: (R1+R2)/R2 within a percent of 11.0
 - [ ] 12.0 V in gives 5.0 V ±0.15 V at the socket's 5V pin
-- [ ] `ADS_A0` reads 1.304 V ±10 mV at 12.0 V in - the divider proving itself against a meter
+- [ ] `ADS_A0` reads 1.091 V ±10 mV at 12.0 V in - the divider proving itself against a meter
       before any firmware trusts it
 - [ ] Supply swept 11 to 15 V: the 5 V rail holds, the A0 reading tracks linearly
 - [ ] **Supply reversed, briefly:** the fuse blows. Intended behaviour from
