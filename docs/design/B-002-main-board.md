@@ -118,7 +118,7 @@ Values and rationale are in [B-001](B-001-power-supply.md) section 3 and
 | J6 | 3 | probe `FRIDGE-T` | **screw terminal** |
 | J7 | 4 | SHT31: 3.3 V, SDA, SCL, GND | **screw terminal** |
 | U2 | 10 | ADS1115 breakout, 0x48 | socket strip |
-| J8 | 4 | bilge level sender: +12 V, signal, GND, one spare | **screw terminal** |
+| J8 | 2 | bilge level sender: +12 V and the loop return | **screw terminal** |
 | J9 | 5 | IMU: 3.3 V, GND, SDA, SCL, INT | **screw terminal**, 6-pole with one spare - it is on the I2C bus |
 | J10 | 4 | I2C expansion: 3.3 V, GND, SDA, SCL | pin header |
 | J11 | 8 | reserved GPIO | pin header |
@@ -150,8 +150,8 @@ Thirty-seven nets. This is the complete electrical description of the board.
 
 | Net | Nodes |
 |-----|-------|
-| `GND` | J1.1, J2.1, J2.2, J2.22, J3.2, D1.2, C1.2, R2.2, C2.2, C3.2, U1.2, C4.2, C5.2, J4.3, J5.3, J6.3, J7.4, U2.2, U2.5, J8.4, J9.2, J10.2, J11.8, J12.14 |
-| `+12V_FUSED` | J3.1, D1.1, C1.1, R1.1, D2.2 |
+| `GND` | J1.1, J2.1, J2.2, J2.22, J3.2, D1.2, C1.2, R2.2, C2.2, C3.2, U1.2, C4.2, C5.2, J4.3, J5.3, J6.3, J7.4, U2.2, U2.5, J9.2, J10.2, J11.8, J12.14 |
+| `+12V_FUSED` | J3.1, D1.1, C1.1, R1.1, D2.2, J8.1 |
 | `+12V_PROT` | D2.1, C3.1, U1.1 (+VIN) |
 | `+5V` | U1.3 (+VOUT), C4.1, C5.1, J1.2 |
 | `+3V3` | J1.21, J1.22, R4.1, R5.1, R6.1, J4.1, J5.1, J6.1, J7.1, U2.1, J9.1, J10.1, J11.7, J12.13 |
@@ -171,7 +171,7 @@ make it.
 | `SDA` | J1.11 (IO8), J7.2, U2.4, J9.3, J10.3 |
 | `SCL` | J1.8 (IO9), J7.3, U2.3, J9.4, J10.4 |
 | `IMU_INT` | J2.18 (IO2), J9.5 |
-| `BILGE_LVL` | J8.2, R10.1 |
+| `BILGE_LVL` | J8.2, R10.1, *(shunt to `GND`, value open)* |
 | `ADS1_A1` | R10.2, C6.1, U2.8 |
 | `ADS1_A2` | R11.2, C7.1, U2.9 |
 | `ADS1_A3` | R12.2, C8.1, U2.10 |
@@ -219,7 +219,7 @@ USB; `IO35`-`IO37` belong to the octal PSRAM; `IO48` drives the DevKit's RGB LED
 | J3 | +12 V | GND | | | |
 | J4, J5, J6 | +3.3 V (probe red) | DATA (probe yellow) | GND (probe black) | | |
 | J7 | +3.3 V | SDA | SCL | GND | |
-| J8 | **+12 V** | signal | GND | - | |
+| J8 | **+12 V** | loop return | | | |
 | J13 | A2 | A3 | GND | +3.3 V | |
 | J9 | +3.3 V | GND | SDA | SCL | INT |
 | J10 | +3.3 V | GND | SDA | SCL | |
@@ -227,10 +227,20 @@ USB; `IO35`-`IO37` belong to the octal PSRAM; `IO48` drives the DevKit's RGB LED
 The three probe connectors share one pin order, deliberately. Three identical connectors wired
 three different ways is a fault waiting for the first service visit.
 
-**J8 is the exception, and it has to be labelled as one.** It is the same 4-pole part in the same
-pin order as the three probe terminals, but its first pole carries 12 V where theirs carry 3.3 V.
-The silkscreen names the voltage at that pole, not just the pin number - otherwise a probe ends
-up on it at the first service visit, and a DS18B20 does not survive that.
+**J8 is two poles, not four**, because a loop-powered sender has two wires and the 2-pole of this
+series is stocked - the spare pole on the probe terminals exists only because the 3-pole is not.
+That leaves J8 looking exactly like J3: same part, same pitch, 12 V on the first pole of each.
+
+The remedy is placement and legend rather than a different part. J3 belongs at the supply gland,
+J8 among the sensor cables, and both poles get the voltage written beside them. It is also the
+milder of the two confusions available here: the supply wired into J8 leaves the board dead and
+announces itself, where 12 V onto a probe terminal destroys a DS18B20 and is not noticed until
+somebody looks at the data.
+
+This assumes a **two-wire, loop-powered** sender - which is what the requirement in
+[MATERIAL.md](../MATERIAL.md) to buy one specified from 9-10 V upwards is selecting for, since
+supply compliance only constrains a two-wire part. A three-wire sender would need the 4-pole
+after all.
 
 ## 6. What a netlist cannot say
 
@@ -288,6 +298,11 @@ to pass for 8.3 ms.
 
 That current runs through exactly two paths: **J3 to D1, and D1 to ground.** A 0.2 mm track does
 not survive it, and it would fail in the one event the circuit exists to survive.
+
+The branch out to J8 looks like an exception and is not. It feeds a sender drawing 20 mA, but it
+leaves the enclosure on a cable lying in the bilge, and a chafed conductor there is limited by
+nothing except the fuse. It stays at the class width for the same reason as the rest of the net:
+what sizes a track is the fault it has to survive, not the load it usually carries.
 
 | Net class | Nets | Width |
 |-----------|------|-------|
@@ -514,9 +529,8 @@ hand - a fine-pitch converter IC in place of the module, say. It does not.
       `SCL` beside the sockets, a pin 1 marker on each socket, and the fuse rating at J3 with the
       note that reversing the supply blows it. None of it under a module, where a fitted board
       hides it
-- [ ] **J8's first pole is marked `+12V`, not just `1`.** It is the same 4-pole part in the same pin
-      order as the three probe terminals, and theirs begin at 3.3 V. The number alone does not stop
-      a probe being screwed into it
+- [ ] **J3 and J8 are the same 2-pole part with 12 V on the same pole, so both carry a legend** -
+      supply in at one, sender loop at the other - and they are not placed side by side
 - [ ] **U3's socket is marked optional**, and so are the resistor positions that feed it. An empty
       footprint with no note reads as a missing part
 - [ ] **Which way each screw terminal opens is drawn on the silkscreen.** A single row of pads with
