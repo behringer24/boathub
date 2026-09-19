@@ -5,15 +5,18 @@ is verified, and what can go wrong. Read these before soldering or writing code.
 
 ## How the system is built
 
-The build runs in three phases. **Nothing is soldered to 12 V until the whole sensor and network
-stack runs on USB power.** That way, when something browns out later, the converter is the suspect
-and not the firmware.
+The build runs in four phases. The first three produce a working monitor; the fourth opens the
+boat's own instrument bus, and does not begin until the first three are behind you.
+
+**Nothing is soldered to 12 V until the whole sensor and network stack runs on USB power.** That
+way, when something browns out later, the converter is the suspect and not the firmware.
 
 | Phase | Covers |
 |-------|--------|
 | **A** | bench build on USB power: sensors, Wi-Fi, server uplink. No 12 V anywhere |
 | **B** | 12 V supply, protection, battery measurement |
 | **C** | installation in the boat |
+| **D** | SeaTalk1: reading the instrument bus, then writing to it |
 
 ### Phase A - on the bench, USB power only
 
@@ -59,6 +62,23 @@ the air inside carries moisture, which condenses on the coldest surface - usuall
 keeps spray out and moisture in. Specify **105 °C electrolytics** rather than 85 °C parts for the
 same reason: inside the box at summer ambient the internal temperature reaches 55-60 °C.
 
+### Phase D - SeaTalk1
+
+Nothing here starts until phase A runs unattended. This stage touches a network the boat's
+navigation depends on.
+
+| # | Step | Document |
+|---|------|----------|
+| 1 | Receive stage: optocoupler, level shift, isolation | [D-001](D-001-seatalk-rx-stage.md) |
+| 2 | Decoding: eleven-bit frames, the command bit, datagrams | [D-002](D-002-seatalk-decoding.md) |
+| 3 | SeaTalk values into telemetry, `seatalk_online` | [D-002](D-002-seatalk-decoding.md) |
+| 4 | Transmit output stage and its interlock | planned |
+| 5 | Autopilot operation on the on-board Wi-Fi | planned |
+
+**Receiving is proven before anything can transmit.** Until the output stage exists, no fault of
+this board can put a single bit onto the bus - the receive stage is physically incapable of driving
+it. That property is worth keeping for as long as possible.
+
 ## The documents
 
 In reading order.
@@ -76,6 +96,8 @@ In reading order.
 | then | [A-007](A-007-store-and-forward.md) | Store and forward |
 | last, on the bench | [B-001](B-001-power-supply.md) | Power supply and battery measurement |
 | with it | [B-002](B-002-main-board.md) | Main board: nets and build |
+| stage 2 | [D-001](D-001-seatalk-rx-stage.md) | SeaTalk1 RX stage |
+| then | [D-002](D-002-seatalk-decoding.md) | SeaTalk1 decoding |
 
 ## Checking a board
 
@@ -133,12 +155,13 @@ They take the next free number in their phase when written.
 
 - Enclosure, mounting, cable routing and labelling
 
-**Later stages, phase letters not yet assigned**
+**Phase D**
 
-- SeaTalk1 RX stage: level shifting and isolation
-- SeaTalk1 decoding: datagrams, 4800 baud, 9th bit
 - SeaTalk1 TX output stage and safety interlock
 - Autopilot operation on the on-board Wi-Fi: arming logic and state machine
+
+**Later stages, phase letters not yet assigned**
+
 - Track logger: record format, LittleFS ring buffer, trip detection
 - Track synchronisation and server-side logbook
 - NMEA2000: CAN transceiver, isolation, PGN selection
