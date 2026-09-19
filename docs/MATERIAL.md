@@ -49,7 +49,7 @@ Values drawn from it:
 | 4.7 kΩ | 3 | A | 1-Wire fallback, the original guide's value. Keep a few, do not fit them first |
 | 100 Ω | 3 | A | series protection in each DS18B20 DATA line |
 | 10 kΩ | 2 | A | bench reference divider from the 3.3 V rail, to prove the ADS1115 without a 12 V supply ([A-002](design/A-002-bench-setup-usb.md) section 4) |
-| **1 kΩ** | 1 | B | **series into ADS1115 A0 - a safety part.** It limits current into the ESD clamp to ~0.1 mA on reversed polarity. Do not omit ([B-001](design/B-001-power-supply.md)) |
+| **1 kΩ** | 1 | B | **series into ADS1115 A0 - a safety part.** If the divider's top leg is ever bridged it holds the current into the ADS1115's input clamp to about 8 mA instead of whatever the ESD structure passes. Do not omit ([B-001](design/B-001-power-supply.md)) |
 | 10 kΩ + 1 kΩ | 1 each | opt | buzzer driver on GPIO21, if a buzzer is fitted |
 
 A 10 kΩ potentiometer instead of the two 10 kΩ resistors makes the ADS1115 test better - sweep it

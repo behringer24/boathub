@@ -91,7 +91,7 @@ Values and rationale are in [B-001](B-001-power-supply.md) section 3 and
 | C1 | 100 nF / 50 V | HF bypass at the input |
 | R1 | 100 kΩ 0.1 % | battery divider, top leg |
 | R2 | 10 kΩ 0.1 % | battery divider, bottom leg |
-| R3 | 1 kΩ | series into ADS1115 A0 - **do not omit**, this is what survives a reversed supply |
+| R3 | 1 kΩ | series into ADS1115 A0 - **do not omit, and keep it in series with the pin.** The last barrier if the divider faults ([B-001](B-001-power-supply.md)) |
 | C2 | 100 nF / 50 V | at A0 to GND, also feeds the converter's switched-capacitor input |
 | D2 | 1N5822 | reverse polarity, 3 A / 40 V Schottky |
 | C3 | 100 µF / 35 V, 105 °C | bulk at the DC/DC input |
