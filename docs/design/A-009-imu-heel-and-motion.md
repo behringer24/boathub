@@ -122,6 +122,24 @@ Consequences worth being explicit about:
 - The action needs somewhere to live: the configuration portal, alongside the probe re-learn from
   [A-003](A-003-ds18b20-temperature-sensors.md).
 
+### The one misalignment zeroing cannot catch
+
+Recording the gravity vector corrects any **tilt** of the mounting - a crooked bracket, the boat's
+own trim, a bulkhead that is not plumb. It cannot correct a **rotation about the vertical axis**.
+
+Mount the sensor a quarter turn out in the horizontal plane and gravity still points exactly down.
+The zero reference sees nothing wrong. But the axis the firmware calls heel is now measuring pitch,
+and the one it calls pitch is measuring heel.
+
+Nothing in the data gives it away. At a berth both channels are small and plausible; the error only
+shows on the first real passage, when the boat appears to pitch twenty degrees and hardly heel at
+all - and by then it has been recorded that way for weeks.
+
+So **decide which of the sensor's axes runs fore and aft before it is bolted down**, mark it, and
+write it in the commissioning notes. If the mounting position makes the right orientation awkward,
+the axis mapping belongs in NVS beside the zero reference rather than being fought mechanically -
+but it has to be a recorded decision either way, because nothing downstream can infer it.
+
 ## 5. Two rates, and why the bus decides
 
 Heel and an impact want very different sampling.
@@ -199,6 +217,9 @@ channel whether or not the alarm is ever armed.
 
 - [ ] Sensor answers at its address, and the bus scan still finds every other device
 - [ ] At rest and zeroed, heel and pitch read within a fraction of a degree of zero
+- [ ] **Tilting the enclosure bow-up moves `pitch_deg` and not `heel_deg`**, and tilting it to
+      starboard moves `heel_deg` and not `pitch_deg`. This is the check for a quarter turn in
+      the horizontal plane, which zeroing cannot detect
 - [ ] Tilting the enclosure by a known angle reads that angle back
 - [ ] Shaking it does **not** move the heel reading much - that is the filter's time constant doing
       its job, and the test that distinguishes a working fusion from a bare accelerometer
