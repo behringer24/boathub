@@ -232,9 +232,14 @@ With a plane the rule is not where to join it, but **not to cut it**:
 - Bottom-layer traces slit the plane and send return current the long way round. Keep the bottom
   layer for the plane and route on top.
 - Nothing crosses beneath R1, R2, C2 and the ADS1115. That is where a slit costs the most.
-- D1's anode connects to the plane with **several vias and no thermal relief**. KiCad gives zone
-  connections thermal spokes by default; four thin spokes are for soldering convenience, not for
-  the 200 A of a reversed supply. Set that pad to a solid connection.
+- **D1's anode needs no stitching vias.** It is a through-hole pad, so its own plated barrel
+  reaches the plane: a 1.6 mm hole plated to 25 µm carries about 0.13 mm² of copper against the
+  0.07 mm² of a 2 mm track. The barrel is the strongest link in that chain, not the weakest.
+- **Thermal relief on it is fine**, and probably better than the alternative. KiCad's default four
+  spokes at 0.5 mm add up to 2 mm of width, which is exactly the track feeding the pad, so nothing
+  is given away. A 3.2 mm pad tied solidly into a ground plane is a fight with a soldering iron,
+  and this board is soldered by hand. **Check the spoke width against the track width** rather than
+  removing the relief - that is the number that matters.
 - The pour is **excluded at the DevKit's antenna end**. A plane fills everything it is not
   forbidden to fill, so that exclusion has to exist as a rule area - it does not follow from the
   note in section 2 by itself.
