@@ -215,7 +215,7 @@ three different ways is a fault waiting for the first service visit.
 
 ## 6. What a netlist cannot say
 
-Four things decide whether this board works, and none is expressible as a net.
+Five things decide whether this board works, and none is expressible as a net.
 
 ### The 1-Wire passives sit at the cable, not at the pin
 
@@ -284,6 +284,41 @@ the current the long way round, and the via count stops mattering.
 `VBAT_SENSE` and `ADS_A0` stay at the default width: they carry 124 µA, and what they need is not
 copper but distance from the DC/DC module, which radiates into a deliberately high-impedance
 measurement path.
+
+### The spare converter channels end at a header, not a terminal
+
+One analogue channel has a defined use - the battery divider on A0. The rest do not, and
+[design/README.md](README.md) still lists their allocation as a document to be written. Putting
+screw terminals on them would mean guessing the conditioning an unknown sender needs, and guessing
+it on the board that is hardest to change.
+
+So they come out on **pin headers** instead, and each channel carries the same shape as A0:
+
+```
+header pin ──[ 1 kΩ ]──┬──► converter input
+                       └── (100 nF, pads only) ── GND
+```
+
+- **The 1 kΩ is fitted and lives here.** It is not conditioning, it is the last barrier in front of
+  the converter: a screw terminal on the far end of a future adapter invites a tank sender or
+  something at 12 V, and the ADS1115 takes VDD + 0.3 V regardless of its gain setting.
+- **The 100 nF is pads only.** It is a charge reservoir for the sampling input, wanted when the
+  source is high-impedance - as the divider is - and unwelcome on a fast signal, where 1 kΩ and
+  100 nF make a 100 µs filter nobody asked for.
+- Conditioning proper belongs on a small adapter designed when the sender is known. A 30 x 20 mm
+  board costs a few euro to respin; this one does not.
+
+A header also need not sit at the board edge, since nothing cabled leaves through it. That, rather
+than the pitch, is where the space is saved.
+
+The second converter is socketed the same way and **fitted with nothing** until its channels are
+specified - no module, no resistors. An empty socket is holes. Mark it optional on the silkscreen,
+or somebody will go looking for the missing module.
+
+One second-order effect worth knowing: the I2C pull-ups sit on the modules, so leaving the second
+converter off raises the bus from about 3.3 kΩ to 5 kΩ. Both are comfortable at 100 kHz. The IMU
+board carries pads for pull-ups and no resistors, which is why it does not enter the sum either
+way.
 
 ### The I2C bus is a bus, not a star
 
