@@ -64,6 +64,31 @@ hard part of this feature - the zero reference and the mounting are. And a filte
 be given the seconds-long time constant that a boat needs, which the BNO055 cannot be told to do at
 any price.
 
+### Which board carries it
+
+The chip costs a few euro; what matters is which breakout brings out **INT1**. Section 5's whole
+argument - poll attitude slowly, let the chip watch for impacts - collapses without that pin, and
+plenty of boards route only the four bus lines.
+
+**ST's own adapter, the STEVAL-MKI217V1** (Reichelt `STEVAL-MKI217V1`, ~21 EUR), carries the
+complete pinout of the chip with the decoupling already fitted. That is the reason to pay more than
+a bare module costs.
+
+Three consequences worth knowing:
+
+- It is a **DIL-24 carrier**, not a small square breakout. That costs nothing here, because the
+  sensor does not sit on the main board at all: it is bolted to structure and reaches the board
+  over five conductors to J9 (section 4, and [B-002](B-002-main-board.md)).
+- It also carries a **LIS2MDL magnetometer, which stays unconnected.** Section 2 explains why a
+  magnetometer is not wanted; having one and ignoring it costs nothing.
+- ST's MEMS adapters commonly separate **VDD and VDD_IO**, and both have to be fed. Read the
+  adapter's user manual for the pin numbers before wiring, rather than assuming a layout.
+
+The Arduino Modulino Movement carries the same chip for half the price, and is rejected for one
+reason: it exposes Qwiic, which is SDA, SCL, 3.3 V and ground, and nothing published says the
+interrupt reaches a pin. It also puts an STM32 on the board for processing, and a microcontroller
+between you and the registers would take the high-g threshold with it.
+
 ## 4. Mounting - the opposite of the SHT31
 
 The SHT31 had to leave the enclosure to measure cabin air. **This one wants to be inside it**,
