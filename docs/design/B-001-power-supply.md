@@ -96,7 +96,7 @@ days**. That is the case where the shore-power-loss alarm earns its keep.
 | 470 µF / 16 V, **105 °C** | 1 | bulk, 5 V output | |
 | 100 kΩ 0.1 % | 1 | divider, top leg | |
 | 10 kΩ 0.1 % | 1 | divider, bottom leg | |
-| 1 kΩ | 1 | series into ADS1115 A0 | **this is what makes reverse polarity safe - do not omit** |
+| 1 kΩ | 1 | series into ADS1115 A0 | **in series with the pin, never a stub.** The last barrier if the divider itself faults - see below |
 | 100 nF / 50 V | 1 | at A0 to GND | also feeds the switched-capacitor input |
 
 ### Circuit
@@ -226,6 +226,30 @@ second order.
 Quiescent draw of the divider: 124 µA at 13.6 V, about 1.7 mW. Irrelevant next to the ESP - it is
 roughly 0.2 % of total system draw, and less than a quarter of what the DevKit's RGB LED consumes
 while dark.
+
+### Why the 1 kΩ is not optional
+
+It guards against a fault in the divider, not against a reversed supply. Reverse polarity is the
+case it is usually credited with and the one where it does least: the TVS pulls the input to about
+-0.7 V, the divider turns that into a few tens of millivolts at the tap, and the ADC never notices.
+
+The case that sizes it is **the top leg of the divider being bridged** - a solder bridge, a failed
+part, or a probe slipping across it on the bench. The tap then sits at the full supply voltage, and
+this resistor is the only thing between 12 V and a 3.3 V input.
+
+| | Current into the ADS1115's input clamp |
+|---|---|
+| With the 1 kΩ, at 12 V on the tap | ~8 mA, inside the ±10 mA the input is rated for |
+| Without it | limited only by the ESD structure itself, which is not a current limiter |
+
+At the TVS clamping voltage it is tens of milliamps rather than single digits, so this is not a
+guarantee at every voltage. It is the difference between a fault the part survives and one it does
+not, for the price of one resistor.
+
+**It has to be in series with the A0 pin.** Wired as a branch off the divider tap - resistor and
+capacitor hanging downwards while the tap runs on to the ADC - it protects nothing, and the
+capacitor stops serving the converter's switched-capacitor input as well. Two functions lost to one
+drawing mistake, and the netlist looks plausible either way.
 
 **Check your charger's profile.** Two separate concerns:
 
@@ -367,10 +391,11 @@ every threshold in the table, so they must not be compiled in.
 - **External 5 V off while flashing over USB.** USB, the 5 V pin and 3V3 are alternative supply
   paths, never parallel ones.
 - Reverse polarity blows the fuse by design - see above. Label the enclosure.
-- The 1 kΩ series resistor into A0 is a safety part: on reversed polarity it limits current into
-  the ADS1115's ESD clamp to ~0.1 mA against a 10 mA limit. **Do not omit it.**
+- The 1 kΩ series resistor into A0 is a safety part, and the fault it guards against is one in the
+  divider itself rather than a reversed supply. **Do not omit it, and do not hang it off the node
+  as a branch** - see section 3.
 - No path exists from the server to anything in this document. Battery data is telemetry only.
-- Star ground in the box.
+- One ground plane on the board; see [B-002](B-002-main-board.md).
 
 ## 7. Test
 
