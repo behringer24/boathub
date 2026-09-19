@@ -215,16 +215,29 @@ cable directly, while the 100 Ω sees only the pin's few pF.
 Lay it out the other way round and the series resistor lands in the path that charges the cable
 capacitance. Same parts, a worse edge, and CRC errors that look like a bad probe.
 
-### GND is one net, but not one piece of copper
+### GND is a plane, and the job is not to cut it
 
 The DC/DC return carries the DevKit's supply current, which peaks at several hundred milliamps when
-the radio transmits. The divider's return carries 148 µA and is being measured to the millivolt.
+the radio transmits. The divider's return carries 148 µA and is being measured to the millivolt. On
+a wired ground those two sharing a conductor would put the transmit peaks straight into the battery
+reading, and the classic answer is a star point.
 
-Share copper between them and the transmit peaks appear in the battery reading.
+**A ground plane makes that answer unnecessary.** 35 µm copper is half a milliohm per square, so
+twenty millimetres across the plane is a fraction of a milliohm and the worst case is a tenth of a
+millivolt - against an ADS1115 LSB of 62.5 µV and half a percent of overall accuracy. A separate
+star-point conductor would be worse: it carries no useful current and behaves as an antenna.
 
-So: the analog return - R2, C2 and the ADS1115 - joins the plane at **one point**, at the DC/DC
-output, rather than anywhere convenient. On a fabricated board this is a deliberate act during
-layout, not something that happens by itself.
+With a plane the rule is not where to join it, but **not to cut it**:
+
+- Bottom-layer traces slit the plane and send return current the long way round. Keep the bottom
+  layer for the plane and route on top.
+- Nothing crosses beneath R1, R2, C2 and the ADS1115. That is where a slit costs the most.
+- D1's anode connects to the plane with **several vias and no thermal relief**. KiCad gives zone
+  connections thermal spokes by default; four thin spokes are for soldering convenience, not for
+  the 200 A of a reversed supply. Set that pad to a solid connection.
+- The pour is **excluded at the DevKit's antenna end**. A plane fills everything it is not
+  forbidden to fill, so that exclusion has to exist as a rule area - it does not follow from the
+  note in section 2 by itself.
 
 ### Track width is set by the fault, not by the load
 

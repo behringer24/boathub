@@ -113,6 +113,16 @@ second ground path through the SeaTalk cable, which is a loop that was not there
 D-003 decides between accepting that and driving a second optocoupler on the instrument side. It is
 a real decision, and building receive-only first keeps it open.
 
+### If this stage ends up on the main board
+
+[B-002](B-002-main-board.md) uses a ground plane, and a plane fills everything it is not forbidden
+to fill. `ST_GND` would therefore have to be an **island**, excluded from the pour, with a
+deliberate gap in the copper running beneath OK20 - across both layers.
+
+A separation that exists in the schematic and not in the copper is worse than none, because it
+reads as isolation on every drawing and is not. That alone is an argument for giving this stage its
+own small board.
+
 ## 5. Parts
 
 | Ref | Value | Purpose |
