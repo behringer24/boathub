@@ -70,24 +70,27 @@ The chip costs a few euro; what matters is which breakout brings out **INT1**. S
 argument - poll attitude slowly, let the chip watch for impacts - collapses without that pin, and
 plenty of boards route only the four bus lines.
 
-**ST's own adapter, the STEVAL-MKI217V1** (Reichelt `STEVAL-MKI217V1`, ~21 EUR), carries the
-complete pinout of the chip with the decoupling already fitted. That is the reason to pay more than
-a bare module costs.
+**The Arduino Modulino Movement** (ABX00101, ~13 EUR) brings it out. Beside the four-pin Qwiic bus
+it carries a second **1x10 header with the sensor's own signals** - INT1, INT2, SDO/SA0, CS and the
+SPI lines. Five conductors reach the main board: 3.3 V, ground, SDA and SCL from the bus header,
+and INT1 from the other.
 
-Three consequences worth knowing:
+What it settles that a bare adapter does not:
 
-- It is a **DIL-24 carrier**, not a small square breakout. That costs nothing here, because the
-  sensor does not sit on the main board at all: it is bolted to structure and reaches the board
-  over five conductors to J9 (section 4, and [B-002](B-002-main-board.md)).
-- It also carries a **LIS2MDL magnetometer, which stays unconnected.** Section 2 explains why a
-  magnetometer is not wanted; having one and ignoring it costs nothing.
-- ST's MEMS adapters commonly separate **VDD and VDD_IO**, and both have to be fed. Read the
-  adapter's user manual for the pin numbers before wiring, rather than assuming a layout.
+- The sensor answers at **0x6A** as shipped, 0x6B on a solder jumper. CS and the address pin are
+  already tied for I2C, so there is nothing at chip level left to get wrong.
+- Decoupling is fitted and **the I2C pull-ups are not** - the pads are there, empty. That is the
+  right way round: the SHT31 and the two ADS1115 already put some 3.3 kΩ on this bus, and a fourth
+  set would drag it lower still.
+- It runs at 3.3 V natively.
 
-The Arduino Modulino Movement carries the same chip for half the price, and is rejected for one
-reason: it exposes Qwiic, which is SDA, SCL, 3.3 V and ground, and nothing published says the
-interrupt reaches a pin. It also puts an STM32 on the board for processing, and a microcontroller
-between you and the registers would take the high-g threshold with it.
+One thing to expect rather than chase: the module carries its own STM32 for the Arduino API, and
+that answers on the bus at **0x7E**. Nothing here talks to it, but a bus scan finds it, and an
+unexplained address is what somebody spends an evening on.
+
+ST's own **STEVAL-MKI217V1** is the alternative at around 21 EUR: a DIL-24 adapter breaking out the
+raw chip pins, with a LIS2MDL magnetometer that would stay unconnected. It works, but it costs
+more, sells as clearance stock, and leaves CS and the address pin for you to tie.
 
 ## 4. Mounting - the opposite of the SHT31
 
