@@ -81,7 +81,8 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 | Part | Qty | Phase | Purpose / requirement | Price | Source |
 |------|-----|-------|-----------------------|-------|--------|
 | Fabricated main board, 2-layer | 5 (minimum run) | B | carries the protection, the DC/DC, the divider, the 1-Wire passives, the I2C distribution and the DevKit socket, and replaces the bundled carrier. Component and net list in [B-002](design/B-002-main-board.md) | ~30-60 | JLCPCB, Aisler, PCBWay |
-| Screw terminals **5.00 mm**, 3-pole | 4 | B | the three probe cables and the SeaTalk cable. One pitch for every terminal that leaves the enclosure, so there is nothing to confuse when ordering | ~0,50 each | Altech AK100 series or equivalent |
+| Screw terminals **5.00 mm**, 3-pole | 4 | B | the three probe cables and the SeaTalk cable. One pitch for every cabled terminal, so there is nothing to confuse when ordering | ~0,50 each | Altech AK100 series or equivalent |
+| Screw terminal **5.00 mm**, 5-pole | 1 | A | the IMU cable. A screw terminal although it stays inside the box, because it is on the I2C bus and a poor contact there takes every sensor with it ([B-002](design/B-002-main-board.md)) | ~0,80 | as above |
 | Screw terminal **5.00 mm**, 2-pole | 1 | B | 12 V entry | with the above | as above |
 | Screw terminal 2.54 mm, 4-pole | 1 | B | the SHT31 cable, whose four thin cores do not need 5 mm. The one terminal on the board at a different pitch - order it deliberately, not by accident | ~0,40 | Xinya XY308 series or equivalent |
 | Socket strip 2.54 mm, 1x40 | 2 | B | cut to 1x22 for the DevKit sockets (J1, J2); one strip yields one 22 and one 18, so two are needed. Sockets, not pin headers - the DevKit has to come out | 3,15 each | Reichelt `BKL 10120978` |
