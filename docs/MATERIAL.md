@@ -8,13 +8,14 @@ used while planning; they are a sourcing hint only. **What matters is the techni
 "Purpose / requirement" column** - any equivalent part will do.
 
 **Phase** says when the part is first needed, matching the build phases in
-[ROADMAP.md](ROADMAP.md):
+[design/README.md](design/README.md):
 
 | Phase | | |
 |-------|---|---|
 | **A** | bench build on USB power | nothing runs on 12 V yet |
-| **B** | power supply and perfboard | the 12 V side gets built |
+| **B** | power supply and main board | the 12 V side gets built |
 | **C** | installation in the boat | enclosure, cable routing |
+| **D** | SeaTalk1 | the boat's instrument bus |
 
 ---
 
@@ -27,7 +28,7 @@ used while planning; they are a sourcing hint only. **What matters is the techni
 | ESP32-S3 N16R8 DevKitC-1 + carrier (Heemol set) | **2** | A | main controller, 16 MB flash / 8 MB octal PSRAM, MRD076A terminal adapter included. Unbranded third-party module; bundled SMA antenna is **inert until a solder jumper is moved** (M9a, see [A-001](design/A-001-devkit-and-carrier.md)). The second board is the guide's reserve - and makes the antenna rework an A/B comparison rather than a one-way bet | ~18 each | [Amazon](https://www.amazon.de/dp/B0GJZS3P1J) |
 | GERUI ADS1115 16-bit I2C, 3-pack | 1 pack | A | ADC for battery and 4-20 mA, plus spares. Addresses 0x48/0x49/0x4A | 8.99 | [Amazon](https://www.amazon.de/dp/B0F1TJ16Q6) |
 | DS18B20-compatible 1-Wire probes, 5 m, 3-pack | 1 pack | A | engine bay, bilge, fridge; potted. Clones - verify family code 0x28 and CRC ([A-003](design/A-003-ds18b20-temperature-sensors.md)) | ~10-20 | [Amazon](https://www.amazon.de/gp/product/B0D8VMY5ZM) |
-| LSM6DSOX breakout (6-axis IMU) | 1 | A | heel and pitch under sail, motion and impact at the berth. 0x6A, no clash on this bus. **Mounted rigidly inside the enclosure**, unlike the SHT31 - an IMU on a flying lead measures the lead ([A-009](design/A-009-imu-heel-and-motion.md)) | ~4-8 | **needed** | [Amazon search](https://www.amazon.de/s?k=LSM6DSOX+breakout) |
+| LSM6DSOX breakout (6-axis IMU) | 1 | A | heel and pitch under sail, motion and impact at the berth. 0x6A, no clash on this bus. **Mounted rigidly inside the enclosure**, unlike the SHT31 - an IMU on a flying lead measures the lead ([A-009](design/A-009-imu-heel-and-motion.md)) | ~4-8 | [Amazon search](https://www.amazon.de/s?k=LSM6DSOX+breakout) |
 | SHT3x-D breakout, ADR 0x44/0x45 | **3** | A | cabin temperature and relative humidity; mounted outside box and cabinet. Only one is fitted; the bus supports two (0x44/0x45), the third is a spare. **Confirm it is an SHT31** - SHT30/31/35 are pin- and protocol-compatible but differ in RH accuracy (±3 / ±2 / ±1.5 %) | ~7-12 each | [Amazon search](https://www.amazon.de/s?k=SHT31-D+I2C+0x44+0x45) |
 
 ### Resistors from a 1 % assortment
@@ -86,7 +87,7 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 | Socket strip 2.54 mm, 1x22 | 2 | B | the DevKit plugs into these (J1, J2). Sockets, not pin headers - the DevKit has to come out | ~6-10 | [Amazon search](https://www.amazon.de/s?k=Buchsenleiste+2.54mm+22polig) |
 | Socket strip 2.54 mm, 1x10 | 1 | B | ADS1115 breakout (U2) | with the above | as above |
 | Pin header strip 2.54 mm, straight | 1 strip | B | IMU, I2C expansion, and the reserved and spare GPIO headers (J9-J12) | ~5-8 | [Amazon search](https://www.amazon.de/s?k=Stiftleiste+2.54mm+Sortiment) |
-| ABS enclosure IP65/IP67, approx. 200 x 120 x 75 mm | 1 | C | electronics box; carrier is 84.5 x 73.7 mm and fits alongside the perfboard | ~12-20 | [Amazon search](https://www.amazon.de/s?k=ABS+Gehaeuse+IP65+200x120x75) |
+| ABS enclosure IP65/IP67, approx. 200 x 120 x 75 mm | 1 | C | electronics box; the main board plus the DevKit standing in its sockets needs roughly 14 mm of height above the board | ~12-20 | [Amazon search](https://www.amazon.de/s?k=ABS+Gehaeuse+IP65+200x120x75) |
 | Pressure-equalisation vent membrane (Gore-type) | 1 | C | stops condensation inside the sealed box; fitted pointing down | ~8-15 | [Amazon search](https://www.amazon.de/s?k=Druckausgleichselement+Gehaeuse+IP67+Membran) |
 | Cable glands M12/M16, IP68 | set | C | cable entries, fitted pointing down or sideways, with drip loops | ~7-10 | [Amazon search](https://www.amazon.de/s?k=Kabelverschraubung+IP68+M12+M16) |
 | Tinned copper stranded wire 0.5-0.75 mm² | as needed | B, C | 12 V / 5 V and sensor wiring, marine grade | ~15-25 | [Amazon search](https://www.amazon.de/s?k=verzinnte+Kupferlitze+Boot+0.75mm2) |
@@ -134,29 +135,31 @@ Many small parts remain over for later stages.
 | Soldering iron approx. 320-350 °C, electronics solder, desoldering braid | **A** | needed in phase A already: the SHT31 and ADS1115 breakouts ship with loose pin headers that must be soldered on before they will sit in a breadboard or a terminal |
 | Side cutters, wire strippers, small pliers, screwdrivers | B | |
 | Heat-shrink tubing and hot air or a lighter | B | use carefully |
-| Oscilloscope or logic analyser | stage 2 | optional now, strongly recommended for SeaTalk |
+| Oscilloscope or logic analyser | D | **not optional for SeaTalk.** Bit timing, the command bit and the optocoupler's edges are all measurements, not guesses ([D-002](design/D-002-seatalk-decoding.md)) |
 
 ---
 
 ## Stage 2 - SeaTalk1 (preliminary, do not order yet)
 
-The RX/TX stage is deliberately not finalised. It gets its own schematic revision and a bench test
-before anything is connected to the Raymarine S1. The parts below are what that stage needs.
+The receive stage is specified in [D-001](design/D-001-seatalk-rx-stage.md); the transmit stage is
+not finalised and gets its own schematic revision and a bench test before anything is connected to
+the Raymarine S1.
 
 | Part | Qty | Purpose |
 |------|-----|---------|
 | 3-pole screw terminal 5.08 mm | 1 | SeaTalk +12 V / DATA / GND |
 | PC817 optocoupler (or 6N137) | 1-2 | galvanic isolation of SeaTalk RX; PC817's ~4 µs edges are fine against a 208 µs bit at 4800 baud |
-| 1-2 kΩ resistor | 1 | LED series resistor on the SeaTalk side of the opto |
+| 4.7 kΩ resistor | 1 | LED series resistor on the SeaTalk side of the opto. ~2.3 mA is plenty for a PC817 and keeps the load off the instrument bus, which is held high by pull-ups inside the instruments. A 6N137 would want 1-2 kΩ instead ([D-001](design/D-001-seatalk-rx-stage.md)) |
 | 10 kΩ resistor | 1 | pull-up on the ESP side of the opto output |
 | 2N7002 or BSS138 N-MOSFET | 1 | SeaTalk TX open-drain driver; **replaces the 74LS07** - no 5 V rail needed, open-drain by nature |
 | **10 kΩ resistor** | 1 | **gate pull-down - keeps TX off while the ESP boots or after a crash. Not optional.** |
-| 100-470 Ω resistor | 1 | series resistor in the TX drain line |
+| 100 Ω resistor | 1 | series resistor in the TX drain line. The low end of the usual range on purpose: it divides against the bus pull-up, and 470 Ω would leave the low level too high to be read as low |
 | SMBJ15A or similar TVS | 1 | protection on the SeaTalk DATA line |
 
 **Firmware note:** the ESP32 UART has no 9-bit mode, so the SeaTalk command bit has to be recovered
-through the parity-error trick or a bit-banged receiver. Prove this on the bench before the
-interface hardware is finalised - see the review, section 4.
+another way - [D-002](design/D-002-seatalk-decoding.md) settles on a bit-banged receiver and says
+why. Prove it on the bench before the interface hardware is finalised: a receiver that measures
+edges rather than sampling mid-bit would want the faster 6N137 instead of the PC817.
 
 ---
 

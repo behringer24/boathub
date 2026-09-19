@@ -114,11 +114,10 @@ docs/
 ├── CHANGELOG.md        software change log
 ├── MATERIAL.md         bill of materials and tools
 ├── design/             build guide and one document per feature (+ TEMPLATE.md)
-│   ├── A-001-devkit-and-carrier.md   DevKit, carrier board and antenna
-│   ├── A-002-bench-setup-usb.md      the USB bench build - start here
-│   ├── A-003-ds18b20-temperature-sensors.md   three 5 m 1-Wire probes
-│   └── B-001-power-supply.md         12 V input, protection, battery measurement
-└── reference/          source documents (project guide PDF)
+│   ├── A-NNN-*.md      phase A: the bench build on USB power
+│   ├── B-NNN-*.md      phase B: 12 V supply, protection, the main board
+│   └── D-NNN-*.md      phase D: SeaTalk1
+├── reference/          source documents (project guide PDF)
 ```
 
 Conventions for working in this repository: [CLAUDE.md](CLAUDE.md)
