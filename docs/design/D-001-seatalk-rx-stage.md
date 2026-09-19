@@ -224,7 +224,7 @@ IO16, or the transmit stage becomes a new board rather than an addition to this 
 
 | Ref | Value | Purpose |
 |-----|-------|---------|
-| J20 | 3-pole screw terminal, 5.08 mm | SeaTalk +12 V / DATA / GND |
+| J20 | 3-pole screw terminal, 5.00 mm | SeaTalk +12 V / DATA / GND - the same part as the probe terminals |
 | D20 | 1.5KE20A | clamps transients on the data line - **the same part as the supply input's TVS**, see below |
 | OK20 | PC817 | level shift and isolation. ~4 µs edges against a 208 µs bit |
 | R20 | 4.7 kΩ | LED series resistor, on the instrument side |
