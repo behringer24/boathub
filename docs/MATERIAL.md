@@ -154,7 +154,7 @@ the Raymarine S1.
 | 2N7002 or BSS138 N-MOSFET | 1 | SeaTalk TX open-drain driver; **replaces the 74LS07** - no 5 V rail needed, open-drain by nature |
 | **10 kΩ resistor** | 1 | **gate pull-down - keeps TX off while the ESP boots or after a crash. Not optional.** |
 | 100 Ω resistor | 1 | series resistor in the TX drain line. The low end of the usual range on purpose: it divides against the bus pull-up, and 470 Ω would leave the low level too high to be read as low |
-| SMBJ15A or similar TVS | 1 | protection on the SeaTalk DATA line |
+| 1.5KE20A TVS | 1 | protection on the SeaTalk DATA line. **The same part as the supply input's**: a 15 V device would sit at its threshold whenever the bank is in absorption ([D-001](design/D-001-seatalk-rx-stage.md)) |
 
 **Firmware note:** the ESP32 UART has no 9-bit mode, so the SeaTalk command bit has to be recovered
 another way - [D-002](design/D-002-seatalk-decoding.md) settles on a bit-banged receiver and says

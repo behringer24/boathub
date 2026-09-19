@@ -50,7 +50,7 @@ U1-U2.
                                     │   │
                                   ST_GND│
                                         │
-                              [ D20 ]  SMBJ15A, ST_DATA to ST_GND
+                              [ D20 ]  1.5KE20A, cathode to ST_DATA
 ```
 
 ```
@@ -69,6 +69,32 @@ U1-U2.
 ```
 
 PC817 pins: 1 anode, 2 cathode, 3 emitter, 4 collector.
+
+### The nets
+
+| Net | Nodes |
+|-----|-------|
+| `ST_12V` | J20.1 alone - give it a no-connect flag, or ERC reports a pin that is unconnected on purpose |
+| `ST_DATA` | J20.2, D20.1, R20.1 |
+| `ST_GND` | J20.3, D20.2, OK20.2, JP20.1 |
+| `ST_LED` | R20.2, OK20.1 |
+| `SEATALK_RX` | OK20.4, R21.2, and the socket pin carrying **IO15** |
+| `+3V3` | R21.1 |
+| `GND` | OK20.3, JP20.2 |
+
+IO16 stays free for the transmit stage.
+
+### Why the TVS is the same part as the supply input's
+
+A 15 V standoff device is the obvious choice for a 12 V bus and it is the wrong one here. The
+SeaTalk supply core hangs off the same bank as everything else: absorption takes it to **14.7 V**,
+and a charger set to a flooded profile would push 15.5 V, which
+[B-001](B-001-power-supply.md) warns about explicitly. A 15 V part would sit at its threshold for
+hours at a time.
+
+**Use the 1.5KE20A already on the parts list** - 17.1 V standoff, clear of both cases, through-hole
+like the rest of the board, and one fewer line to order. Its couple of nanofarads give a time
+constant of about 2 µs against a 208 µs bit, which nothing on this bus will notice.
 
 ### The LED current decides how hard this loads the bus
 
@@ -169,7 +195,7 @@ IO16, or the transmit stage becomes a new board rather than an addition to this 
 | Ref | Value | Purpose |
 |-----|-------|---------|
 | J20 | 3-pole screw terminal, 5.08 mm | SeaTalk +12 V / DATA / GND |
-| D20 | SMBJ15A | clamps transients on the data line; 15 V standoff sits above the 12 V idle |
+| D20 | 1.5KE20A | clamps transients on the data line - **the same part as the supply input's TVS**, see below |
 | OK20 | PC817 | level shift and isolation. ~4 µs edges against a 208 µs bit |
 | R20 | 4.7 kΩ | LED series resistor, on the instrument side |
 | R21 | 10 kΩ | pull-up on the ESP side |
