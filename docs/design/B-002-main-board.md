@@ -113,14 +113,25 @@ Values and rationale are in [B-001](B-001-power-supply.md) section 3 and
 | J7 | 4 | SHT31: 3.3 V, SDA, SCL, GND | **screw terminal** |
 | U2 | 10 | ADS1115 breakout, 0x48 | socket strip |
 | J8 | 4 | ADS1115 A1, A2, A3 and GND | screw terminal |
-| J9 | 5 | IMU: 3.3 V, GND, SDA, SCL, INT | pin header |
+| J9 | 5 | IMU: 3.3 V, GND, SDA, SCL, INT | **screw terminal** - it is on the I2C bus |
 | J10 | 4 | I2C expansion: 3.3 V, GND, SDA, SCL | pin header |
 | J11 | 8 | reserved GPIO | pin header |
 | J12 | 14 | spare GPIO | pin header |
 
-Everything that leaves the enclosure gets a **screw terminal**; everything that stays inside gets a
-pin header. Probe cables and the SHT31 run have to come off for service, and that is the whole
-reason they are connectors rather than solder joints.
+A connector is chosen by **what a bad contact costs**, not by which side of the enclosure wall it
+sits on.
+
+- **Anything cabled onto the I2C bus gets a screw terminal.** A contact that degrades there does
+  not merely lose its own sensor: SDA held low takes the SHT31 and both converters with it. That is
+  out of all proportion to the one device at fault, and it is why the IMU *inside* the box is
+  terminated the same way as the probes outside it.
+- **A single GPIO, or a spare, gets a pin header.** A bad contact costs exactly the one thing, and
+  it is easy to find.
+- A header onto which a board plugs directly is not a cabled connection and has nothing to work
+  loose, so the expansion header stays a header.
+
+Nothing that has to come off for service is soldered down - the probe cables and the SHT31 run both
+do.
 
 ## 5. The nets
 
