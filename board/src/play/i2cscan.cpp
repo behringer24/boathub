@@ -49,8 +49,14 @@ static const Known KNOWN[] = {
   {0x4A, "ADS1115 (ADDR to SDA)"},
   {0x4B, "ADS1115 (ADDR to SCL)"},
   {0x68, "DS3231 real-time clock"},
+  {0x6A, "LSM6DSOX IMU (SA0 low)"},
+  {0x6B, "LSM6DSOX IMU (SA0 high)"},
   {0x76, "BME280 / BMP280 - not part of this project"},
   {0x77, "BME280 / BMP280 - not part of this project"},
+  // The Modulino board carries its own STM32 for the Arduino API, and it
+  // answers here alongside the sensor. Nothing in this project talks to it -
+  // but an unexplained address is what somebody spends an evening on.
+  {0x7E, "STM32 on the Modulino IMU board - expected, unused"},
 };
 
 static const char *describe(uint8_t addr) {

@@ -30,7 +30,9 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   addresses answer, naming the ones this project expects. It rescans every two seconds so a module
   can be plugged in and watched appearing. Most "the sensor does not work" sessions are a wire
   rather than a sensor, and a scanner that only lists addresses reports the same "nothing found"
-  for both.
+  for both. The IMU board's own microcontroller is listed among the expected addresses beside
+  the sensor itself - an address the project never talks to is still one somebody would
+  otherwise spend an evening explaining.
 - `adsread` build environment: a bench meter that prints every channel of every ADS1115 it finds, in
   volts, with a bar so a potentiometer swept across the 3.3 V rail shows the whole scale and any
   dead patch in it. A bus scan proves an address answers; it cannot prove the converter converts.
