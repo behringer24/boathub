@@ -174,6 +174,25 @@ on the far side of that gap, with the board's own ground.
 Put J20, D20, R20 and OK20 together as one block at the board edge and the island stays small,
 which is what an island should be.
 
+### Track width here is set by the TVS, not by the signal
+
+In operation this stage carries nothing: 2.3 mA through the optocoupler's LED, some 10 mA when the
+transmit stage pulls the bus down. The default 0.2 mm handles 750 mA, so everything is sixty times
+over-provisioned.
+
+One path is different. When a transient arrives down the SeaTalk cable, D20 clamps it, and the
+clamping current runs through **J20.2 → D20 → J20.3** and nowhere else - up to 54 A for about a
+millisecond. Those two short segments get **1 mm**, because they are a few millimetres long and the
+copper costs nothing.
+
+**Placement matters more than width there.** A clamp is only as good as the loop it clamps across:
+the inductance between the terminal and the TVS produces a voltage the TVS cannot remove, because
+it appears behind it. Put D20 hard against J20.
+
+The surge returns through the `ST_GND` island rather than the ground plane, since the island is
+separate by design. Keep it solid - it is small enough that this happens by itself, as long as no
+track cuts through it.
+
 A separation that exists in the schematic and not in the copper is worse than none, because it
 reads as isolation on every drawing and is not.
 
