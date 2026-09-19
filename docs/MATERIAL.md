@@ -49,7 +49,8 @@ Values drawn from it:
 | 4.7 kΩ | 3 | A | 1-Wire fallback, the original guide's value. Keep a few, do not fit them first |
 | 100 Ω | 3 | A | series protection in each DS18B20 DATA line |
 | 10 kΩ | 2 | A | bench reference divider from the 3.3 V rail, to prove the ADS1115 without a 12 V supply ([A-002](design/A-002-bench-setup-usb.md) section 4) |
-| **1 kΩ** | 1 | B | **series into ADS1115 A0 - a safety part.** If the divider's top leg is ever bridged it holds the current into the ADS1115's input clamp to about 8 mA instead of whatever the ESD structure passes. Do not omit ([B-001](design/B-001-power-supply.md)) |
+| **1 kΩ** | **4** | B | **one in series with each analogue input of the first converter - a safety part.** It holds the current into the ADS1115's input clamp to about 8 mA whatever arrives outside: a bridged divider top leg on A0, or the loop's own 12 V on the bilge channel. The converter takes VDD + 0.3 V on an input regardless of its gain setting. Do not omit ([B-001](design/B-001-power-supply.md), [B-002](design/B-002-main-board.md)) |
+| 1 kΩ | 4 | opt | the same again for the second converter's inputs, fitted only when that module is |
 | 10 kΩ + 1 kΩ | 1 each | opt | buzzer driver on GPIO21, if a buzzer is fitted |
 
 A 10 kΩ potentiometer instead of the two 10 kΩ resistors makes the ADS1115 test better - sweep it
@@ -72,7 +73,7 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 | Automotive blade fuse holder + 2 A fuses | 1 set | B | cable protection close to the source | ~6-10 | [Amazon search](https://www.amazon.de/s?k=wasserdichter+KFZ+Flachsicherungshalter+2A) |
 | TVS diode 1.5KE20A | 1 | B | transient clamp, **fitted ahead of the Schottky**. 17.1 V standoff, clamps 27.7 V at 54 A. Unidirectional - the bidirectional `CA` suffix is the wrong part | 0,37 | Reichelt `1,5KE20A` |
 | 1N5822 Schottky diode | 1 | B | reverse-polarity protection, 3 A / 40 V, DO-201AD | 0,15 | Reichelt `1N 5822` |
-| 100 nF / 50 V | **at least 5** | B | 12 V input, DC/DC output, ADS1115 A0, ADS1115 A1, and the SHT31 far end | ~8-15 (assortment) | [Amazon search](https://www.amazon.de/s?k=Kondensator+Sortiment+100nF+100uF+470uF) |
+| 100 nF / 50 V | **at least 6** | B | 12 V input, DC/DC output, the SHT31 far end, and one at each analogue input that has a known source - A0 and the bilge channel. The positions on the unspecified channels stay empty pads: the capacitor suits a high-impedance source and gets in the way of a fast one | ~8-15 (assortment) | [Amazon search](https://www.amazon.de/s?k=Kondensator+Sortiment+100nF+100uF+470uF) |
 | 100 µF / 35 V, **105 °C** | 1 | B | bulk at the DC/DC input. 105 °C, not 85 °C | with the above | as above |
 | 470 µF / 16 V, **105 °C** | 1 | B | bulk on the 5 V output | with the above | as above |
 
@@ -81,13 +82,13 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 | Part | Qty | Phase | Purpose / requirement | Price | Source |
 |------|-----|-------|-----------------------|-------|--------|
 | Fabricated main board, 2-layer | 5 (minimum run) | B | carries the protection, the DC/DC, the divider, the 1-Wire passives, the I2C distribution and the DevKit socket, and replaces the bundled carrier. Component and net list in [B-002](design/B-002-main-board.md) | ~30-60 | JLCPCB, Aisler, PCBWay |
-| Screw terminals 5.08 mm, **4-pole** | 4 | B | the three probe cables and the SeaTalk cable, three wires each. **Four poles for three wires on purpose**: the 3-pole of this series is not stocked, and one spare pole costs 5 mm of board edge against a wait of months | 0,57 each | Reichelt `CTB0509-4` |
+| Screw terminals 5.08 mm, **4-pole** | 5 | B | the three probe cables and the SeaTalk cable, three wires each, plus the bilge level sender. **Four poles for three wires on purpose**: the 3-pole of this series is not stocked, and one spare pole costs 5 mm of board edge against a wait of months. The bilge terminal is fitted whether or not that sender is bought - 57 cents keeps the channel usable without another board revision | 0,57 each | Reichelt `CTB0509-4` |
 | Screw terminal 5.08 mm, **6-pole** | 1 | A | the IMU cable, five wires. A screw terminal although it stays inside the box, because it is on the I2C bus and a poor contact there takes every sensor with it ([B-002](design/B-002-main-board.md)). Six poles because the series has no 5-pole | 0,83 | Reichelt `CTB0509-6` |
 | Screw terminal 5.08 mm, 2-pole | 1 | B | 12 V entry | 0,29 | Reichelt `CTB0509-2` |
 | Screw terminal 5.08 mm, 4-pole | 1 | B | the SHT31 cable. One pitch across the whole board, so there is nothing to confuse when ordering or when soldering | 0,57 | Reichelt `CTB0509-4` |
 | Socket strip 2.54 mm, 1x40 | 2 | B | cut to 1x22 for the DevKit sockets (J1, J2); one strip yields one 22 and one 18, so two are needed. Sockets, not pin headers - the DevKit has to come out | 3,15 each | Reichelt `BKL 10120978` |
-| Socket strip 2.54 mm, 1x10 | 1 | B | ADS1115 breakout (U2) | with the above | as above |
-| Pin header strip 2.54 mm, straight | 1 strip | B | IMU, I2C expansion, and the reserved and spare GPIO headers (J9-J12) | ~5-8 | [Amazon search](https://www.amazon.de/s?k=Stiftleiste+2.54mm+Sortiment) |
+| Socket strip 2.54 mm, 1x10 | 2 | B | ADS1115 breakouts U2 and U3. U3's socket is fitted and left empty until its channels are specified - an empty socket costs nothing and loads nothing | with the above | as above |
+| Pin header strip 2.54 mm, straight | 1 strip | B | I2C expansion, the reserved and spare GPIO headers, and the spare analogue channels (J10-J14). The analogue ones are headers rather than terminals because the conditioning an unspecified sender needs belongs on a small adapter, not on the board that is hardest to change | ~5-8 | [Amazon search](https://www.amazon.de/s?k=Stiftleiste+2.54mm+Sortiment) |
 | ABS enclosure IP65/IP67, approx. 200 x 120 x 75 mm | 1 | C | electronics box; the main board plus the DevKit standing in its sockets needs roughly 14 mm of height above the board | ~12-20 | [Amazon search](https://www.amazon.de/s?k=ABS+Gehaeuse+IP65+200x120x75) |
 | Pressure-equalisation vent membrane (Gore-type) | 1 | C | stops condensation inside the sealed box; fitted pointing down | ~8-15 | [Amazon search](https://www.amazon.de/s?k=Druckausgleichselement+Gehaeuse+IP67+Membran) |
 | Cable glands M12/M16, IP68 | set | C | cable entries, fitted pointing down or sideways, with drip loops | ~7-10 | [Amazon search](https://www.amazon.de/s?k=Kabelverschraubung+IP68+M12+M16) |

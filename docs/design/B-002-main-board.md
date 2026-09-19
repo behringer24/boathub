@@ -98,6 +98,12 @@ Values and rationale are in [B-001](B-001-power-supply.md) section 3 and
 | U1 | RECOM **R-78K5.0-1.0** | DevKit supply. 6.5-36 V in, 5 V / 1 A out, 1 mA quiescent, SIP-3 with three pins at 2.54 mm |
 | C4 | 470 µF / 16 V, 105 °C | bulk at the 5 V output |
 | C5 | 100 nF / 50 V | HF bypass at the output |
+| R10 | 1 kΩ | series into ADS1115 A1, the bilge level channel |
+| C6 | 100 nF / 50 V | at A1 to GND |
+| R11, R12 | 1 kΩ | series into ADS1115 A2, A3 |
+| C7, C8 | 100 nF / 50 V | at A2, A3 - **pads only, not fitted** |
+| R13-R16 | 1 kΩ | series into the second converter's A0-A3 - **not fitted** until U3 is |
+| C9-C12 | 100 nF / 50 V | at the second converter's inputs - **pads only, not fitted** |
 | R4, R5, R6 | 2.0 kΩ | 1-Wire pull-ups, one per probe |
 | R7, R8, R9 | 100 Ω | 1-Wire series protection, one per probe |
 
@@ -112,11 +118,14 @@ Values and rationale are in [B-001](B-001-power-supply.md) section 3 and
 | J6 | 3 | probe `FRIDGE-T` | **screw terminal** |
 | J7 | 4 | SHT31: 3.3 V, SDA, SCL, GND | **screw terminal** |
 | U2 | 10 | ADS1115 breakout, 0x48 | socket strip |
-| J8 | 4 | ADS1115 A1, A2, A3 and GND | screw terminal |
+| J8 | 4 | bilge level sender: +12 V, signal, GND, one spare | **screw terminal** |
 | J9 | 5 | IMU: 3.3 V, GND, SDA, SCL, INT | **screw terminal**, 6-pole with one spare - it is on the I2C bus |
 | J10 | 4 | I2C expansion: 3.3 V, GND, SDA, SCL | pin header |
 | J11 | 8 | reserved GPIO | pin header |
 | J12 | 14 | spare GPIO | pin header |
+| U3 | 10 | ADS1115 breakout, 0x49 - **socket left empty** | socket strip |
+| J13 | 4 | spare channels on U2: A2, A3, GND, 3.3 V | pin header |
+| J14 | 6 | channels on U3: A0-A3, GND, 3.3 V | pin header |
 
 A connector is chosen by **what a bad contact costs**, not by which side of the enclosure wall it
 sits on.
@@ -162,12 +171,16 @@ make it.
 | `SDA` | J1.11 (IO8), J7.2, U2.4, J9.3, J10.3 |
 | `SCL` | J1.8 (IO9), J7.3, U2.3, J9.4, J10.4 |
 | `IMU_INT` | J2.18 (IO2), J9.5 |
-| `ADS1_A1` | U2.8, J8.1 |
-| `ADS1_A2` | U2.9, J8.2 |
-| `ADS1_A3` | U2.10, J8.3 |
+| `BILGE_LVL` | J8.2, R10.1 |
+| `ADS1_A1` | R10.2, C6.1, U2.8 |
+| `ADS1_A2` | R11.2, C7.1, U2.9 |
+| `ADS1_A3` | R12.2, C8.1, U2.10 |
+| `SPARE_A2` | J13.1, R11.1 |
+| `SPARE_A3` | J13.2, R12.1 |
 
-`U2.5` is the ADS1115's ADDR pin, tied to GND for address **0x48**. The other two modules set
-theirs on the expansion header, per [A-002](A-002-bench-setup-usb.md).
+`U2.5` is the ADS1115's ADDR pin, tied to GND for address **0x48**. `U3.5` is tied to 3.3 V for
+**0x49**. A third module, if one is ever wanted, sets its own on the expansion header per
+[A-002](A-002-bench-setup-usb.md).
 
 ### 1-Wire
 
@@ -206,16 +219,22 @@ USB; `IO35`-`IO37` belong to the octal PSRAM; `IO48` drives the DevKit's RGB LED
 | J3 | +12 V | GND | | | |
 | J4, J5, J6 | +3.3 V (probe red) | DATA (probe yellow) | GND (probe black) | | |
 | J7 | +3.3 V | SDA | SCL | GND | |
-| J8 | A1 | A2 | A3 | GND | |
+| J8 | **+12 V** | signal | GND | - | |
+| J13 | A2 | A3 | GND | +3.3 V | |
 | J9 | +3.3 V | GND | SDA | SCL | INT |
 | J10 | +3.3 V | GND | SDA | SCL | |
 
 The three probe connectors share one pin order, deliberately. Three identical connectors wired
 three different ways is a fault waiting for the first service visit.
 
+**J8 is the exception, and it has to be labelled as one.** It is the same 4-pole part in the same
+pin order as the three probe terminals, but its first pole carries 12 V where theirs carry 3.3 V.
+The silkscreen names the voltage at that pole, not just the pin number - otherwise a probe ends
+up on it at the first service visit, and a DS18B20 does not survive that.
+
 ## 6. What a netlist cannot say
 
-Five things decide whether this board works, and none is expressible as a net.
+Six things decide whether this board works, and none is expressible as a net.
 
 ### The 1-Wire passives sit at the cable, not at the pin
 
@@ -285,40 +304,55 @@ the current the long way round, and the via count stops mattering.
 copper but distance from the DC/DC module, which radiates into a deliberately high-impedance
 measurement path.
 
-### The spare converter channels end at a header, not a terminal
+### What each analogue channel ends in
 
-One analogue channel has a defined use - the battery divider on A0. The rest do not, and
-[design/README.md](README.md) still lists their allocation as a document to be written. Putting
-screw terminals on them would mean guessing the conditioning an unknown sender needs, and guessing
-it on the board that is hardest to change.
+Four analogue inputs on the first converter, and they do not all deserve the same connector.
 
-So they come out on **pin headers** instead, and each channel carries the same shape as A0:
+| Channel | Ends in | Because |
+|---------|---------|---------|
+| A0 | nothing - the divider is on the board | it measures the board's own supply |
+| **A1** | **screw terminal J8** | the bilge level sender is a cable through the enclosure wall |
+| A2, A3 | pin header J13 | nothing is specified for them yet |
+| U3's four | pin header J14 | the converter itself is not fitted yet |
+
+Every one of them carries the same shape, **per signal pin** - the ground and 3.3 V poles on a
+header are supply for a future adapter and carry nothing:
 
 ```
-header pin ──[ 1 kΩ ]──┬──► converter input
-                       └── (100 nF, pads only) ── GND
+J8.2 / header pin ──[ 1 kΩ ]──┬──► converter input
+                              └── (100 nF) ── GND
 ```
 
-- **The 1 kΩ is fitted and lives here.** It is not conditioning, it is the last barrier in front of
-  the converter: a screw terminal on the far end of a future adapter invites a tank sender or
-  something at 12 V, and the ADS1115 takes VDD + 0.3 V regardless of its gain setting.
-- **The 100 nF is pads only.** It is a charge reservoir for the sampling input, wanted when the
-  source is high-impedance - as the divider is - and unwelcome on a fast signal, where 1 kΩ and
-  100 nF make a 100 µs filter nobody asked for.
-- Conditioning proper belongs on a small adapter designed when the sender is known. A 30 x 20 mm
-  board costs a few euro to respin; this one does not.
+- **The 1 kΩ is fitted and it lives here, on this board.** It is not conditioning, it is the last
+  barrier in front of the converter, and the ADS1115 takes VDD + 0.3 V on an input regardless of
+  what its gain is set to. The bilge channel makes the case concretely: a 4-20 mA loop is powered
+  from the same terminal it measures into, so the fault to design against is the loop's own +12 V
+  arriving on the signal pole. The 1 kΩ holds that to about 8 mA into the input clamp - the same
+  number, and the same argument, as the bridged divider in [B-001](B-001-power-supply.md).
+- **The 100 nF is fitted where the source is known and pads only where it is not.** It is a charge
+  reservoir for the converter's switched-capacitor input, wanted behind a high-impedance source -
+  the divider, and the bilge shunt - and unwelcome on a fast signal, where 1 kΩ and 100 nF make a
+  100 µs filter nobody asked for.
 
-A header also need not sit at the board edge, since nothing cabled leaves through it. That, rather
-than the pitch, is where the space is saved.
+**Conditioning proper belongs on a small adapter designed once the sender is known.** Putting screw
+terminals on A2 and A3 now would mean guessing the circuit an unspecified sender needs, and
+guessing it on the board that is hardest to change. A 30 x 20 mm adapter costs a few euro to
+respin; this one does not. A header also need not sit at the board edge, since nothing cabled
+leaves through it - which is where the space is actually saved, not in the pitch.
 
-The second converter is socketed the same way and **fitted with nothing** until its channels are
-specified - no module, no resistors. An empty socket is holes. Mark it optional on the silkscreen,
-or somebody will go looking for the missing module.
+### The second converter is socketed and left empty
 
-One second-order effect worth knowing: the I2C pull-ups sit on the modules, so leaving the second
-converter off raises the bus from about 3.3 kΩ to 5 kΩ. Both are comfortable at 100 kHz. The IMU
-board carries pads for pull-ups and no resistors, which is why it does not enter the sum either
-way.
+U3 has its socket, its header and its four resistor positions, and **nothing fitted in any of
+them** until its channels are specified. An empty socket is holes: no device answers at 0x49, the
+bus scan finds nothing there, and the firmware reports only the channels that produced a value.
+
+Mark the socket **optional** on the silkscreen, or somebody will go looking for the missing module.
+
+One second-order effect worth knowing, because it is the sort that surprises later: the I2C
+pull-ups sit on the modules, not on this board. With the SHT31 and both converters fitted the bus
+sees about 3.3 kΩ; with U3 absent, 5 kΩ. Both are comfortable at 100 kHz - 5 kΩ against a few
+hundred picofarads is an edge of about 2 µs against a 10 µs half-period. The IMU board carries pads
+for pull-ups and no resistors, so it does not enter the sum either way.
 
 ### The I2C bus is a bus, not a star
 
@@ -480,6 +514,11 @@ hand - a fine-pitch converter IC in place of the module, say. It does not.
       `SCL` beside the sockets, a pin 1 marker on each socket, and the fuse rating at J3 with the
       note that reversing the supply blows it. None of it under a module, where a fitted board
       hides it
+- [ ] **J8's first pole is marked `+12V`, not just `1`.** It is the same 4-pole part in the same pin
+      order as the three probe terminals, and theirs begin at 3.3 V. The number alone does not stop
+      a probe being screwed into it
+- [ ] **U3's socket is marked optional**, and so are the resistor positions that feed it. An empty
+      footprint with no note reads as a missing part
 - [ ] **Which way each screw terminal opens is drawn on the silkscreen.** A single row of pads with
       no alignment pegs accepts the block either way round, and the stock footprints draw a
       symmetric body, so nothing in the design records the intended direction. An asymmetric
@@ -515,8 +554,8 @@ hand - a fine-pitch converter IC in place of the module, say. It does not.
 
 | Point | Decide by |
 |-------|-----------|
-| The 4-20 mA shunt has no circuit document, so it is not in the netlist. Reserve area for two 100 Ω 0.1 % in parallel and a 100 nF at A1 | when the bilge level probe is specified |
-| Channel allocation for the second and third ADS1115. Until it exists they live on the expansion header rather than in sockets | when the analog inputs are specified |
+| The 4-20 mA shunt value follows from the sender's supply and span, so it is not in the netlist. J8, R10 and C6 are in place; reserve area beside them for the shunt, which will be two resistors in parallel to reach a 0.1 % value | when the bilge level sender is chosen |
+| Channel allocation for U3's four inputs. The socket, header and resistor positions exist; nothing is fitted | when the analog inputs are specified |
 | Whether the SeaTalk level shifter and its interlock belong on this board or on their own | when the SeaTalk stage is designed |
 | Whether to fit a fuse holder on the board as well as inline | when the enclosure layout is known |
 
