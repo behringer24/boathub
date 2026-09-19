@@ -141,19 +141,20 @@ Many small parts remain over for later stages.
 
 ## Stage 2 - SeaTalk1 (preliminary, do not order yet)
 
-The receive stage is specified in [D-001](design/D-001-seatalk-rx-stage.md); the transmit stage is
-not finalised and gets its own schematic revision and a bench test before anything is connected to
-the Raymarine S1.
+The receive stage is specified in [D-001](design/D-001-seatalk-rx-stage.md), the transmit stage in
+[D-003](design/D-003-seatalk-tx-stage.md). **Nothing is connected to the Raymarine S1 until both
+have passed a bench test against a simulated bus.**
 
 | Part | Qty | Purpose |
 |------|-----|---------|
-| 3-pole screw terminal 5.08 mm | 1 | SeaTalk +12 V / DATA / GND |
+| 3-pole screw terminal, 5.00 or 5.08 mm | 1 | SeaTalk +12 V / DATA / GND. Shared by both directions |
 | PC817 optocoupler (or 6N137) | 1-2 | galvanic isolation of SeaTalk RX; PC817's ~4 µs edges are fine against a 208 µs bit at 4800 baud |
 | 4.7 kΩ resistor | 1 | LED series resistor on the SeaTalk side of the opto. ~2.3 mA is plenty for a PC817 and keeps the load off the instrument bus, which is held high by pull-ups inside the instruments. A 6N137 would want 1-2 kΩ instead ([D-001](design/D-001-seatalk-rx-stage.md)) |
 | 10 kΩ resistor | 1 | pull-up on the ESP side of the opto output |
-| 2N7002 or BSS138 N-MOSFET | 1 | SeaTalk TX open-drain driver; **replaces the 74LS07** - no 5 V rail needed, open-drain by nature |
-| **10 kΩ resistor** | 1 | **gate pull-down - keeps TX off while the ESP boots or after a crash. Not optional.** |
-| 100 Ω resistor | 1 | series resistor in the TX drain line. The low end of the usual range on purpose: it divides against the bus pull-up, and 470 Ω would leave the low level too high to be read as low |
+| BC337-25 or 2N3904 NPN, TO-92 | 1 | SeaTalk TX driver. **Not a small MOSFET**: the common logic-level types are surface mount, and the through-hole ones specify a gate threshold of up to 3 V, which a 3.3 V pin barely clears ([D-003](design/D-003-seatalk-tx-stage.md)) |
+| 1 kΩ resistor | 1 | base resistor from IO16 - 2.6 mA of base current, ample for a bus that needs ten |
+| **10 kΩ resistor** | 1 | **base to emitter - keeps the transmitter off while the ESP boots, crashes or is unpowered. Not optional**: it is the only thing between a dead board and a dead instrument network |
+| 100 Ω resistor | 1 | series resistor in the collector line. The low end of the usual range on purpose: it divides against the bus pull-up, and 470 Ω would leave the low level too high to be read as low |
 | 1.5KE20A TVS | 1 | protection on the SeaTalk DATA line. **The same part as the supply input's**: a 15 V device would sit at its threshold whenever the bank is in absorption ([D-001](design/D-001-seatalk-rx-stage.md)) |
 
 **Firmware note:** the ESP32 UART has no 9-bit mode, so the SeaTalk command bit has to be recovered
