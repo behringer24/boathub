@@ -113,15 +113,56 @@ second ground path through the SeaTalk cable, which is a loop that was not there
 D-003 decides between accepting that and driving a second optocoupler on the instrument side. It is
 a real decision, and building receive-only first keeps it open.
 
+### What the two directions share
+
+Almost nothing, which is what makes a compact layout possible.
+
+| Shared | |
+|--------|---|
+| **J20**, the three-pole terminal | one cable serves both directions |
+| **D20**, the TVS on `ST_DATA` | protects receiving and transmitting alike |
+
+| Receiving only | Transmitting only |
+|----------------|-------------------|
+| R20 and the optocoupler | the MOSFET, its gate pull-down and its drain resistor |
+| R21, on the ESP side of the isolation | - |
+
+The two branches meet at one net, `ST_DATA`, and nowhere else.
+
 ### If this stage ends up on the main board
 
 [B-002](B-002-main-board.md) uses a ground plane, and a plane fills everything it is not forbidden
-to fill. `ST_GND` would therefore have to be an **island**, excluded from the pour, with a
-deliberate gap in the copper running beneath OK20 - across both layers.
+to fill. `ST_GND` therefore has to be an **island**, excluded from the pour, and it is a small one -
+three pads:
+
+```
+J20.3    the cable's ground
+OK20.2   the LED's cathode
+D20      the TVS anode
+```
+
+The gap in the copper runs **lengthwise beneath the optocoupler**, between its two pin rows. A
+DIP-4 puts them 7.62 mm apart, which is room enough for a clean break on both layers. R21 belongs
+on the far side of that gap, with the board's own ground.
+
+Put J20, D20, R20 and OK20 together as one block at the board edge and the island stays small,
+which is what an island should be.
 
 A separation that exists in the schematic and not in the copper is worse than none, because it
-reads as isolation on every drawing and is not. That alone is an argument for giving this stage its
-own small board.
+reads as isolation on every drawing and is not.
+
+### Keep the decision open with a solder jumper
+
+Receiving alone is isolated; adding the transmit stage bonds the two grounds. Building receive-only
+first is therefore a decision not yet taken - and a ground plane drawn without care takes it for
+you, silently.
+
+**Two pads with a narrow gap between `ST_GND` and `GND`, left open.** While the board only
+receives, the separation is real. When the transmit stage arrives, a drop of solder closes it.
+
+That costs two pads and keeps a decision open that this document is deliberately not making yet.
+Reserve roughly 15 x 10 mm beside the terminal for the MOSFET and its two resistors, and a track to
+IO16, or the transmit stage becomes a new board rather than an addition to this one.
 
 ## 5. Parts
 
@@ -132,6 +173,7 @@ own small board.
 | OK20 | PC817 | level shift and isolation. ~4 µs edges against a 208 µs bit |
 | R20 | 4.7 kΩ | LED series resistor, on the instrument side |
 | R21 | 10 kΩ | pull-up on the ESP side |
+| JP20 | solder jumper, open | bridges `ST_GND` to `GND` when the transmit stage is fitted - see section 4 |
 
 ## 6. Failure modes
 
