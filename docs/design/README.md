@@ -72,7 +72,7 @@ navigation depends on.
 | 1 | Receive stage: optocoupler, level shift, isolation | [D-001](D-001-seatalk-rx-stage.md) |
 | 2 | Decoding: eleven-bit frames, the command bit, datagrams | [D-002](D-002-seatalk-decoding.md) |
 | 3 | SeaTalk values into telemetry, `seatalk_online` | [D-002](D-002-seatalk-decoding.md) |
-| 4 | Transmit output stage and its interlock | planned |
+| 4 | Transmit output stage and its interlock | [D-003](D-003-seatalk-tx-stage.md) |
 | 5 | Autopilot operation on the on-board Wi-Fi | planned |
 
 **Receiving is proven before anything can transmit.** Until the output stage exists, no fault of
@@ -98,6 +98,7 @@ In reading order.
 | with it | [B-002](B-002-main-board.md) | Main board: nets and build |
 | stage 2 | [D-001](D-001-seatalk-rx-stage.md) | SeaTalk1 RX stage |
 | then | [D-002](D-002-seatalk-decoding.md) | SeaTalk1 decoding |
+| last | [D-003](D-003-seatalk-tx-stage.md) | SeaTalk1 TX output stage |
 
 ## Checking a board
 
@@ -157,7 +158,6 @@ They take the next free number in their phase when written.
 
 **Phase D**
 
-- SeaTalk1 TX output stage and safety interlock
 - Autopilot operation on the on-board Wi-Fi: arming logic and state machine
 
 **Later stages, phase letters not yet assigned**
