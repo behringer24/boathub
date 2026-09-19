@@ -177,14 +177,25 @@ which is what an island should be.
 A separation that exists in the schematic and not in the copper is worse than none, because it
 reads as isolation on every drawing and is not.
 
-### Keep the decision open with a solder jumper
+### Keep the decision open with a wire link
 
 Receiving alone is isolated; adding the transmit stage bonds the two grounds. Building receive-only
 first is therefore a decision not yet taken - and a ground plane drawn without care takes it for
 you, silently.
 
-**Two pads with a narrow gap between `ST_GND` and `GND`, left open.** While the board only
-receives, the separation is real. When the transmit stage arrives, a drop of solder closes it.
+**Two pads at 2.54 mm between `ST_GND` and `GND`, left open.** While the board only receives, the
+separation is real. When the transmit stage arrives, a short piece of wire soldered through closes
+it, and side cutters reopen it.
+
+A pluggable shunt would do the same job and is the obvious thing to reach for. It is the wrong
+choice here for two reasons that only apply on a boat: the enclosure vents to outside air because
+moisture gets in, which is hard on a plug contact left closed for years; and a board in an engine
+space lives with vibration a desk does not. A shunt that works loose does not announce itself - the
+transmit path simply stops, which is the failure mode this design spends its effort avoiding
+everywhere else.
+
+Give the two pads a **pin header footprint** all the same. The holes take a wire link just as well,
+and nothing about the layout forces the choice before assembly.
 
 That costs two pads and keeps a decision open that this document is deliberately not making yet.
 Reserve roughly 15 x 10 mm beside the terminal for the MOSFET and its two resistors, and a track to
@@ -199,7 +210,7 @@ IO16, or the transmit stage becomes a new board rather than an addition to this 
 | OK20 | PC817 | level shift and isolation. ~4 µs edges against a 208 µs bit |
 | R20 | 4.7 kΩ | LED series resistor, on the instrument side |
 | R21 | 10 kΩ | pull-up on the ESP side |
-| JP20 | solder jumper, open | bridges `ST_GND` to `GND` when the transmit stage is fitted - see section 4 |
+| JP20 | two pads at 2.54 mm, left open | a wire link bridges `ST_GND` to `GND` when the transmit stage is fitted - see section 4 |
 
 ## 6. Failure modes
 
