@@ -384,11 +384,26 @@ does not matter.
 
 ### It is hand-soldered
 
-The board is entirely through-hole, about 140 joints, none of them fine-pitch. Machine assembly is
-not worth buying for it: the cheap assembly services handle surface-mount only, and the parts that
-would have to be placed by hand regardless - the converter module, the socket strips, the screw
-terminals - are most of the board. Through-hole keeps every part reworkable, which on a first
-revision is worth more than the hour it costs.
+The board is entirely through-hole, about 140 joints, none of them fine-pitch, and it stays that
+way. The reason is structural rather than a preference: **this is a connector board.**
+
+| | Joints | Could be surface-mount |
+|---|--------|------------------------|
+| Socket strips J1, J2, U2 | 54 | no |
+| Terminals and headers J3-J12 | 50 | no |
+| Converter module U1 | 4 | no |
+| Resistors, capacitors, diodes | 32 | yes |
+
+Connectors are through-hole because they have to hold when somebody pulls a cable. So converting
+the passives to surface-mount would move 32 joints of 140 to a machine and leave 108 to be soldered
+by hand anyway - and the assembly setup, plus a feeder charge for each part that is not shelf
+stock, costs more than the ten minutes it saves on the one board that actually gets populated.
+
+Through-hole also keeps every part reworkable, which matters while values are still provisional:
+the 1-Wire pull-ups are specified as a range, and a wire-ended resistor is a thirty-second swap.
+
+Surface mount would earn its place if this board ever carried something that cannot be soldered by
+hand - a fine-pitch converter IC in place of the module, say. It does not.
 
 ## 9. Verification
 
