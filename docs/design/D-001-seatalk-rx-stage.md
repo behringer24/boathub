@@ -35,6 +35,10 @@ eleventh bit time.
 taking power from the instrument bus would put the ESP's consumption onto a network whose current
 budget belongs to Raymarine.
 
+Ground takes pin 1 and the supply core pin 3, so the two conductors that carry something sit
+together at one end and the unused core ends up beside the spare pole, where neither can be taken
+for a signal.
+
 ## 3. The circuit
 
 Reference designators start at 20 so that this stage can be merged onto the main board later
@@ -44,13 +48,12 @@ U1-U2.
 ```
   SeaTalk cable                     J20
   ─────────────                    ─────
-   red    +12 V ──────────────────► 1     landed, not used
-   yellow DATA  ──────────────────► 2 ──┬─────────── ST_DATA
-   screen GND   ──────────────────► 3   │
-                                    │   │
-                                  ST_GND│
-                                        │
-                              [ D20 ]  1.5KE20A, cathode to ST_DATA
+   screen GND   ──────────────────► 1 ──── ST_GND
+   yellow DATA  ──────────────────► 2 ──── ST_DATA
+   red    +12 V ──────────────────► 3      landed, used for nothing
+                                    4      spare pole, mark it n.c.
+
+              ST_DATA ──[ D20 ]── ST_GND    1.5KE20A, cathode to ST_DATA
 ```
 
 ```
@@ -74,9 +77,10 @@ PC817 pins: 1 anode, 2 cathode, 3 emitter, 4 collector.
 
 | Net | Nodes |
 |-----|-------|
-| `ST_12V` | J20.1 alone - give it a no-connect flag, or ERC reports a pin that is unconnected on purpose |
-| `ST_DATA` | J20.2, D20.1, R20.1 |
-| `ST_GND` | J20.3, D20.2, OK20.2, JP20.1 |
+| `ST_GND` | **J20.1**, D20.2, OK20.2, JP20.1 |
+| `ST_DATA` | **J20.2**, D20.1, R20.1 |
+| `ST_12V` | **J20.3** alone - give it a no-connect flag, or ERC reports a pin unconnected on purpose |
+| - | **J20.4** is the spare pole of a four-way block. Mark it `n.c.` on the silkscreen, or somebody hunts for a fourth core |
 | `ST_LED` | R20.2, OK20.1 |
 | `SEATALK_RX` | OK20.4, R21.2, and the socket pin carrying **IO15** |
 | `+3V3` | R21.1 |
