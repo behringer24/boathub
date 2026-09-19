@@ -113,7 +113,7 @@ Values and rationale are in [B-001](B-001-power-supply.md) section 3 and
 | J7 | 4 | SHT31: 3.3 V, SDA, SCL, GND | **screw terminal** |
 | U2 | 10 | ADS1115 breakout, 0x48 | socket strip |
 | J8 | 4 | ADS1115 A1, A2, A3 and GND | screw terminal |
-| J9 | 5 | IMU: 3.3 V, GND, SDA, SCL, INT | **screw terminal** - it is on the I2C bus |
+| J9 | 5 | IMU: 3.3 V, GND, SDA, SCL, INT | **screw terminal**, 6-pole with one spare - it is on the I2C bus |
 | J10 | 4 | I2C expansion: 3.3 V, GND, SDA, SCL | pin header |
 | J11 | 8 | reserved GPIO | pin header |
 | J12 | 14 | spare GPIO | pin header |
@@ -325,7 +325,7 @@ its pins as two anodes.
 Two entries in that table are placeholders and have to be replaced before the board is ordered:
 
 - **The screw terminals.** Filter the footprint chooser to the `TerminalBlock*` libraries and
-  search for the pole count at `P5.00mm`. Which one fits depends on the part bought, and library
+  search for the pole count at `P5.08mm`. Which one fits depends on the part bought, and library
   names in that family change between KiCad releases - which is why the netlist does not name one.
 - **The converter.** Three pads at 2.54 mm is geometrically correct and always resolves, which is
   why the netlist names a pin header. If the installed libraries carry a RECOM R-78 footprint,
@@ -367,7 +367,7 @@ appears with a ratsnest showing what must connect to what.
 
 **Footprints in the netlist are placeholders.** Pin headers and socket strips stand in for the
 screw terminals, because their names are stable across KiCad versions while terminal-block library
-names are not. Before ordering, replace them with footprints matching the parts in hand: 5.00 mm
+names are not. Before ordering, replace them with footprints matching the parts in hand: 5.08 mm
 pitch for the screw terminals, and whatever pad pattern the DC/DC module has.
 
 The alternative route is to draw the schematic in KiCad, let it generate its own netlist, and
