@@ -151,7 +151,7 @@ have passed a bench test against a simulated bus.**
 | PC817 optocoupler (or 6N137) | 1-2 | galvanic isolation of SeaTalk RX; PC817's ~4 µs edges are fine against a 208 µs bit at 4800 baud |
 | 4.7 kΩ resistor | 1 | LED series resistor on the SeaTalk side of the opto. ~2.3 mA is plenty for a PC817 and keeps the load off the instrument bus, which is held high by pull-ups inside the instruments. A 6N137 would want 1-2 kΩ instead ([D-001](design/D-001-seatalk-rx-stage.md)) |
 | 10 kΩ resistor | 1 | pull-up on the ESP side of the opto output |
-| BC337-25 or 2N3904 NPN, TO-92 | 1 | SeaTalk TX driver. **Not a small MOSFET**: the common logic-level types are surface mount, and the through-hole ones specify a gate threshold of up to 3 V, which a 3.3 V pin barely clears ([D-003](design/D-003-seatalk-tx-stage.md)) |
+| **BC337-25** NPN, TO-92 | 1 | SeaTalk TX driver, Reichelt `BC 337-25`, 0,06 EUR. hFE 160 minimum against the 100 of a 2N3904, and four times the current headroom. **Not a small MOSFET**: the common logic-level types are surface mount, and the through-hole ones specify a gate threshold of up to 3 V, which a 3.3 V pin barely clears ([D-003](design/D-003-seatalk-tx-stage.md)) |
 | 1 kΩ resistor | 1 | base resistor from IO16 - 2.6 mA of base current, ample for a bus that needs ten |
 | **10 kΩ resistor** | 1 | **base to emitter - keeps the transmitter off while the ESP boots, crashes or is unpowered. Not optional**: it is the only thing between a dead board and a dead instrument network |
 | 100 Ω resistor | 1 | series resistor in the collector line. The low end of the usual range on purpose: it divides against the bus pull-up, and 470 Ω would leave the low level too high to be read as low |
