@@ -81,10 +81,10 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 | Part | Qty | Phase | Purpose / requirement | Price | Source |
 |------|-----|-------|-----------------------|-------|--------|
 | Fabricated main board, 2-layer | 5 (minimum run) | B | carries the protection, the DC/DC, the divider, the 1-Wire passives, the I2C distribution and the DevKit socket, and replaces the bundled carrier. Component and net list in [B-002](design/B-002-main-board.md) | ~30-60 | JLCPCB, Aisler, PCBWay |
-| Screw terminals **5.00 mm**, 3-pole | 4 | B | the three probe cables and the SeaTalk cable. One pitch for every cabled terminal, so there is nothing to confuse when ordering | ~0,50 each | Altech AK100 series or equivalent |
-| Screw terminal **5.00 mm**, 5-pole | 1 | A | the IMU cable. A screw terminal although it stays inside the box, because it is on the I2C bus and a poor contact there takes every sensor with it ([B-002](design/B-002-main-board.md)) | ~0,80 | as above |
-| Screw terminal **5.00 mm**, 2-pole | 1 | B | 12 V entry | with the above | as above |
-| Screw terminal 2.54 mm, 4-pole | 1 | B | the SHT31 cable, whose four thin cores do not need 5 mm. The one terminal on the board at a different pitch - order it deliberately, not by accident | ~0,40 | Xinya XY308 series or equivalent |
+| Screw terminals 5.08 mm, **4-pole** | 4 | B | the three probe cables and the SeaTalk cable, three wires each. **Four poles for three wires on purpose**: the 3-pole of this series is not stocked, and one spare pole costs 5 mm of board edge against a wait of months | 0,57 each | Reichelt `CTB0509-4` |
+| Screw terminal 5.08 mm, **6-pole** | 1 | A | the IMU cable, five wires. A screw terminal although it stays inside the box, because it is on the I2C bus and a poor contact there takes every sensor with it ([B-002](design/B-002-main-board.md)). Six poles because the series has no 5-pole | 0,83 | Reichelt `CTB0509-6` |
+| Screw terminal 5.08 mm, 2-pole | 1 | B | 12 V entry | 0,29 | Reichelt `CTB0509-2` |
+| Screw terminal 5.08 mm, 4-pole | 1 | B | the SHT31 cable. One pitch across the whole board, so there is nothing to confuse when ordering or when soldering | 0,57 | Reichelt `CTB0509-4` |
 | Socket strip 2.54 mm, 1x40 | 2 | B | cut to 1x22 for the DevKit sockets (J1, J2); one strip yields one 22 and one 18, so two are needed. Sockets, not pin headers - the DevKit has to come out | 3,15 each | Reichelt `BKL 10120978` |
 | Socket strip 2.54 mm, 1x10 | 1 | B | ADS1115 breakout (U2) | with the above | as above |
 | Pin header strip 2.54 mm, straight | 1 strip | B | IMU, I2C expansion, and the reserved and spare GPIO headers (J9-J12) | ~5-8 | [Amazon search](https://www.amazon.de/s?k=Stiftleiste+2.54mm+Sortiment) |
@@ -148,7 +148,7 @@ have passed a bench test against a simulated bus.**
 
 | Part | Qty | Purpose |
 |------|-----|---------|
-| 3-pole screw terminal, 5.00 mm | 1 | SeaTalk +12 V / DATA / GND. Shared by both directions; same part as the probe terminals |
+| 4-pole screw terminal, 5.08 mm | 1 | SeaTalk +12 V / DATA / GND, one pole unused. Shared by both directions; same part as the probe terminals |
 | PC817 optocoupler (or 6N137) | 1-2 | galvanic isolation of SeaTalk RX; PC817's ~4 µs edges are fine against a 208 µs bit at 4800 baud |
 | 4.7 kΩ resistor | 1 | LED series resistor on the SeaTalk side of the opto. ~2.3 mA is plenty for a PC817 and keeps the load off the instrument bus, which is held high by pull-ups inside the instruments. A 6N137 would want 1-2 kΩ instead ([D-001](design/D-001-seatalk-rx-stage.md)) |
 | 10 kΩ resistor | 1 | pull-up on the ESP side of the opto output |

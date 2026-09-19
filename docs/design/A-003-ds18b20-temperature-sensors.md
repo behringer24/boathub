@@ -47,7 +47,7 @@ The cost is three pins, and the pin plan has them spare. Keep it.
 | DS18B20-compatible potted probe, 5 m | 3 | engine bay, bilge, fridge | sold in 3-packs |
 | 2.0-2.2 kΩ resistor | 3 | 1-Wire pull-up, one per bus | **not** 4.7 kΩ - see below |
 | 100 Ω resistor | 3 | series protection in each DATA line | |
-| 3-pole screw terminal, 5.00 mm | 3 | detachable probe connection | cables must come off for service. Same pitch as every other terminal that leaves the enclosure |
+| Screw terminal, 5.08 mm, 4-pole | 3 | detachable probe connection | cables must come off for service. Four poles for three wires: the 3-pole of the stocked series is not available, and a spare pole is cheaper than a wait |
 | Clamp-on ferrite | 3 | optional, conducted noise at the box entry | |
 
 ### Pin assignment
