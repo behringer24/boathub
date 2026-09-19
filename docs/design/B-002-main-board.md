@@ -445,6 +445,14 @@ hand - a fine-pitch converter IC in place of the module, say. It does not.
       `SCL` beside the sockets, a pin 1 marker on each socket, and the fuse rating at J3 with the
       note that reversing the supply blows it. None of it under a module, where a fitted board
       hides it
+- [ ] **Which way each screw terminal opens is drawn on the silkscreen.** A single row of pads with
+      no alignment pegs accepts the block either way round, and the stock footprints draw a
+      symmetric body, so nothing in the design records the intended direction. An asymmetric
+      outline - 4.55 mm towards the opening, 3.75 mm behind the pins - says it without a legend
+- [ ] **Terminal drill diameter is 1.2 mm.** That is the manufacturer's recommendation for a
+      1.0-1.1 mm pin, and it is a fit rather than a minimum: the block stands square by itself while
+      it is soldered. A footprint borrowed from a maker with heavier pins drills wider and leaves it
+      loose
 - [ ] Netlist compared against a second description - either the tables in section 5 read through
       by hand, or a schematic drawn independently
 
