@@ -38,14 +38,17 @@ COMPONENTS = [
     ("D1", "1.5KE20A", D_FP, "Device", "D_Zener", 2,
      "transient clamp, unidirectional - a zener symbol, so pin 1 is the cathode"),
     ("C1", "100n/50V", C_FP, "Device", "C", 2, "HF bypass at the input"),
-    ("R1", "82k 0.1%", R_FP, "Device", "R", 2, "battery divider, top leg"),
+    ("R1", "100k 0.1%", R_FP, "Device", "R", 2, "battery divider, top leg"),
     ("R2", "10k 0.1%", R_FP, "Device", "R", 2, "battery divider, bottom leg"),
     ("R3", "1k", R_FP, "Device", "R", 2, "series into ADS1115 A0"),
     ("C2", "100n/50V", C_FP, "Device", "C", 2, "at A0 to GND"),
     ("D2", "1N5822", D_FP, "Device", "D_Schottky", 2, "reverse polarity"),
     ("C3", "100u/35V", CP8, "Device", "CP", 2, "bulk, DC/DC input, 105 C"),
-    ("U1", "DCDC 12V-5V", HDR(4), "Connector_Generic", "Conn_01x04", 4,
-     "9-36 V to 5 V module, min 3 A"),
+    # SIP-3, three pins at 2.54 mm: 1 = +VIN, 2 = GND, 3 = +VOUT. The pin header
+    # footprint is geometrically right and always resolves; KiCad's own RECOM
+    # footprint is the better choice where the installed libraries carry one.
+    ("U1", "R-78K5.0-1.0", HDR(3), "Connector_Generic", "Conn_01x03", 3,
+     "RECOM switching regulator, 6.5-36 V in, 5 V 1 A out, SIP-3"),
     ("C4", "470u/16V", CP10, "Device", "CP", 2, "bulk, 5 V output, 105 C"),
     ("C5", "100n/50V", C_FP, "Device", "C", 2, "HF bypass at the output"),
     # 1-Wire, one channel per probe, from A-003
@@ -94,7 +97,7 @@ NO_CONNECT = {
 
 NETS = [
     ("GND", [("J1", 1), ("J2", 1), ("J2", 2), ("J2", 22), ("J3", 2), ("D1", 2), ("C1", 2),
-             ("R2", 2), ("C2", 2), ("C3", 2), ("U1", 2), ("U1", 4), ("C4", 2), ("C5", 2),
+             ("R2", 2), ("C2", 2), ("C3", 2), ("U1", 2), ("C4", 2), ("C5", 2),
              ("J4", 3), ("J5", 3), ("J6", 3), ("J7", 4), ("U2", 2), ("U2", 5), ("J8", 4),
              ("J9", 2), ("J10", 2), ("J11", 8), ("J12", 14)]),
     ("+5V", [("U1", 3), ("C4", 1), ("C5", 1), ("J1", 2)]),

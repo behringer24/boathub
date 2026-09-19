@@ -30,13 +30,18 @@ Continuous draw of the finished stage 1 system:
 |------|---------|
 | ESP32-S3, Wi-Fi associated, no light sleep | ~40-50 mA |
 | DevKit overhead - regulator, PWR LED, CH343P, RGB LED | ~10-18 mA |
-| DC/DC quiescent current, typical 3 A module | ~5-20 mA |
+| DC/DC quiescent current, R-78K5.0-1.0 | 1 mA |
 | Divider and sensors | <1 mA |
-| **Total** | **~55-90 mA** |
+| **Total** | **~52-70 mA** |
 
-That is 1.3-2.2 Ah per day, or 40-65 Ah per month. The **DC/DC quiescent current sets the floor**,
-not the ESP: no sleep strategy can get below the converter's own idle draw, so the converter choice
-matters more than the firmware. On shore power none of this is a problem, and it follows that:
+That is 1.2-1.7 Ah per day, or 37-50 Ah per month. **The DevKit's own overhead sets the floor** -
+its 3.3 V regulator, USB bridge and power LED draw more than anything else on the board except the
+radio. No sleep strategy reaches below it while the DevKit is socketed, which is the price of that
+decision ([B-002](B-002-main-board.md) section 2) and a fair one on permanent shore power.
+
+A generic 3 A buck module, with its 10-20 mA of quiescent current, would have doubled the standby
+draw by itself. That is why the converter is specified by part number rather than by rating. It
+follows that:
 
 - continuous operation, no duty cycling
 - a standard DC/DC module is fine; no low-quiescent-current part needed
@@ -84,11 +89,11 @@ days**. That is the case where the shore-power-loss alarm earns its keep.
 | Blade fuse holder + 2 A fuse | 1 | cable protection, close to the source | protects the **cable**, not the load |
 | TVS 1.5KE20A | 1 | transient clamp | unidirectional, 17.1 V standoff, clamps 27.7 V at 54 A |
 | 1N5822 | 1 | reverse polarity | 3 A / 40 V Schottky |
-| DC/DC 9-36 V to 5 V, min. 3 A | 1 | ESP supply | wide input covers 11-15 V comfortably |
+| **RECOM R-78K5.0-1.0** switching regulator | 1 | ESP supply | 6.5-36 V in, 5 V / 1 A out, 1 mA quiescent. SIP-3 in the TO-220 outline, three pins at 2.54 mm: 1 = +VIN, 2 = GND, 3 = +VOUT |
 | 100 nF / 50 V | 2 | HF bypass, input and output | |
 | 100 µF / 35 V, **105 °C** | 1 | bulk, DC/DC input | 105 °C |
 | 470 µF / 16 V, **105 °C** | 1 | bulk, 5 V output | |
-| 82 kΩ 0.1 % | 1 | divider, top leg | |
+| 100 kΩ 0.1 % | 1 | divider, top leg | |
 | 10 kΩ 0.1 % | 1 | divider, bottom leg | |
 | 1 kΩ | 1 | series into ADS1115 A0 | **this is what makes reverse polarity safe - do not omit** |
 | 100 nF / 50 V | 1 | at A0 to GND | also feeds the switched-capacitor input |
@@ -103,7 +108,7 @@ days**. That is the case where the shore-power-loss alarm earns its keep.
       +---- 1.5KE20A --------- GND      <- TVS first
       +---- 100 nF ----------- GND
       |
-      +---- 82 kOhm ---+                <- battery tap, ahead of the diode
+      +---- 100 kOhm --+                <- battery tap, ahead of the diode
       |                |
       |                +--- 1 kOhm ---- ADS1115 A0
       |                |
@@ -115,7 +120,7 @@ days**. That is the case where the shore-power-loss alarm earns its keep.
       |
       +---- 100 uF ----------- GND
       |
-    DC/DC 12 V -> 5 V
+    R-78K5.0-1.0
       |
       +---- 470 uF ----------- GND
       +---- 100 nF ----------- GND
@@ -131,6 +136,30 @@ days**. That is the case where the shore-power-loss alarm earns its keep.
 | TVS second | A surge is clamped **before** it reaches the 3 A Schottky. In the guide's original order the diode sat in the surge path and was the weakest link. |
 | Battery tap third | Measuring ahead of the diode removes the ±80 mV of load- and temperature-dependent error that no calibration can take out. |
 | Schottky fourth | Reverse polarity protection for everything that follows. |
+
+### What the converter asks for in return
+
+Swapping a converter means checking what it wants around it, because the bulk capacitors are part
+of the part.
+
+| | Datasheet | This design |
+|---|---|---|
+| Input capacitance | 27 µF recommended at fast input slew rates and above 18 V in | C3 at 100 µF covers it several times over |
+| **Maximum output capacitance** | **not specified - there is no stated limit** | C4 at 470 µF stays |
+| Minimum load | 0 % | nothing to add; it regulates into no load |
+| Switching frequency | 400 kHz | keeps the sense traces away from it, section 6 |
+| Output ripple | 50 mV peak to peak | below the ADS1115's own noise floor on a divided 12 V |
+
+The absence of a maximum capacitive load is the one that mattered. Many small switching regulators
+limit it, and an output bank above the limit makes the current limit trip at power-on so the
+converter never starts - a fault that looks exactly like a dead part.
+
+**One warning from the datasheet is worth carrying into the build:** current flowing *backwards*
+into the output can damage the converter while it is unpowered, and the remedy is a blocking diode
+on the output. That is precisely the USB case - a DevKit fed from USB pushes 5 V onto the rail the
+converter drives. The changeover rule in section 8 is therefore not tidiness. **USB and 12 V never
+at the same time**, and the reason is now a line in the manufacturer's own document rather than
+caution.
 
 ### The negative side, and where it returns
 
@@ -175,20 +204,26 @@ leaves you guessing. Worth writing on the inside of the enclosure lid.
 
 ### Divider calculation
 
-Ratio (82 + 10) / 10 = **9.2**.
+Ratio (100 + 10) / 10 = **11.0**.
 
 | Condition | Battery | at ADS1115 A0 | Inside ±2.048 V FSR |
 |-----------|---------|---------------|---------------------|
-| Critical, AGM ~30 % | 12.0 V | 1.304 V | yes |
-| Warning, AGM ~50 % | 12.3 V | 1.337 V | yes |
-| Resting, full AGM | 12.85 V | 1.397 V | yes |
-| Float charging | 13.2-13.8 V | 1.435-1.500 V | yes |
-| Absorption, AGM | 14.4-14.7 V | 1.565-1.598 V | yes |
-| Equalisation (flooded profile - **wrong for AGM**) | 15.5 V | 1.685 V | yes |
-| TVS clamping | 27.7 V | 3.011 V | clips, but below VDD 3.3 V - no damage |
+| Critical, AGM ~30 % | 12.0 V | 1.091 V | yes |
+| Warning, AGM ~50 % | 12.3 V | 1.118 V | yes |
+| Resting, full AGM | 12.85 V | 1.168 V | yes |
+| Float charging | 13.2-13.8 V | 1.200-1.255 V | yes |
+| Absorption, AGM | 14.4-14.7 V | 1.309-1.336 V | yes |
+| Equalisation (flooded profile - **wrong for AGM**) | 15.5 V | 1.409 V | yes |
+| TVS clamping | 27.7 V | 2.518 V | clips, but below VDD 3.3 V - no damage |
 
-Quiescent draw of the divider: 148 µA at 13.6 V, about 2 mW. Irrelevant next to the ESP - it is
-roughly 0.25 % of total system draw, and less than a quarter of what the DevKit's RGB LED consumes
+100 kΩ and 10 kΩ rather than a ratio chosen for its own sake: both are stocked as 0.1 % parts,
+where 82 kΩ is not, and the whole board then comes from one supplier. The cost is resolution -
+0.69 mV per ADC step at the battery instead of 0.58 mV - against thresholds three hundred
+millivolts apart. It buys nothing and costs nothing, which is the right trade when it removes a
+second order.
+
+Quiescent draw of the divider: 124 µA at 13.6 V, about 1.7 mW. Irrelevant next to the ESP - it is
+roughly 0.2 % of total system draw, and less than a quarter of what the DevKit's RGB LED consumes
 while dark.
 
 **Check your charger's profile.** Two separate concerns:
@@ -205,9 +240,9 @@ while dark.
 |--------------|-----------|------------------------|
 | Resistor tolerance, 0.1 % each | up to ~27 mV at 13.6 V | yes |
 | ADS1115 gain error | up to ~0.15 % | yes |
-| Source impedance 8.9 kΩ against 6 MΩ input | ~0.15 % gain error | yes, **as long as the PGA is never changed afterwards** |
+| Source impedance 9.1 kΩ against 6 MΩ input | ~0.15 % gain error | yes, **as long as the PGA is never changed afterwards** |
 | Resistor tempco, 25-50 ppm/°C over 30 °C | ~20 mV | no |
-| ADC resolution, ±2.048 V FSR | 0.6 mV at the battery | not needed |
+| ADC resolution, ±2.048 V FSR | 0.7 mV at the battery | not needed |
 
 **Realistic after calibration: ±20-30 mV.** Against the ±80 mV that measuring behind the diode
 would have left, this is what makes the 12.9 / 13.2 V decision threshold in section 4 usable at
@@ -310,7 +345,7 @@ reading becomes actionable - the moment you need to decide whether to start the 
 
 All thresholds belong in NVS/Preferences, not in constants: `v_charging_on` (13.1), `v_on_battery`
 (12.8), `v_low` (12.3), `v_critical` (12.0), the debounce windows, the **charging-history window**
-(6 h), and `v_calibration_factor` (nominal 9.2).
+(6 h), and `v_calibration_factor` (nominal 11.0).
 
 Battery chemistry is a configuration item too. Swapping the AGM bank for flooded or lithium moves
 every threshold in the table, so they must not be compiled in.
@@ -371,7 +406,7 @@ every threshold in the table, so they must not be compiled in.
 1. Set the PGA to ±2.048 V. **Fix it before calibrating and never change it**.
 2. Measure the battery at the terminals with the multimeter.
 3. Read the raw ADC value.
-4. `v_calibration_factor = V_multimeter / V_adc_raw`, nominally 9.2.
+4. `v_calibration_factor = V_multimeter / V_adc_raw`, nominally 11.0.
 5. Store in NVS. Re-check after the first week and after any wiring change.
 
 Calibrate with shore power **off**, so the reading is not sitting on a charger's ripple.
