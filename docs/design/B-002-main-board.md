@@ -351,6 +351,45 @@ pitch for the screw terminals, and whatever pad pattern the DC/DC module has.
 The alternative route is to draw the schematic in KiCad, let it generate its own netlist, and
 compare the two. Two independent descriptions that agree are worth considerably more than one.
 
+### Having it made
+
+Two layers, 1 oz copper, and nothing on it that a cheap process cannot do. Set the design rules
+before routing rather than discovering them afterwards; the values below sit inside every common
+fabricator's standard 2-layer process, and are worth confirming against the current capability page
+of whoever makes it.
+
+| | Set to |
+|---|--------|
+| Track width and clearance | 0.2 mm |
+| Via drill / diameter | 0.3 / 0.6 mm |
+| Smallest hole | 0.3 mm |
+| Copper to board edge | 0.3 mm |
+| Silkscreen line / character height | 0.2 / 1.2 mm |
+
+**Keep the board inside 100 x 100 mm.** That is where the cheapest tier ends at most fabricators,
+and the price step above it is steep. The two socket strips are 56 mm long, so it fits - but it
+fits by planning for it, not by shuffling parts at the end.
+
+Send Gerbers plus an Excellon drill file: `F.Cu`, `B.Cu`, `F.Mask`, `B.Mask`, `F.Silkscreen`,
+`B.Silkscreen` and `Edge.Cuts`, which has to be a closed outline. `F.Paste` is only needed for
+assembly.
+
+**Open the Gerbers in a Gerber viewer before uploading them**, not just the layout editor. That is
+what the fabricator sees, and it is the only reliable way to confirm that the exclusion under the
+antenna is actually absent from the copper rather than merely present as a rule.
+
+Lead-free HASL is enough here: the board lives in a sealed enclosure with a vent membrane, and the
+enclosure is the corrosion measure. ENIG is flatter and more corrosion resistant if the surcharge
+does not matter.
+
+### It is hand-soldered
+
+The board is entirely through-hole, about 140 joints, none of them fine-pitch. Machine assembly is
+not worth buying for it: the cheap assembly services handle surface-mount only, and the parts that
+would have to be placed by hand regardless - the converter module, the socket strips, the screw
+terminals - are most of the board. Through-hole keeps every part reworkable, which on a first
+revision is worth more than the hour it costs.
+
 ## 9. Verification
 
 ### Before the board is ordered
