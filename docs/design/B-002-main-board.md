@@ -98,6 +98,7 @@ Values and rationale are in [B-001](B-001-power-supply.md) section 3 and
 | U1 | RECOM **R-78K5.0-1.0** | DevKit supply. 6.5-36 V in, 5 V / 1 A out, 1 mA quiescent, SIP-3 with three pins at 2.54 mm |
 | C4 | 470 µF / 16 V, 105 °C | bulk at the 5 V output |
 | C5 | 100 nF / 50 V | HF bypass at the output |
+| R17 | 100 Ω 0.1 % | the 4-20 mA burden, from J8.2 to GND. 0.4-2.0 V out of 4-20 mA |
 | R10 | 1 kΩ | series into ADS1115 A1, the bilge level channel |
 | C6 | 100 nF / 50 V | at A1 to GND |
 | R11, R12 | 1 kΩ | series into ADS1115 A2, A3 |
@@ -171,7 +172,7 @@ make it.
 | `SDA` | J1.11 (IO8), J7.2, U2.4, J9.3, J10.3 |
 | `SCL` | J1.8 (IO9), J7.3, U2.3, J9.4, J10.4 |
 | `IMU_INT` | J2.18 (IO2), J9.5 |
-| `BILGE_LVL` | J8.2, R10.1, *(shunt to `GND`, value open)* |
+| `BILGE_LVL` | J8.2, R10.1, R17.1 *(R17.2 to `GND`)* |
 | `ADS1_A1` | R10.2, C6.1, U2.8 |
 | `ADS1_A2` | R11.2, C7.1, U2.9 |
 | `ADS1_A3` | R12.2, C8.1, U2.10 |
@@ -244,7 +245,7 @@ after all.
 
 ## 6. What a netlist cannot say
 
-Six things decide whether this board works, and none is expressible as a net.
+Seven things decide whether this board works, and none is expressible as a net.
 
 ### The 1-Wire passives sit at the cable, not at the pin
 
@@ -319,6 +320,40 @@ the current the long way round, and the via count stops mattering.
 copper but distance from the DC/DC module, which radiates into a deliberately high-impedance
 measurement path.
 
+### The bilge channel has two poles and no ground
+
+A loop-powered sender has two wires and nothing else, because the quantity it sends is a **current**
+rather than a voltage. It regulates 4-20 mA through the loop irrespective of the potential across
+it, which is what makes the standard survive a long, wet cable: line resistance and a poor contact
+change the voltage along the loop and not the current in it.
+
+So there is no third wire to reference against, and there is nothing at the sender to call ground.
+**Ground appears on this board**, at the bottom of the burden resistor:
+
+```
+   J8.1 ──────────────────────────► +12 V    ─┐
+                                               │  sender in the bilge
+   J8.2 ◄─────────────────────────  loop back ─┘   (4-20 mA)
+     │
+     ├──[ R17  100 Ω ]── GND     the voltage appears here
+     │
+     └──[ R10  1 kΩ  ]──┬──► A1
+                        └──[ C6 ]── GND
+```
+
+Running a ground wire out to the sender as well would not merely be spare copper, it would put a
+second return path in parallel with the loop.
+
+**R17 is 100 Ω**, and that does not depend on which sender is bought: 4-20 mA across it is
+0.4-2.0 V, which fills the ADS1115's +/-2.048 V range without crossing it. What does depend on the
+sender is whether it works on the roughly 10 V left after the burden - a purchasing criterion,
+recorded in [MATERIAL.md](../MATERIAL.md), not a component value.
+
+R17 is also the part that dies first. Twelve volts onto the loop - a chafed cable is the realistic
+way - puts 1.4 W into it, and it opens. That is the right order of failure: from then on R10 holds
+the converter's input clamp to the same 8 mA as a bridged divider, and a through-hole resistor is a
+two-minute repair where the converter is not.
+
 ### What each analogue channel ends in
 
 Four analogue inputs on the first converter, and they do not all deserve the same connector.
@@ -326,7 +361,7 @@ Four analogue inputs on the first converter, and they do not all deserve the sam
 | Channel | Ends in | Because |
 |---------|---------|---------|
 | A0 | nothing - the divider is on the board | it measures the board's own supply |
-| **A1** | **screw terminal J8** | the bilge level sender is a cable through the enclosure wall |
+| **A1** | **screw terminal J8**, through a 100 Ω burden | the bilge level sender is a cable through the enclosure wall |
 | A2, A3 | pin header J13 | nothing is specified for them yet |
 | U3's four | pin header J14 | the converter itself is not fitted yet |
 
@@ -568,7 +603,6 @@ hand - a fine-pitch converter IC in place of the module, say. It does not.
 
 | Point | Decide by |
 |-------|-----------|
-| The 4-20 mA shunt value follows from the sender's supply and span, so it is not in the netlist. J8, R10 and C6 are in place; reserve area beside them for the shunt, which will be two resistors in parallel to reach a 0.1 % value | when the bilge level sender is chosen |
 | Channel allocation for U3's four inputs. The socket, header and resistor positions exist; nothing is fitted | when the analog inputs are specified |
 | Whether the SeaTalk level shifter and its interlock belong on this board or on their own | when the SeaTalk stage is designed |
 | Whether to fit a fuse holder on the board as well as inline | when the enclosure layout is known |
