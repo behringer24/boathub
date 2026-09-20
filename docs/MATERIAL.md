@@ -51,6 +51,7 @@ Values drawn from it:
 | 10 kΩ | 2 | A | bench reference divider from the 3.3 V rail, to prove the ADS1115 without a 12 V supply ([A-002](design/A-002-bench-setup-usb.md) section 4) |
 | **1 kΩ** | **4** | B | **one in series with each analogue input of the first converter - a safety part.** It holds the current into the ADS1115's input clamp to about 8 mA whatever arrives outside: a bridged divider top leg on A0, or the loop's own 12 V on the bilge channel. The converter takes VDD + 0.3 V on an input regardless of its gain setting. Do not omit ([B-001](design/B-001-power-supply.md), [B-002](design/B-002-main-board.md)) |
 | 1 kΩ | 4 | opt | the same again for the second converter's inputs, fitted only when that module is |
+| **100 Ω 0.1 %** | 1 | B | **the 4-20 mA burden for the bilge channel.** 4-20 mA across it is 0.4-2.0 V, which fills the ADS1115's +/-2.048 V range without exceeding it. Also the sacrificial part: 12 V onto the loop puts 1.4 W into it, and once it opens the 1 kΩ holds the converter's input clamp to about 8 mA ([B-002](design/B-002-main-board.md)) |
 | 10 kΩ + 1 kΩ | 1 each | opt | buzzer driver on GPIO21, if a buzzer is fitted |
 
 A 10 kΩ potentiometer instead of the two 10 kΩ resistors makes the ADS1115 test better - sweep it
@@ -102,7 +103,9 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 |------|-----|-------|-----------------------|-------|--------|
 | Bilge pressure probe 0-1 m, 4-20 mA, IP68 | 1 | B | hydrostatic water level, small range beats 0-5 m. **Buy one specified from 9-10 V up** - the compliance budget is tight on a discharged battery | ~30-45 | [Amazon search](https://www.amazon.de/s?k=4-20mA+Wasserstandssensor+0-1m+IP68+316L) |
 
-Shunt resistors for it are in the precision-resistor table above.
+The 100 Ohm burden for it is in the precision-resistor table above, and is fitted whether or not
+the probe is bought - it costs cents and it is what makes the channel testable with a current
+source on the bench.
 
 ### Optional - fourth temperature probe
 
