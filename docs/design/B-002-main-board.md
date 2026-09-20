@@ -84,9 +84,9 @@ spacing or a pin order that is out by one is a scrapped run.
 | IMU | inside the enclosure, bolted down, on a five-core cable ([A-009](A-009-imu-heel-and-motion.md)) |
 | Conditioning for any future analogue sender | on a small adapter plugged into J1, designed when that sender is known |
 
-**The unallocated GPIO do not come out on headers.** An earlier revision put all of them on pin
-headers, on the argument that breaking out the GPIO is what made the carrier useful. The board
-filled up first. The consequence is worth stating plainly rather than leaving to be discovered:
+**The unallocated GPIO do not come out on headers.** Breaking out the GPIO is what made the
+carrier useful, and there is a good case for doing the same here - but the board fills up, and this
+is where it gives. The consequence is worth stating plainly rather than leaving to be discovered:
 `IO7`, `IO17`, `IO18` and `IO21` terminate at a socket pin and nothing else, so reaching one later
 means soldering to that pin with the DevKit lifted out. Section 10 keeps the question open, because
 it is not a decision that can be revisited after the board is made.
@@ -485,8 +485,8 @@ for pull-ups and no resistors, so it does not enter the sum either way.
 ### The I2C bus is a bus, not a star
 
 `SDA` and `SCL` reach five places. Routed as a star from the socket, each branch is a stub, and
-stubs add capacitance where the rise time is already set by roughly 2.5 kΩ of pull-up on the
-breakouts ([A-002](A-002-bench-setup-usb.md)). Route it as a chain instead - socket, J6, J10, the
+stubs add capacitance where the rise time is already set by a few kilohms of pull-up on the
+breakouts - the figure from the previous section. Route it as a chain instead - socket, J6, J10, the
 IMU terminal, and the SHT31 terminal last, since that one leaves the box and is the longest branch
 by far.
 
@@ -555,12 +555,8 @@ BoatHub-main.net     the exported netlist
 
 The tables in sections 4, 5 and 7 are read from that export. **Where the two disagree, the project
 is right and this document is stale** - which is the only workable rule once a board is being
-routed rather than specified.
-
-An earlier revision generated the netlist from a script, so that the tables here and the importable
-file could not drift apart. That served its purpose - it bootstrapped the schematic - and then
-became the drift it was meant to prevent, once the schematic acquired designators of its own. The
-generator is gone; the export is the netlist.
+routed rather than specified, and the reason this document carries the project's own reference
+designators rather than a numbering of its own.
 
 **Export the netlist and run DRC from the same save as the layout being checked.** A netlist that
 is minutes older than the board describes a board that no longer exists, and the disagreement is

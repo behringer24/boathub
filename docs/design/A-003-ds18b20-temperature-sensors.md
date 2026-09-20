@@ -266,11 +266,11 @@ sensor, not the channel.
 
 ## 8. Open points
 
-| Point | Decide by | Who |
-|-------|-----------|-----|
-| What GPIO7 gets: the optional tank probe, or a battery probe for temperature-compensated thresholds | when either becomes necessary | both |
-| Whether the fridge duty cycle is worth deriving and reporting | after a week of data | both |
-| Whether engine bay temperature should feed the charging discriminator in [B-001](B-001-power-supply.md) | after the first motoring trip | both |
+| Point | Decide by |
+|-------|-----------|
+| What GPIO7 gets: the optional tank probe, or a battery probe for temperature-compensated thresholds | when either becomes necessary |
+| Whether the fridge duty cycle is worth deriving and reporting | after a week of data |
+| Whether engine bay temperature should feed the charging discriminator in [B-001](B-001-power-supply.md) | after the first motoring trip |
 
 ### GPIO7 is contested, but it does not have to be
 

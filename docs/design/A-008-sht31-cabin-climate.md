@@ -16,7 +16,7 @@ aggregate as `cabin_temp_c` and `cabin_rh`.
 
 ## 2. Starting point
 
-The sensor shares the I2C bus on GPIO8/9 with the three ADS1115 - **that sharing drives most of the
+The sensor shares the I2C bus on GPIO8/9 with the ADS1115 converters and the IMU - **that sharing drives most of the
 decisions below.** Anything this sensor does to the bus, it does to the analog side too.
 
 Humidity is the reason this sensor exists. Temperature it measures as well, and the cabin figure is
@@ -40,7 +40,7 @@ roughly one part in a thousand. Self-heating at that rate is not measurable.
 The command has two variants. Clock stretching lets the sensor **hold SCL low** until the
 measurement is finished, so the read call simply blocks and returns data.
 
-That is the wrong one here. Holding SCL low holds it low for *everybody*: the three ADS1115 sit on
+That is the wrong one here. Holding SCL low holds it low for *everybody*: the converters sit on
 the same two wires and cannot be talked to for those 12.5 ms. Use the non-stretching command
 (`0x2400`), return to the loop, and collect the result on a later pass 15 ms later.
 

@@ -51,7 +51,7 @@ Values drawn from it:
 | 10 kΩ | 2 | A | bench reference divider from the 3.3 V rail, to prove the ADS1115 without a 12 V supply ([A-002](design/A-002-bench-setup-usb.md) section 4) |
 | **1 kΩ** | **4** | B | **one in series with each analogue input of the first converter - a safety part.** It holds the current into the ADS1115's input clamp to about 8 mA whatever arrives outside: a bridged divider top leg on A0, or the loop's own 12 V on the bilge channel. The converter takes VDD + 0.3 V on an input regardless of its gain setting. Do not omit ([B-001](design/B-001-power-supply.md), [B-002](design/B-002-main-board.md)) |
 | 1 kΩ | **4 more** | B | the same again for the second converter's inputs. Fitted even though that module is not - it is the protection, and it must not wait on somebody remembering it when the module goes in |
-| **100 Ω 0.1 %** | 1 | B | **the 4-20 mA burden for the bilge channel.** 4-20 mA across it is 0.4-2.0 V, which fills the ADS1115's +/-2.048 V range without exceeding it. Also the sacrificial part: 12 V onto the loop puts 1.4 W into it, and once it opens the 1 kΩ holds the converter's input clamp to about 8 mA ([B-002](design/B-002-main-board.md)) |
+| **100 Ω 0.1 %, 0.25 W** | 1 | B | **the 4-20 mA burden for the bilge channel.** 4-20 mA across it is 0.4-2.0 V, which fills the ADS1115's +/-2.048 V range without exceeding it. Also the sacrificial part: 12 V onto the loop puts 1.4 W into it, and once it opens the 1 kΩ holds the converter's input clamp to about 8 mA ([B-002](design/B-002-main-board.md)) |
 | 10 kΩ + 1 kΩ | 1 each | opt | buzzer driver on GPIO21, if a buzzer is fitted |
 
 A 10 kΩ potentiometer instead of the two 10 kΩ resistors makes the ADS1115 test better - sweep it
@@ -64,7 +64,6 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 | Part | Qty | Phase | Purpose / requirement | Price | Source |
 |------|-----|-------|-----------------------|-------|--------|
 | 100 kΩ 0.1 % + 10 kΩ 0.1 % | 1 each | B | battery voltage divider, factor 11.0. **100 kΩ rather than 82 kΩ because both values are stocked as 0.1 % parts and 82 kΩ is not** - it costs 0.1 mV of resolution and saves a second order ([B-001](design/B-001-power-supply.md)) | 4,79 | Reichelt `WEL RC55Y-100KB`, `WEL RC55Y-10KBI` |
-| 100 Ω 0.1 % / 0.25 W | 2 | opt | 4-20 mA shunt into ADS1115 A1; **two in parallel give 50 Ω**, halving the burden voltage at identical resolution | ~5 (pack) | [Amazon search](https://www.amazon.de/s?k=100+Ohm+0.1%25+Praezisionswiderstand) |
 
 ### Power supply and protection
 

@@ -49,15 +49,20 @@ tolerate reconnects, and no local UI may treat a dropped socket as anything unus
 
 ## Hardware at a glance
 
-- **Controller:** 1 x ESP32-S3 N16R8 DevKitC-1 (third-party module, on a screw-terminal carrier
-  board). Ships with an onboard PCB antenna; the bundled external antenna needs a solder rework to
-  activate - see [docs/design/A-001-devkit-and-carrier.md](docs/design/A-001-devkit-and-carrier.md)
+- **Controller:** 1 x ESP32-S3 N16R8 DevKitC-1 (third-party module). It sits on the bundled
+  screw-terminal carrier for the bench build and in a socket on the main board once installed -
+  [A-001](docs/design/A-001-devkit-and-carrier.md),
+  [B-002](docs/design/B-002-main-board.md). Ships with an onboard PCB antenna; the bundled external
+  antenna needs a solder rework to activate
 - **Temperature:** 3 x DS18B20 (engine bay, bilge water, fridge), each on its own 1-Wire GPIO
 - **Cabin climate:** SHT31-D (I2C, address 0x44)
-- **Analog:** 3 x ADS1115 (0x48 / 0x49 / 0x4A) on the shared I2C bus
-- **Battery:** 82 kΩ / 10 kΩ divider (factor 9.2) into ADS1115 A0, tapped **upstream of** the
+- **Analog:** 2 x ADS1115 on the shared I2C bus, 0x48 and 0x49. The second is socketed and may
+  stay empty until its channels are specified
+- **Attitude and motion:** LSM6DSOX IMU on the I2C bus at 0x6A, with its interrupt on GPIO2 -
+  heel and pitch under sail, impacts at the berth
+- **Battery:** 100 kΩ / 10 kΩ divider (factor 11.0) into ADS1115 A0, tapped **upstream of** the
   reverse-polarity diode, calibrated against a multimeter
-- **Bilge level (optional):** hydrostatic 0-1 m probe, 4-20 mA, 100 Ω (or 50 Ω) shunt into ADS1115 A1
+- **Bilge level (optional):** hydrostatic 0-1 m probe, 4-20 mA, 100 Ω burden into ADS1115 A1
 - **Power:** 12 V house supply → 2 A fuse → TVS 1.5KE20A → 1N5822 → DC/DC 9-36 V to 5 V
 
 The TVS sits ahead of the Schottky diode, and the battery tap ahead of both - see
@@ -69,12 +74,13 @@ Full parts list with prices and sources: [docs/MATERIAL.md](docs/MATERIAL.md)
 
 | GPIO | Function today | Later / note |
 |------|----------------|--------------|
+| 2 | IMU interrupt | impact detection, [A-009](docs/design/A-009-imu-heel-and-motion.md) |
 | 4 | DS18B20 engine bay | dedicated 1-Wire bus |
 | 5 | DS18B20 bilge water | dedicated 1-Wire bus |
 | 6 | DS18B20 fridge | dedicated 1-Wire bus |
 | 7 | spare | optional water tank DS18B20 |
-| 8 | I2C SDA | SHT31 + all ADS1115 |
-| 9 | I2C SCL | SHT31 + all ADS1115 |
+| 8 | I2C SDA | SHT31, both ADS1115, IMU |
+| 9 | I2C SCL | SHT31, both ADS1115, IMU |
 | 15 | reserved | SeaTalk RX (stage 2) |
 | 16 | reserved | SeaTalk TX (stage 2) |
 | 17 | reserved | TWAI TX (stage 3) |

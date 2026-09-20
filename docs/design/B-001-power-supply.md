@@ -439,14 +439,14 @@ Calibrate with shore power **off**, so the reading is not sitting on a charger's
 
 ## 8. Open points
 
-| Point | Decide by | Who |
-|-------|-----------|-----|
-| Charger profile - confirm it is set for AGM, not flooded | before first connection | Andreas |
-| Exact threshold values - the table is a starting point, not measured on this bank | after a week of data | both |
-| Charging-history window - 6 h is a reasoned guess; tune it once real float and engine-run patterns are logged | after the first trip | both |
-| Whether engine bay temperature should sharpen the charging discriminator - a hot bay during the charging period means alternator, not shore charger, which addresses the long-motoring false positive directly. See [A-003](A-003-ds18b20-temperature-sensors.md) section 8 | after the first motoring trip | both |
-| Whether `BATTERY_CRITICAL` should also cut the 4-20 mA loop (20 mA is a third of the ESP's own draw) | when the bilge sensor is fitted | both |
-| Battery temperature sensor on the spare GPIO7, for temperature-compensated thresholds | only if the readings prove too seasonal | both |
+| Point | Decide by |
+|-------|-----------|
+| Charger profile - confirm it is set for AGM, not flooded | before first connection |
+| Exact threshold values - the table is a starting point, not measured on this bank | after a week of data |
+| Charging-history window - 6 h is a reasoned guess; tune it once real float and engine-run patterns are logged | after the first trip |
+| Whether engine bay temperature should sharpen the charging discriminator - a hot bay during the charging period means alternator, not shore charger, which addresses the long-motoring false positive directly. See [A-003](A-003-ds18b20-temperature-sensors.md) section 8 | after the first motoring trip |
+| Whether `BATTERY_CRITICAL` should also cut the 4-20 mA loop (20 mA is a third of the ESP's own draw) | when the bilge sensor is fitted |
+| Battery temperature sensor on the spare GPIO7, for temperature-compensated thresholds | only if the readings prove too seasonal |
 
 ### Considered and rejected: a current shunt for Ah counting
 

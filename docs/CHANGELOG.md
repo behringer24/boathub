@@ -72,7 +72,7 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 - SHT31 cabin climate on the shared I2C bus at 0x44, measured every 10 s and reported as
   `cabin_temp_c` and `cabin_rh`. Single shot rather than free-running, because continuous
   measurement warms the sensor and a warm humidity sensor reads low; and the non-stretching command,
-  because clock stretching would hold SCL low for the three ADS1115 sharing the bus as well. Both
+  because clock stretching would hold SCL low for every ADS1115 sharing the bus as well. Both
   CRCs are checked, and a reading outside a plausible range or jumping implausibly is discarded
   rather than averaged in.
 - SHT31 heater, on by default: condensation on the sensor leaves it stuck at 100 %RH long after the
