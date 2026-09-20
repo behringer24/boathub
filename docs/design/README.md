@@ -42,7 +42,7 @@ system - no battery measurement, no 12 V robustness - but a real, testable one.
 
 | # | Step | Document |
 |---|------|----------|
-| 1 | Main board: fuse, TVS, reverse-polarity protection, DC/DC, and the 1-Wire passives moved off the breadboard | [B-001](B-001-power-supply.md), [B-002](B-002-main-board.md) |
+| 1 | Main board: fuse, TVS, reverse-polarity protection, DC/DC, and the 1-Wire passives moved off the breadboard. **The SeaTalk stages are soldered with it** - phase D commissions them, it does not build them | [B-001](B-001-power-supply.md), [B-002](B-002-main-board.md) |
 | 2 | Battery divider and its calibration factor | [B-001](B-001-power-supply.md), [B-002](B-002-main-board.md) |
 | 3 | Battery state machine and debouncing | [B-001](B-001-power-supply.md) |
 | 4 | Shore-power-loss alarm, gated so it stays quiet underway | [B-001](B-001-power-supply.md) |
@@ -75,9 +75,11 @@ navigation depends on.
 | 4 | Transmit output stage and its interlock | [D-003](D-003-seatalk-tx-stage.md) |
 | 5 | Autopilot operation on the on-board Wi-Fi | planned |
 
-**Receiving is proven before anything can transmit.** Until the output stage exists, no fault of
-this board can put a single bit onto the bus - the receive stage is physically incapable of driving
-it. That property is worth keeping for as long as possible.
+**Receiving is proven before anything transmits.** The output stage is soldered with the main
+board, so what keeps the bus free in the meantime is one resistor: R13, holding the transistor's
+base at ground while the GPIO floats. Fit it, measure it, and leave the firmware's transmit path
+unwritten until the receive path has run for days - see [D-003](D-003-seatalk-tx-stage.md)
+section 2.
 
 ## The documents
 

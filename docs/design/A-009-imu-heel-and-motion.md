@@ -151,7 +151,7 @@ Heel and an impact want very different sampling.
 
 Sampling everything at 100 Hz is not free. Fourteen bytes per sample at 100 kHz is roughly
 1.4 ms of bus time, so 100 Hz would occupy the I2C bus about **14 % of the time** - shared with the
-SHT31 and three ADS1115. Batching through the FIFO saves the per-transaction overhead and not much
+SHT31 and the ADS1115 converters. Batching through the FIFO saves the per-transaction overhead and not much
 else; the traffic is the traffic.
 
 **So the chip does the watching.** The LSM6DSOX runs its own high-g detector at full internal rate

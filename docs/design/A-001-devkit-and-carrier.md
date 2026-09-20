@@ -190,28 +190,31 @@ also means a botched rework costs nothing - the stock board is still there.
 
 ## 5. Consequences for the rest of the build
 
-### The carrier replaces part of the perfboard
+### Where the carrier earns its place, and where it stops
 
-The guide's plan was a perfboard carrying screw terminals plus the protection circuit. The carrier
-already provides the screw terminals and a socketed, replaceable DevKit - which is exactly what the
-guide asked for ("do not solder the DevKit in permanently").
+The guide asks that the DevKit is not soldered in permanently, and the carrier answers that
+directly: it turns the module into something with screw terminals, so the whole of phase A can be
+wired with a screwdriver and no soldered joint anywhere in the signal path.
 
-**Revised split:**
+What it cannot do is carry the circuit. **The carrier's terminals connect straight to bare GPIOs
+with no protection**, so every pull-up, series resistor, divider and clamp from
+[B-001](B-001-power-supply.md) and the sensor documents has to live somewhere else.
 
-| Board | Carries |
-|-------|---------|
-| MRD076A carrier | DevKit socket, all signal and 3.3 V / 5 V terminals |
-| Perfboard (smaller than planned) | fuse, TVS, 1N5822, DC/DC, bulk caps, battery divider, 1-Wire pull-ups and series resistors, 4-20 mA shunt |
+| Stage | The DevKit sits on | Which carries |
+|-------|--------------------|---------------|
+| Phase A, on the bench | MRD076A carrier | terminals only - the passives sit on the breadboard beside it |
+| Phase B onwards, installed | the main board, [B-002](B-002-main-board.md) | terminals, protection, conversion, the whole circuit |
 
-The perfboard still earns its place: **the carrier's terminals connect straight to bare GPIOs with
-no protection**, so every pull-up, series resistor and filter from [B-001](B-001-power-supply.md) and
-the sensor documents still has to live somewhere.
+So the carrier never goes into the enclosure. It stays on the bench, where being able to move a
+wire without a soldering iron is worth more than anything it would contribute in the boat.
 
 ### Mechanical
 
-Carrier 84.5 x 73.7 mm inside a 200 x 120 x 75 mm enclosure - fits with room for the perfboard
-alongside. Stack height with the socketed DevKit is roughly 20 mm against 75 mm of depth. Both USB-C
-ports face sideways; leave access to them or accept opening the box to reflash.
+The carrier is 84.5 x 73.7 mm, and the socketed DevKit stands about 20 mm above it. Both USB-C
+ports face sideways, which is what decides where it can sit on a crowded bench.
+
+Enclosure fit is [B-002](B-002-main-board.md)'s question, since that is the board which goes into
+the box.
 
 ### DevKit overhead
 
@@ -265,12 +268,10 @@ stays silent for good.
 
 ## 7. Open points
 
-| Point | Decide by | Who |
-|-------|-----------|-----|
-| Which position the antenna jumper ships in on this board | first bench evening | Andreas |
-| Onboard antenna sufficient, or do the rework? | after the RSSI measurement | both |
-| Which GPIO carries the WS2812 | first bench evening | both |
-| Whether to fit the carrier at all, or keep the original all-perfboard plan | before drilling the enclosure | both |
+| Point | Decide by |
+|-------|-----------|
+| Which position the antenna jumper ships in on this board | reading it off the board before anything else is built on it |
+| Onboard antenna sufficient, or do the rework? | after the RSSI measurement in section 4 |
 
 ## 8. References
 

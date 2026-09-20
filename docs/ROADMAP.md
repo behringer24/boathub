@@ -19,7 +19,7 @@ to the self-hosted server.
 |---------|-------|
 | Three DS18B20 on dedicated GPIOs | pin the ROM addresses explicitly rather than letting the library auto-detect; verify the CRC on every read and reject bad frames |
 | SHT31-D on I2C | bus at 100 kHz, address 0x44 |
-| Three ADS1115 on I2C | fix the PGA once and never change it, or an existing calibration silently becomes wrong |
+| ADS1115 converters on I2C | fix the PGA once and never change it, or an existing calibration silently becomes wrong |
 | SoftAP `BOOT-NETZ` plus a local configuration web UI | |
 | Station mode, credentials in NVS/Preferences | **no Wi-Fi or server passwords in source** |
 | Battery state machine with debouncing | thresholds and windows configurable in NVS, see [design/B-001-power-supply.md](design/B-001-power-supply.md) |
@@ -86,7 +86,8 @@ Three rates that have nothing to do with each other:
 
 - Each DS18B20 is identified individually and reports plausible values
 - SHT31 reports temperature and relative humidity
-- All three ADS1115 answer on 0x48 / 0x49 / 0x4A
+- Every ADS1115 present answers at its address - 0x48 and 0x49 on the main board, all three of
+  the pack on the breadboard
 - Battery voltage matches the multimeter after calibration
 - `BOOT-NETZ` appears and a phone reaches the local web UI
 - Marina Wi-Fi connects, and reconnects after an outage

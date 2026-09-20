@@ -184,7 +184,7 @@ timestamp looks odd" into a diagnosis.
 ### If exactness matters
 
 A **DS3231** on the existing I2C bus is about 3 EUR and needs no extra pin: address 0x68 clashes
-with neither the SHT31 at 0x44 nor the ADS1115s at 0x48/0x49/0x4A. Temperature-compensated to
+with neither the SHT31 at 0x44 nor the ADS1115s at 0x48/0x49. Temperature-compensated to
 ±2 ppm - about a minute a year - with a coin cell that lasts years.
 
 Note that the cheap ZS-042 modules carry a **charging circuit for rechargeable LIR2032 cells**.

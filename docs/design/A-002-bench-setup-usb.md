@@ -195,7 +195,7 @@ The **battery divider is a separate circuit from the power supply**, and can be 
 long before the protection board exists. Build just the divider on the breadboard:
 
 ```
-bench PSU +  ---- 82 kOhm ---+--- 1 kOhm --- ADS1115 A0
+bench PSU +  --- 100 kOhm ---+--- 1 kOhm --- ADS1115 A0
                              |
                           10 kOhm      +-- 100 nF -- GND
                              |
@@ -207,7 +207,8 @@ factor established early, and the reading can then be cross-checked once the rea
 
 > **Safety.** This is the one step in phase A with a voltage that can destroy the ESP. Build the
 > divider on a **separate part of the breadboard**, apply the PSU, and **verify with a multimeter
-> that the tap really sits near 1.5 V before connecting anything to the ADS1115.** A slipped
+> that the tap really sits near 1.1 V at 12 V in, and never above 1.5 V, before connecting
+> anything to the ADS1115.** A slipped
 > jumper putting 15 V on a GPIO ends the evening. Current-limit the PSU if it can.
 
 If no bench supply is available, skip level 2 - it belongs to phase B anyway.
