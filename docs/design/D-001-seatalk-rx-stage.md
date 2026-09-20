@@ -41,9 +41,9 @@ for a signal.
 
 ## 3. The circuit
 
-Reference designators start at 20 so that this stage can be merged onto the main board later
-without renumbering anything - [B-002](B-002-main-board.md) uses J1-J12, R1-R9, C1-C5, D1-D2 and
-U1-U2.
+The designators below name the parts of this stage on their own. **What they are called on the
+board is in [B-002](B-002-main-board.md) section 4**, which is read from the KiCad project - the
+terminal is J17 there, the clamp D3, the optocoupler U1.
 
 ```
   SeaTalk cable                     J20
@@ -278,6 +278,7 @@ On the boat:
 ## 9. References
 
 - [D-002-seatalk-decoding.md](D-002-seatalk-decoding.md) - the bit stream this stage delivers
-- [B-002-main-board.md](B-002-main-board.md) - `IO15` is brought out on the reserved header J11
+- [B-002-main-board.md](B-002-main-board.md) - where this stage sits on the board, and what its
+  parts are called there
 - [A-001-devkit-and-carrier.md](A-001-devkit-and-carrier.md) - the pin plan reserving IO15 and IO16
 - Thomas Knauf's public SeaTalk reference, the standard description of the bus and its datagrams
