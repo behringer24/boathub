@@ -135,7 +135,7 @@ codes.
 | C6 | 100 nF / 50 V | at A1 to GND |
 | R21, R20 | 1 kΩ | series into ADS1115 A2, A3 |
 | C12, C11 | 100 nF / 50 V | at A2, A3 - **pads only, not fitted** |
-| R19, R18, R17, R16 | 1 kΩ | series into the second converter's A0-A3 - **not fitted** until J10 carries a module |
+| R19, R18, R17, R16 | 1 kΩ | series into the second converter's A0-A3. **Fitted**, although the module is not - the resistor is the protection, and the moment it is needed is the moment somebody plugs a module in |
 | C7, C8, C9, C10 | 100 nF / 50 V | at the second converter's A0-A3 - **pads only, not fitted** |
 
 ### SeaTalk
@@ -465,10 +465,14 @@ leaves through it - which is where the space is actually saved, not in the pitch
 
 ### The second converter is socketed and left empty
 
-J10 has its socket, its four pins on J1 and its four resistor positions, and **nothing fitted in
-any of them** until its channels are specified. An empty socket is holes: no device answers at
-0x49, the bus scan finds nothing there, and the firmware reports only the channels that produced a
-value.
+J10 has its socket and its four pins on J1, and **no module in it** until its channels are
+specified. An empty socket is holes: no device answers at 0x49, the bus scan finds nothing there,
+and the firmware reports only the channels that produced a value.
+
+Its four series resistors are fitted all the same. They do nothing while the socket is empty - they
+lead from J1 to pins that go nowhere - and they are the one part of that channel that must not
+depend on somebody remembering it later. The capacitors stay as bare pads for the opposite reason:
+what they should be is a property of a sender nobody has chosen.
 
 Mark the socket **optional** on the silkscreen, or somebody will go looking for the missing module.
 
@@ -637,8 +641,7 @@ hand - a fine-pitch converter IC in place of the module, say. It does not.
 - [ ] **J1's channel labels use the converter's own names, `A0`-`A3`.** The breakout is printed
       `A0 A1 A2 A3` and the firmware says the same; a legend that counts from one is an off-by-one
       against both
-- [ ] **J10's socket is marked optional**, and so are the resistor positions that feed it. An empty
-      footprint with no note reads as a missing part
+- [ ] **J10's socket is marked optional.** An empty footprint with no note reads as a missing part
 - [ ] **Which way each screw terminal opens is drawn on the silkscreen.** A single row of pads with
       no alignment pegs accepts the block either way round, and the stock footprints draw a
       symmetric body, so nothing in the design records the intended direction. An asymmetric
