@@ -83,19 +83,29 @@ about 1.3 V, which every receiver does.
 **Measure the bus pull-up before settling this value.** It is a property of the instruments on that
 particular boat, and no datasheet has it.
 
-## 4. This stage needs D-001's ground link closed
+## 4. Where the transmit current returns
 
-Q1's emitter sits on the board's ground and pulls `ST_DATA` down towards it. That only means
-anything if `ST_GND` and `GND` are at the same potential - so **JP2 is soldered closed when this
-stage is fitted**, and the galvanic separation that receive-only enjoyed ends there.
+Q1's emitter sits on the board's ground and pulls `ST_DATA` down towards it. The return then has to
+reach the instruments' ground, and there are two routes.
 
-[D-001](D-001-seatalk-rx-stage.md) section 4 explains the trade and why the link exists as a
-deliberate act rather than a plane drawn carelessly.
+**Through the supply cable**, which exists whether anyone wants it or not: `GND` is battery
+negative at J9, and `ST_GND` is battery negative at the instrument end. Twelve milliamps through a
+few tens of milliohms of boat wiring is under a millivolt, so this route works.
 
-The alternative, kept open by that link: a second optocoupler driving a transistor powered from the
-instrument side, which preserves the separation at the cost of two more parts and a supply taken
-from the bus. It is worth revisiting if the ground loop through the SeaTalk screen ever causes
-trouble.
+**Through JP2**, a few millimetres of wire on the board.
+
+The second is better, and it is what the link is for: a short, defined return instead of one that
+runs the length of the boat and shares a conductor with the DevKit's transmit bursts. **Close JP2
+when this stage is commissioned.**
+
+What the link is *not* is a safety measure. Leaving it open does not keep this board off the bus,
+because the first route is still there - [D-001](D-001-seatalk-rx-stage.md) section 4 sets that
+out. What keeps the bus free is R13, which is section 2 and the reason this document exists.
+
+The alternative the open link keeps available: a second optocoupler driving a transistor powered
+from the instrument side, which removes the board-side return altogether at the cost of two more
+parts and a supply taken from the bus. Worth revisiting if a ground loop through the SeaTalk screen
+ever causes trouble.
 
 ## 5. Collisions, and why receiving comes first
 
@@ -120,9 +130,16 @@ blind into a network the boat navigates by, which is the second reason
 | Two devices transmitting together | both datagrams lost | read-back and retry, section 5 |
 | R14 too large | nobody hears the low level | measured, section 3 |
 | Bus shorted to 12 V externally | Q1 sees 12 V through R14 | 100 Ω limits it to ~120 mA, inside a BC337's rating |
+| **Q1 fails collector-emitter short** | the bus is held low permanently - the whole instrument network down, and no firmware can release it | nothing on the board. Opening JP2 does not help, because the return still runs through the supply cable. **The cure is to unplug the SeaTalk cable** |
 
 The first row is the reason this document exists. Every other fault on this board costs a
 measurement; that one costs the boat its instruments.
+
+The last row has no electrical remedy, and does not need one to be acceptable: a wired-OR bus gives
+every device on it the same power to jam the line, and the boat already carries several. What this
+board owes the bus is that it **notices**. The receive stage reads the line the transmit stage
+drives, so a bus that stays low while nothing is being sent is detectable - and that belongs in the
+alarm path rather than in a puzzled hour at the chart table.
 
 ## 7. Verification
 
@@ -145,7 +162,7 @@ and the receive stage watching it.
 | Point | Decide by |
 |-------|-----------|
 | The bus pull-up value on this boat, which sets R14 | measured at the Raymarine S1 before the board is ordered |
-| Whether to keep the isolation with a second optocoupler instead of closing JP2 | if a ground loop through the SeaTalk screen shows up in the measurements |
+| Whether to remove the board-side return with a second optocoupler instead of closing JP2 | if a ground loop through the SeaTalk screen shows up in the measurements |
 | What may be transmitted at all, and what arms it | the autopilot document. **Nothing here is reachable from the server** - control stays on the local on-board Wi-Fi |
 
 ## 9. References
