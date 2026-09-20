@@ -151,4 +151,5 @@ and the receive stage watching it.
 - [D-001-seatalk-rx-stage.md](D-001-seatalk-rx-stage.md) - the receive stage, the shared terminal
   and TVS, and the ground link this stage closes
 - [D-002-seatalk-decoding.md](D-002-seatalk-decoding.md) - the frame format this has to produce
-- [B-002-main-board.md](B-002-main-board.md) - `IO16` is brought out for this
+- [B-002-main-board.md](B-002-main-board.md) - `IO16` reaches this stage from the DevKit socket,
+  and the board's own designators for it
