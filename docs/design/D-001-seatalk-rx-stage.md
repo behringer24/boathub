@@ -123,26 +123,48 @@ state high, so this is upside down.
 Do not fix it with another transistor. The ESP32 inverts in hardware inside the UART block, and a
 bit-banged receiver inverts by reading the pin the other way round. It costs nothing at either end.
 
-## 4. Grounding: receive-only is genuinely isolated
+## 4. Grounding: what the optocoupler separates, and what it does not
 
-This is the part worth being precise about, because it stops being true the moment transmitting is
-added.
+This is the part worth being precise about, because the obvious word for it is the wrong one.
 
 The LED loop runs entirely on the instrument side - `ST_DATA` → R10 → LED → `ST_GND`. The board's
-own ground is not involved. **So `ST_GND` is not connected to `GND`, and must not be.**
+own ground is not involved, and between the two halves of the PC817 sits a barrier rated in
+kilovolts.
 
-| | |
+**That is not two floating systems held apart.** This board is powered from the boat's battery
+through J9, so `GND` is battery negative; the instruments' `ST_GND` is battery negative at their
+end. The two are bonded through the boat's own wiring whether or not JP2 is closed. What is
+isolated is the **signal path** - there were never two ground systems to separate.
+
+Which is still worth the part, and worth being exact about:
+
+| What it buys | |
 |---|---|
-| **Receive only** | true galvanic separation. A fault on the bus cannot reach a GPIO, and no second ground path runs through the SeaTalk screen |
-| **Once transmitting is armed** | Q1's emitter sits on the board's ground, so pulling `ST_DATA` low only means something if both grounds sit at the same potential. They have to be bonded, and the separation is gone |
+| No bus current through this board's ground | the LED loop closes on the instrument side, so nothing the bus does appears across the ground plane the battery divider is measured against |
+| No conductive path from the bus to a GPIO | a fault on `ST_DATA` meets D3, then the LED, then the barrier. IO15 is on the far side of it |
+| No second conductor in parallel with the boat's negative | and this is the only one of the three that JP2 changes |
 
-On a boat both are battery negative anyway, so bonding them costs little in practice. It does add a
-second ground path through the SeaTalk cable, which is a loop that was not there before.
+The third is a real effect rather than a formality. Closing the link puts the supply cable's
+negative and the SeaTalk screen in parallel between the same two points. That loop carries
+circulating current whenever the boat's negative bus has a potential gradient along it, which with
+an engine running and an alternator charging it does.
 
-[D-003](D-003-seatalk-tx-stage.md) accepts the loop rather than driving a second optocoupler from
-the instrument side, which would preserve the separation at the cost of two more parts and a supply
-taken from the bus. That remains the fallback if a ground loop through the SeaTalk screen ever
-shows up in the measurements - and commissioning the receive path first is what keeps it available.
+### What the link does not do
+
+The transmit stage's return does not depend on it. Q1's emitter sits on `GND`, which reaches the
+instruments' ground through the supply cable regardless - and twelve milliamps through a few tens
+of milliohms of boat wiring is well under a millivolt, against bus levels with volts of margin.
+**Transmitting works with JP2 open.**
+
+So the link is not an interlock, and nothing should be built on the belief that an open link keeps
+this board off the boat's bus. What keeps it off the bus is R13 holding Q1's base at ground - see
+[D-003](D-003-seatalk-tx-stage.md) section 2. **JP2 decides where the transmit current returns, not
+whether it flows.**
+
+[D-003](D-003-seatalk-tx-stage.md) accepts the board-side return rather than driving a second
+optocoupler from the instrument side, which would remove it altogether at the cost of two more
+parts and a supply taken from the bus. That remains the fallback if a ground loop through the
+SeaTalk screen ever shows up in the measurements.
 
 ### What the two directions share
 
@@ -207,13 +229,13 @@ reads as isolation on every drawing and is not.
 
 ### Keep the decision open with a wire link
 
-Transmitting bonds the two grounds. The transmit stage is fitted on the board, so what decides
-whether the bond exists is the link and not the parts - and a ground plane drawn without care
-closes it for you, silently.
+Whether this board puts a second conductor in parallel with the boat's negative is decided by the
+link - and by a ground plane, if one is drawn without care. A plane that swallows `ST_GND` makes
+the bond permanent and makes it invisible, which is the worst of both.
 
-**Two pads at 2.54 mm between `ST_GND` and `GND`, left open.** While the board only receives, the
-link is absent. When the transmit stage is commissioned, a short piece of wire soldered through
-closes it, and side cutters reopen it.
+**Two pads at 2.54 mm between `ST_GND` and `GND`, left open.** A short piece of wire soldered
+through closes the link, and side cutters reopen it - so the bond is something you can see, undo
+and measure, rather than a property of a pour.
 
 A pluggable shunt would do the same job and is the obvious thing to reach for. It is the wrong
 choice here for two reasons that only apply on a boat: the enclosure vents to outside air because
@@ -225,9 +247,9 @@ everywhere else.
 Give the two pads a **pin header footprint** all the same. The holes take a wire link just as well,
 and nothing about the layout forces the choice before assembly.
 
-That costs two pads and keeps the commissioning step in one place. The transmit stage sits beside
-it - Q1 with its three resistors and the track from IO16 - so soldering the link is the single
-deliberate act that puts this board on the boat's bus as a talker.
+That costs two pads and keeps the return path a decision rather than an accident. It also keeps
+the second-optocoupler variant available: isolating the transmit side properly requires the link to
+be open, and a plane that has already bonded the two leaves nothing to open.
 
 ## 5. Parts
 
@@ -261,8 +283,11 @@ Before anything is connected to the Raymarine S1:
 - [ ] Bench test against a signal generator or a second microcontroller sending 4800 baud, with the
       LED fed from a 12 V bench supply rather than the boat
 - [ ] Pin level at IO15 follows the simulated bus, inverted, with clean edges on a logic analyser
-- [ ] `ST_GND` measures open against `GND` - the isolation is real and not accidentally bridged by
-      a shared terminal
+- [ ] `ST_GND` measures open against `GND` on the bare board - nothing bridges the island by
+      accident, through a shared terminal or a pour that filled where it should not have
+- [ ] **`ST_DATA` measures open against `GND` with IO16 held low**, which is what proves R13 is
+      doing its job. It is the transmit stage's only barrier, and the one measurement that
+      distinguishes a fitted R13 from an empty pad
 
 On the boat:
 
