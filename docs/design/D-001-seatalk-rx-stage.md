@@ -41,28 +41,27 @@ for a signal.
 
 ## 3. The circuit
 
-The designators below name the parts of this stage on their own. **What they are called on the
-board is in [B-002](B-002-main-board.md) section 4**, which is read from the KiCad project - the
-terminal is J17 there, the clamp D3, the optocoupler U1.
+Designators are the ones in the KiCad project, as [B-002](B-002-main-board.md) section 4 lists
+them.
 
 ```
-  SeaTalk cable                     J20
+  SeaTalk cable                     J17
   ─────────────                    ─────
    screen GND   ──────────────────► 1 ──── ST_GND
    yellow DATA  ──────────────────► 2 ──── ST_DATA
    red    +12 V ──────────────────► 3      landed, used for nothing
                                     4      spare pole, mark it n.c.
 
-              ST_DATA ──[ D20 ]── ST_GND    1.5KE20A, cathode to ST_DATA
+              ST_DATA ──[ D3 ]── ST_GND    1.5KE20A, cathode to ST_DATA
 ```
 
 ```
-   ST_DATA ──[ R20  4.7 kΩ ]──┐
+   ST_DATA ──[ R10  4.7 kΩ ]──┐
                               │
                         ┌─────┴──────────────┐
-                        │  1 ──►|── 4        │          +3V3
-                        │       OK20         │            │
-                        │       PC817        │      [ R21  10 kΩ ]
+                        │  1 ──►|── 4        │          3.3V
+                        │       U1           │            │
+                        │       PC817        │      [ R11  10 kΩ ]
                         │  2 ────────── 3    │            │
                         └─────┬────────┬─────┘            │
                               │        │                  │
@@ -77,16 +76,16 @@ PC817 pins: 1 anode, 2 cathode, 3 emitter, 4 collector.
 
 | Net | Nodes |
 |-----|-------|
-| `ST_GND` | **J20.1**, D20.2, OK20.2, JP20.1 |
-| `ST_DATA` | **J20.2**, D20.1, R20.1 |
-| `ST_12V` | **J20.3** alone - give it a no-connect flag, or ERC reports a pin unconnected on purpose |
-| - | **J20.4** is the spare pole of a four-way block. Mark it `n.c.` on the silkscreen, or somebody hunts for a fourth core |
-| `ST_LED` | R20.2, OK20.1 |
-| `SEATALK_RX` | OK20.4, R21.2, and the socket pin carrying **IO15** |
-| `+3V3` | R21.1 |
-| `GND` | OK20.3, JP20.2 |
+| `ST_GND` | **J17.1**, D3.2, U1.2, JP2.1 |
+| `ST_DATA` | **J17.2**, D3.1, R10.1 |
+| - | **J17.3** is where the cable's 12 V core is parked, connected to nothing. Give it a no-connect flag, or ERC reports a pin unconnected on purpose |
+| - | **J17.4** is the spare pole of a four-way block. Mark it `n.c.` on the silkscreen, or somebody hunts for a fourth core |
+| `Net-(R10-Pad1)` | R10.2, U1.1 |
+| `Net-(J7-GPIO15)` | U1.4, R11.2, **J7.8** - the socket pin carrying IO15 |
+| `3.3V` | R11.1 |
+| `GND` | U1.3, JP2.2 |
 
-IO16 stays free for the transmit stage.
+IO16 reaches the transmit stage on J7.9.
 
 ### Why the TVS is the same part as the supply input's
 
@@ -129,19 +128,21 @@ bit-banged receiver inverts by reading the pin the other way round. It costs not
 This is the part worth being precise about, because it stops being true the moment transmitting is
 added.
 
-The LED loop runs entirely on the instrument side - `ST_DATA` → R20 → LED → `ST_GND`. The board's
+The LED loop runs entirely on the instrument side - `ST_DATA` → R10 → LED → `ST_GND`. The board's
 own ground is not involved. **So `ST_GND` is not connected to `GND`, and must not be.**
 
 | | |
 |---|---|
 | **Receive only** | true galvanic separation. A fault on the bus cannot reach a GPIO, and no second ground path runs through the SeaTalk screen |
-| **Once transmitting exists** | an open-drain MOSFET referenced to the board's ground can only pull `ST_DATA` low if both grounds sit at the same potential, so they have to be bonded - and the separation is gone |
+| **Once transmitting is armed** | Q1's emitter sits on the board's ground, so pulling `ST_DATA` low only means something if both grounds sit at the same potential. They have to be bonded, and the separation is gone |
 
 On a boat both are battery negative anyway, so bonding them costs little in practice. It does add a
 second ground path through the SeaTalk cable, which is a loop that was not there before.
 
-D-003 decides between accepting that and driving a second optocoupler on the instrument side. It is
-a real decision, and building receive-only first keeps it open.
+[D-003](D-003-seatalk-tx-stage.md) accepts the loop rather than driving a second optocoupler from
+the instrument side, which would preserve the separation at the cost of two more parts and a supply
+taken from the bus. That remains the fallback if a ground loop through the SeaTalk screen ever
+shows up in the measurements - and commissioning the receive path first is what keeps it available.
 
 ### What the two directions share
 
@@ -149,33 +150,34 @@ Almost nothing, which is what makes a compact layout possible.
 
 | Shared | |
 |--------|---|
-| **J20**, the three-pole terminal | one cable serves both directions |
-| **D20**, the TVS on `ST_DATA` | protects receiving and transmitting alike |
+| **J17**, the four-pole terminal | one cable serves both directions |
+| **D3**, the TVS on `ST_DATA` | protects receiving and transmitting alike |
 
 | Receiving only | Transmitting only |
 |----------------|-------------------|
-| R20 and the optocoupler | the MOSFET, its gate pull-down and its drain resistor |
-| R21, on the ESP side of the isolation | - |
+| R10 and the optocoupler | Q1, its base pull-down and its collector resistor |
+| R11, on the ESP side of the isolation | - |
 
 The two branches meet at one net, `ST_DATA`, and nowhere else.
 
-### If this stage ends up on the main board
+### The ground island on the main board
 
 [B-002](B-002-main-board.md) uses a ground plane, and a plane fills everything it is not forbidden
 to fill. `ST_GND` therefore has to be an **island**, excluded from the pour, and it is a small one -
-three pads:
+four pads:
 
 ```
-J20.3    the cable's ground
-OK20.2   the LED's cathode
-D20      the TVS anode
+J17.1    the cable's ground
+U1.2     the LED's cathode
+D3.2     the TVS anode
+JP2.1    the pad the wire link lands on
 ```
 
 The gap in the copper runs **lengthwise beneath the optocoupler**, between its two pin rows. A
-DIP-4 puts them 7.62 mm apart, which is room enough for a clean break on both layers. R21 belongs
+DIP-4 puts them 7.62 mm apart, which is room enough for a clean break on both layers. R11 belongs
 on the far side of that gap, with the board's own ground.
 
-Put J20, D20, R20 and OK20 together as one block at the board edge and the island stays small,
+Put J17, D3, R10 and U1 together as one block at the board edge and the island stays small,
 which is what an island should be.
 
 ### Track width here is set by the TVS, not by the signal
@@ -184,14 +186,17 @@ In operation this stage carries nothing: 2.3 mA through the optocoupler's LED, s
 transmit stage pulls the bus down. The default 0.2 mm handles 750 mA, so everything is sixty times
 over-provisioned.
 
-One path is different. When a transient arrives down the SeaTalk cable, D20 clamps it, and the
-clamping current runs through **J20.2 → D20 → J20.3** and nowhere else - up to 54 A for about a
+One path is different. When a transient arrives down the SeaTalk cable, D3 clamps it, and the
+clamping current runs through **J17.2 → D3 → J17.1** and nowhere else - up to 54 A for about a
 millisecond. Those two short segments get **1 mm**, because they are a few millimetres long and the
 copper costs nothing.
 
 **Placement matters more than width there.** A clamp is only as good as the loop it clamps across:
 the inductance between the terminal and the TVS produces a voltage the TVS cannot remove, because
-it appears behind it. Put D20 hard against J20.
+it appears behind it. Put D3 close to J17, within a centimetre or so. On the 8/20 µs waveform
+the 1.5KE is rated for, ten millimetres of track adds well under a tenth of a volt - so the rule
+has room in it, and it only tightens if the threat is a nanosecond edge rather than a surge down a
+long cable.
 
 The surge returns through the `ST_GND` island rather than the ground plane, since the island is
 separate by design. Keep it solid - it is small enough that this happens by itself, as long as no
@@ -202,13 +207,13 @@ reads as isolation on every drawing and is not.
 
 ### Keep the decision open with a wire link
 
-Receiving alone is isolated; adding the transmit stage bonds the two grounds. Building receive-only
-first is therefore a decision not yet taken - and a ground plane drawn without care takes it for
-you, silently.
+Transmitting bonds the two grounds. The transmit stage is fitted on the board, so what decides
+whether the bond exists is the link and not the parts - and a ground plane drawn without care
+closes it for you, silently.
 
 **Two pads at 2.54 mm between `ST_GND` and `GND`, left open.** While the board only receives, the
-separation is real. When the transmit stage arrives, a short piece of wire soldered through closes
-it, and side cutters reopen it.
+link is absent. When the transmit stage is commissioned, a short piece of wire soldered through
+closes it, and side cutters reopen it.
 
 A pluggable shunt would do the same job and is the obvious thing to reach for. It is the wrong
 choice here for two reasons that only apply on a boat: the enclosure vents to outside air because
@@ -220,33 +225,34 @@ everywhere else.
 Give the two pads a **pin header footprint** all the same. The holes take a wire link just as well,
 and nothing about the layout forces the choice before assembly.
 
-That costs two pads and keeps a decision open that this document is deliberately not making yet.
-Reserve roughly 15 x 10 mm beside the terminal for the MOSFET and its two resistors, and a track to
-IO16, or the transmit stage becomes a new board rather than an addition to this one.
+That costs two pads and keeps the commissioning step in one place. The transmit stage sits beside
+it - Q1 with its three resistors and the track from IO16 - so soldering the link is the single
+deliberate act that puts this board on the boat's bus as a talker.
 
 ## 5. Parts
 
 | Ref | Value | Purpose |
 |-----|-------|---------|
-| J20 | screw terminal, 5.08 mm, 4-pole | SeaTalk +12 V / DATA / GND, fourth pole unused - the same part as the probe terminals |
-| D20 | 1.5KE20A | clamps transients on the data line - **the same part as the supply input's TVS**, see below |
-| OK20 | PC817 | level shift and isolation. ~4 µs edges against a 208 µs bit |
-| R20 | 4.7 kΩ | LED series resistor, on the instrument side |
-| R21 | 10 kΩ | pull-up on the ESP side |
-| JP20 | two pads at 2.54 mm, left open | a wire link bridges `ST_GND` to `GND` when the transmit stage is fitted - see section 4 |
+| J17 | screw terminal, 5.08 mm, 4-pole | GND, DATA, the bus 12 V parked, fourth pole unused - the same part as the probe terminals |
+| D3 | 1.5KE20A | clamps transients on the data line - **the same part as the supply input's TVS**, see below |
+| U1 | PC817 | level shift and isolation. ~4 µs edges against a 208 µs bit |
+| R10 | 4.7 kΩ | LED series resistor, on the instrument side |
+| R11 | 10 kΩ | pull-up on the ESP side |
+| JP2 | two pads at 2.54 mm, left open | a wire link bridges `ST_GND` to `GND` when the transmit stage is fitted - see section 4 |
 
 ## 6. Failure modes
 
 | Case | Detection | Reaction |
 |------|-----------|----------|
 | Cable not connected | no edges at all; the pin sits at one level | `seatalk_online` false, everything else carries on |
-| Bus loaded too hard by R20 | instruments misbehave, idle level sags | measured in section 8 before the bus is trusted |
+| Bus loaded too hard by R10 | instruments misbehave, idle level sags | measured in section 8 before the bus is trusted |
 | Optocoupler too slow for the chosen receiver | bits misread at the edges, CRC-less garbage | visible on a logic analyser as narrow or shifted bits; the answer is a 6N137, not a smaller resistor |
 | A bus device jams the line low | permanent low, no framing | reported as offline; **nothing on this board can cause it, because this stage cannot drive the bus at all** |
-| Transient on the data line | - | clamped by D20 before it reaches the LED |
+| Transient on the data line | - | clamped by D3 before it reaches the LED |
 
-The last row is the reason receive-only is built first: until D-003 exists, there is no failure of
-this board that can take the instrument network down.
+The last row holds for this stage on its own: it has no driver, so it cannot pull the bus down at
+all. The transmit stage is fitted beside it, and what keeps the bus free while the ESP is
+unpowered, booting or crashed is R13 - see [D-003](D-003-seatalk-tx-stage.md) section 2.
 
 ## 7. Verification
 
@@ -261,7 +267,7 @@ Before anything is connected to the Raymarine S1:
 On the boat:
 
 - [ ] **Bus idle voltage measured with the interface disconnected, then connected.** A drop of more
-      than a few tenths of a volt means R20 is too small
+      than a few tenths of a volt means R10 is too small
 - [ ] Every instrument still behaves normally with the interface attached - depth, log, wind and
       autopilot all watched for several minutes
 - [ ] Edges at IO15 on a logic analyser: bit time 208 µs ±5 µs, frames of eleven bits
@@ -271,8 +277,7 @@ On the boat:
 
 | Point | Decide by |
 |-------|-----------|
-| Whether this stage sits on the main board or on its own. Its own board keeps the isolation obvious and the 12 V bus away from the sensor rail; on the main board it saves a connector | when [D-002](D-002-seatalk-decoding.md) has settled the receiver, since that decides whether a PC817 is fast enough |
-| R20's final value, which depends on what the bus tolerates | during the idle-level measurement in section 7 |
+| R10's final value, which depends on what the bus tolerates | during the idle-level measurement in section 7 |
 | Whether `seatalk_online` is derived from datagram traffic or from edge activity | in [D-002](D-002-seatalk-decoding.md) |
 
 ## 9. References
