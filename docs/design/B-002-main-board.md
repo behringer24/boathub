@@ -50,14 +50,14 @@ a rework. **Socket it.**
 | | |
 |---|---|
 | Row spacing | **25.4 mm**, 2 x 22 pins at 2.54 mm. That is 10 pitches, a full inch - not the 22.86 mm that a DevKitC-1 of the original width would give. Confirm it by counting: **nine free grid positions** between the two rows |
-| Orientation | **pin 1 of both sockets sits at the USB end.** J1.1 is the `GND` next to `5V`, J2.1 is the first of the `GND` pair - see [A-001](A-001-devkit-and-carrier.md) section 3 |
-| Antenna | **no copper pour at the far end from pin 1.** That is where the module's antenna sits; a ground plane beneath it detunes the antenna, and the board would be the reason for poor range |
-| USB sockets | both DevKit USB connectors must stay reachable at the board edge beside pin 1 |
+| Orientation | **pin 1 of both sockets sits at the antenna end.** J1.1 is the first of the `3V3` pair, J2.1 is the `GND` opposite it; `5V` and `GND` land on pins 21 and 22 at the USB end - see [A-001](A-001-devkit-and-carrier.md) section 3 |
+| Antenna | **no copper pour beyond pin 1.** That is where the module's antenna sits; a ground plane beneath it detunes the antenna, and the board would be the reason for poor range |
+| USB sockets | both DevKit USB connectors must stay reachable at the board edge beside pin 22 |
 | Buttons | the DevKit's own BOOT and RESET buttons must stay pressable with the board installed |
 
 The orientation line is the one to get right. Both sockets run in the same direction, pin 1 to pin
-22 from the USB end towards the antenna. One socket footprint placed 180° out puts 5 V where GND
-belongs, and nothing in the netlist can catch it - the ratsnest is just as happy either way.
+22 from the antenna end towards the USB end. One socket footprint placed 180° out puts 5 V where
+GND belongs, and nothing in the netlist can catch it - the ratsnest is just as happy either way.
 
 **Measure the actual DevKit before the board is ordered.** [A-001](A-001-devkit-and-carrier.md)
 establishes that boards sold under this description vary, and a socket is unforgiving: a row
@@ -216,9 +216,9 @@ USB; `IO35`-`IO37` belong to the octal PSRAM; `IO48` drives the DevKit's RGB LED
 
 | | Pin 1 | Pin 2 | Pin 3 | Pin 4 | Pin 5 |
 |---|---|---|---|---|---|
-| J3 | +12 V | GND | | | |
-| J4, J5, J6 | +3.3 V (probe red) | DATA (probe yellow) | GND (probe black) | | |
-| J7 | +3.3 V | SDA | SCL | GND | |
+| J3 | GND | +12 V | | | |
+| J4, J5, J6 | DATA (probe yellow) | +3.3 V (probe red) | GND (probe black) | | |
+| J7 | +3.3 V | GND | SCL | SDA | |
 | J8 | **+12 V** | loop return | | | |
 | J13 | A2 | A3 | GND | +3.3 V | |
 | J9 | +3.3 V | GND | SDA | SCL | INT |
@@ -518,7 +518,7 @@ hand - a fine-pitch converter IC in place of the module, say. It does not.
 - [ ] Socket row spacing counted on the physical DevKit - nine free grid positions between the
       rows - and the pin order read off the DevKit rather than off the carrier's silkscreen
 - [ ] ADS1115 breakout pin order confirmed against the part in hand
-- [ ] No copper pour under the DevKit's antenna end
+- [ ] No copper pour under the DevKit's antenna end - which is the **pin 1** end of both sockets
 - [ ] Both DevKit USB sockets and both its buttons reachable once installed
 - [ ] Board outline and mounting holes checked against the enclosure
 - [ ] Every terminal that takes a cable - J3, J4, J5, J6, J7, J8 - sits at the board edge with its
