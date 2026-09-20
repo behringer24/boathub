@@ -11,7 +11,8 @@
 Pull the SeaTalk1 bus low under firmware control, and **never** by accident.
 
 **Out of scope:** what to transmit and when it may be armed, which is the autopilot document; and
-receiving, which is [D-001](D-001-seatalk-rx-stage.md) and has to work before any of this is built.
+receiving, which is [D-001](D-001-seatalk-rx-stage.md) and has to work before any of this is
+armed.
 
 ## 2. The rule this stage is judged by
 
@@ -35,24 +36,25 @@ no function in normal operation at all.
 
 ## 3. The circuit
 
-Designators continue [D-001](D-001-seatalk-rx-stage.md)'s 20 series.
+Designators are the ones in the KiCad project, as [B-002](B-002-main-board.md) section 4 lists
+them.
 
 ```
-   IO16 ──[ R22  1 kΩ ]──┬──── B
-                         │        Q20   BC337 / 2N3904 (NPN, TO-92)
-                    [ R23  10 kΩ ]
+   IO16 ──[ R12  1 kΩ ]──┬──── B
+                         │        Q1   BC337-25 (NPN, TO-92)
+                    [ R13  10 kΩ ]
                          │
                         GND ──── E
 
-                                  C ──[ R24  100 Ω ]──► ST_DATA
+                                  C ──[ R14  100 Ω ]──► ST_DATA
 ```
 
 | Ref | Value | Purpose |
 |-----|-------|---------|
-| Q20 | BC337-25 or 2N3904, TO-92 | pulls `ST_DATA` low |
-| R22 | 1 kΩ | base current from a 3.3 V pin |
-| R23 | 10 kΩ | **base to emitter. Not optional - see section 2** |
-| R24 | 100 Ω | series into the bus |
+| Q1 | BC337-25, TO-92 | pulls `ST_DATA` low. A 2N3904 substitutes electrically, but **check its pin order** - it is not the same as a BC337's, and the board's footprint is not either |
+| R12 | 1 kΩ | base current from a 3.3 V pin |
+| R13 | 10 kΩ | **base to emitter. Not optional - see section 2** |
+| R14 | 100 Ω | series into the bus |
 
 ### Why a bipolar rather than a MOSFET
 
@@ -72,7 +74,7 @@ The price is a saturation voltage of roughly 0.25 V instead of a few ohms of cha
 Against a bus pull-up around 1 kΩ and the 100 Ω series resistor, that moves the low level from
 about 1.1 V to about 1.3 V - both far below what any receiver on that bus treats as high.
 
-### R24 stays at the low end
+### R14 stays at the low end
 
 It sits in series with the transistor and forms a divider with the bus pull-up. At 470 Ω against a
 1 kΩ pull-up the low level would be some 3.8 V, which no receiver reads as low. At 100 Ω it is
@@ -83,8 +85,8 @@ particular boat, and no datasheet has it.
 
 ## 4. This stage needs D-001's ground link closed
 
-Q20's emitter sits on the board's ground and pulls `ST_DATA` down towards it. That only means
-anything if `ST_GND` and `GND` are at the same potential - so **JP20 is soldered closed when this
+Q1's emitter sits on the board's ground and pulls `ST_DATA` down towards it. That only means
+anything if `ST_GND` and `GND` are at the same potential - so **JP2 is soldered closed when this
 stage is fitted**, and the galvanic separation that receive-only enjoyed ends there.
 
 [D-001](D-001-seatalk-rx-stage.md) section 4 explains the trade and why the link exists as a
@@ -112,12 +114,12 @@ blind into a network the boat navigates by, which is the second reason
 
 | Case | Consequence | What prevents it |
 |------|-------------|------------------|
-| ESP unpowered or booting | would hold the bus low - **the whole instrument network down** | R23 |
-| Firmware crash, GPIO left high | as above | R23 only helps once the pin goes high-impedance; the watchdog has to reset the board, and after reset R23 holds |
+| ESP unpowered or booting | would hold the bus low - **the whole instrument network down** | R13 |
+| Firmware crash, GPIO left high | as above | R13 only helps once the pin goes high-impedance; the watchdog has to reset the board, and after reset R13 holds |
 | Firmware bug transmitting at the wrong moment | corrupted datagrams on a live bus | the arming state machine, its own document |
 | Two devices transmitting together | both datagrams lost | read-back and retry, section 5 |
-| R24 too large | nobody hears the low level | measured, section 3 |
-| Bus shorted to 12 V externally | Q20 sees 12 V through R24 | 100 Ω limits it to ~120 mA, inside a BC337's rating |
+| R14 too large | nobody hears the low level | measured, section 3 |
+| Bus shorted to 12 V externally | Q1 sees 12 V through R14 | 100 Ω limits it to ~120 mA, inside a BC337's rating |
 
 The first row is the reason this document exists. Every other fault on this board costs a
 measurement; that one costs the boat its instruments.
@@ -142,8 +144,8 @@ and the receive stage watching it.
 
 | Point | Decide by |
 |-------|-----------|
-| The bus pull-up value on this boat, which sets R24 | measured at the Raymarine S1 before the board is ordered |
-| Whether to keep the isolation with a second optocoupler instead of closing JP20 | if a ground loop through the SeaTalk screen shows up in the measurements |
+| The bus pull-up value on this boat, which sets R14 | measured at the Raymarine S1 before the board is ordered |
+| Whether to keep the isolation with a second optocoupler instead of closing JP2 | if a ground loop through the SeaTalk screen shows up in the measurements |
 | What may be transmitted at all, and what arms it | the autopilot document. **Nothing here is reachable from the server** - control stays on the local on-board Wi-Fi |
 
 ## 9. References
