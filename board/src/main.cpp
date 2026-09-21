@@ -111,9 +111,25 @@ void loop() {
     if (climate.valid) {
       snprintf(cabin, sizeof(cabin), "cabin %.1fC %.0f%%", climate.tempC, climate.rh);
     }
-    Serial.printf("[status] wifi %s %s | broker %s | %s (%s) | heap %lu\n", net::stateName(),
+
+    // Which probes are alive, at a glance. A probe that was never found and a
+    // probe that enumerated and has since gone quiet are different faults, so
+    // they read differently: "-" was never there, "?" is there and silent.
+    char probes[48];
+    int at = snprintf(probes, sizeof(probes), "probes");
+    for (uint8_t i = 0; i < ds18b20::ProbeCount && at > 0 && (size_t)at < sizeof(probes); i++) {
+      const ds18b20::Probe p = (ds18b20::Probe)i;
+      const char initial = ds18b20::name(p)[0] - ('a' - 'A');
+      const ds18b20::Reading probe = ds18b20::latest(p);
+      const int room = sizeof(probes) - at;
+      at += probe.valid ? snprintf(probes + at, room, " %c%.1f", initial, probe.tempC)
+                        : snprintf(probes + at, room, " %c%s", initial,
+                                   ds18b20::present(p) ? "?" : "-");
+    }
+
+    Serial.printf("[status] wifi %s %s | broker %s | %s (%s) | %s | heap %lu\n", net::stateName(),
                   net::stationIp().c_str(), uplink::statusText(), cabin, sht31::statusText(),
-                  (unsigned long)ESP.getFreeHeap());
+                  probes, (unsigned long)ESP.getFreeHeap());
   }
 
   delay(1);  // hand the core back to FreeRTOS
