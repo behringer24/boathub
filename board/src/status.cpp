@@ -7,7 +7,12 @@ namespace {
 
 // Low on purpose. The WS2812 at full scale is uncomfortable to look at, and
 // nothing here needs to be seen from across the cabin.
-const uint8_t LEVEL = 20;
+//
+// Not a power setting. Averaged over the breathing cycle - a second dark and
+// two seconds of a squared ramp - this is about 4 of 255, some 0.3 mA against
+// a system that draws 52-70 mA. The chip's own controller draws three times
+// that in the dark, and no value here reaches it.
+const uint8_t LEVEL = 10;
 
 // 50 frames a second is more than an eye resolves, and the WS2812 is a timed
 // protocol that blocks for about 30 us per update - no reason to run it faster.
