@@ -257,8 +257,19 @@ itself, and `install-certs.sh` finds the certificate in the proxy's own volume.
 
 The TLS block in `mosquitto/config/mosquitto.conf` is commented out on purpose: mosquitto refuses
 to start when a certificate file named in its configuration is missing, and a broker that will not
-start is a worse first experience than one without TLS. Uncomment it once the files are in place,
-and restart.
+start is a worse first experience than one without TLS. Uncomment it once the files are in place:
+
+```
+sed -i -E 's/^#(listener 8883|protocol mqtt|certfile|keyfile|require_certificate|tls_version)//'   mosquitto/config/mosquitto.conf
+docker compose restart mosquitto
+```
+
+**`restart`, not `up -d`.** Compose recreates a container when its definition changes, and a file
+inside a mounted directory is not part of that definition - `up -d` reports the broker as *Running*
+and leaves the old process in place. A `SIGHUP` is not enough either: mosquitto re-reads its
+certificates and password file on one, but listeners exist only from startup.
+
+`Opening ipv4 listen socket on port 8883` in the log is the confirmation.
 
 ### Close 1883 from outside
 
