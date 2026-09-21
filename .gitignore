@@ -41,3 +41,6 @@ server/mosquitto/config/passwd
 # --- Go build output ---
 server/ingest/ingest
 server/ingest/ingest.exe
+
+# --- Working conventions for this repository, local only ---
+CLAUDE.md
