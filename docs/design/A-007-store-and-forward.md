@@ -170,7 +170,7 @@ one that cannot.
 | `time_source` | `time_valid` | Meaning |
 |---------------|--------------|---------|
 | `ntp` / `gps` | true | synced, trust it |
-| `restored` | false | the NVS floor plus elapsed time - ordering is right, absolute time is a lower bound |
+| `restored` | false | not verified this boot. Either the NVS floor plus elapsed time, or a clock that kept running across a soft reset - the RTC domain survives one, so the time is real but unchecked. Ordering is right, absolute time is a lower bound |
 | `none` | false | no clock this boot; only `boot_id` and `t_mono_s` order these |
 
 `time_valid` stays the field to filter on; `time_source` says why, which is what turns "this

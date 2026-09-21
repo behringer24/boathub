@@ -33,15 +33,26 @@ uint32_t nextSeq = 0;
 // anything that asks a second later gets the wrong answer.
 volatile bool ntpSynced = false;
 bool clockFromFloor = false;
+bool clockCarried = false;
 
 void onTimeSync(struct timeval *) { ntpSynced = true; }
 
 bool clockSane() { return time(nullptr) > TIME_SANE_AFTER; }
 
 // Which clock produced the timestamp on a record written now.
+//
+// `restored` covers two ways of having a time that was not verified this boot:
+// the floor read back from NVS, and a clock that simply kept running across a
+// soft reset, where the RTC domain survives. The second is the better of the
+// two - it is the real time, merely not re-checked - and both are lower bounds
+// rather than claims.
+//
+// Without the second, a restart from the configuration portal produced records
+// carrying a perfectly good timestamp labelled `none`, which is a contradiction
+// the server has no way to resolve.
 buffer::TimeSource timeSource() {
   if (ntpSynced) return buffer::TimeSource::Ntp;
-  if (clockFromFloor && clockSane()) return buffer::TimeSource::Restored;
+  if ((clockFromFloor || clockCarried) && clockSane()) return buffer::TimeSource::Restored;
   return buffer::TimeSource::None;
 }
 char state[40] = "starting";
@@ -146,6 +157,10 @@ void begin() {
   // length of the outage - seconds after a watchdog reset, and only genuinely
   // wrong after a long lay-up. Records say `restored` so the server knows the
   // difference between a timestamp and a lower bound.
+  // A clock that is already running was set before this boot and survived -
+  // a watchdog or a deliberate restart keeps the RTC domain alive.
+  clockCarried = clockSane();
+
   const uint32_t floorWall = buffer::restoredFloor();
   if (floorWall > 0 && !clockSane()) {
     struct timeval tv;
