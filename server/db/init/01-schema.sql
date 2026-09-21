@@ -40,6 +40,18 @@ CREATE TABLE telemetry (
     ts             timestamptz,
     time_valid     boolean     NOT NULL DEFAULT false,
 
+    -- Which clock produced `ts`, so an odd timestamp is a diagnosis rather
+    -- than a puzzle:
+    --
+    --   ntp, gps  synced, trust it
+    --   restored  a floor carried across a restart plus elapsed time - the
+    --             ordering is right, the absolute time is a lower bound
+    --   none      no clock this boot; only boot_id and the board's uptime
+    --             order these records
+    --
+    -- `time_valid` stays the field to filter on; this one says why.
+    time_source    text,
+
     -- The window this row covers. Null on messages from firmware that does not
     -- aggregate yet; n = 1 marks a spot reading.
     window_s       integer,

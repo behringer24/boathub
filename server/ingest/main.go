@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -44,6 +46,12 @@ import (
 type telemetry struct {
 	TS        *time.Time `json:"ts"`
 	TimeValid *bool      `json:"time_valid"`
+
+	// Which clock produced TS. "ntp" and "gps" are trustworthy, "restored" is
+	// a lower bound carried across a restart, "none" means only boot_id and
+	// the board's uptime order this record. TimeValid stays the field to
+	// filter on; this one says why.
+	TimeSource *string `json:"time_source"`
 	WindowS   *int32     `json:"window_s"`
 	N         *int16     `json:"n"`
 
@@ -90,7 +98,7 @@ type telemetry struct {
 
 const insertTelemetry = `
 INSERT INTO telemetry (
-  boat_id, ts, time_valid, window_s, n,
+  boat_id, ts, time_valid, time_source, window_s, n,
   boot_id, seq,
   uptime_s, heap_free, rssi_dbm, reset_reason,
   battery_v, battery_v_min, battery_v_max,
@@ -102,17 +110,17 @@ INSERT INTO telemetry (
   bilge_level_cm, bilge_level_cm_min, bilge_level_cm_max,
   seatalk_online
 ) VALUES (
-  $1,$2,$3,$4,$5,
-  $6,$7,
-  $8,$9,$10,$11,
-  $12,$13,$14,
-  $15,$16,$17,
-  $18,$19,$20,
-  $21,$22,$23,
-  $24,$25,$26,
-  $27,$28,$29,
-  $30,$31,$32,
-  $33)`
+  $1,$2,$3,$4,$5,$6,
+  $7,$8,
+  $9,$10,$11,$12,
+  $13,$14,$15,
+  $16,$17,$18,
+  $19,$20,$21,
+  $22,$23,$24,
+  $25,$26,$27,
+  $28,$29,$30,
+  $31,$32,$33,
+  $34)`
 
 // Claims an identity before the row is written. Returns no rows when the pair
 // has been seen, which is the whole mechanism: QoS 1 redelivers, and a second
@@ -185,7 +193,7 @@ func insertWithRetry(ctx context.Context, pool *pgxpool.Pool, sql string, args .
 // have to agree, and a mismatch is otherwise only discovered as a failing
 // insert on every single message.
 var required = []string{
-	"boat_id", "ts", "time_valid", "window_s", "n",
+	"boat_id", "ts", "time_valid", "time_source", "window_s", "n",
 	"boot_id", "seq",
 	"uptime_s", "heap_free", "rssi_dbm", "reset_reason",
 	"battery_v", "battery_v_min", "battery_v_max",
@@ -357,8 +365,8 @@ func onTelemetry(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {
 		return
 	}
 
-	var t telemetry
-	if err := json.Unmarshal(m.Payload(), &t); err != nil {
+	batch, err := decodeBatch(m.Payload())
+	if err != nil {
 		// Logged with the raw payload and acknowledged. A message that cannot be
 		// parsed will not parse on redelivery either, and leaving it unacknowledged
 		// would block every message behind it.
@@ -366,8 +374,12 @@ func onTelemetry(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {
 		m.Ack()
 		return
 	}
+	if len(batch) == 0 {
+		m.Ack()
+		return
+	}
 
-	stored, err := storeWithRetry(ctx, pool, id, t)
+	stored, err := storeWithRetry(ctx, pool, id, batch)
 	if err != nil {
 		// Deliberately NOT acknowledged. The broker redelivers on the next
 		// reconnect, and its inflight limit becomes backpressure rather than
@@ -375,12 +387,36 @@ func onTelemetry(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {
 		log.Printf("insert telemetry for %s failed, leaving unacknowledged: %v", id, err)
 		return
 	}
-	if !stored {
-		// A redelivery of something already in the table. Acknowledged, because
-		// it is stored - just not by this delivery.
-		log.Printf("duplicate for %s boot %d seq %d, already stored", id, *t.BootID, *t.Seq)
+	if stored < len(batch) {
+		// Redeliveries of records already in the table. Acknowledged, because
+		// they are stored - just not by this delivery.
+		log.Printf("%s: %d of %d records already stored", id, len(batch)-stored, len(batch))
 	}
 	m.Ack()
+}
+
+// A telemetry message is an array of records. It was a single object before
+// buffering existed, and that shape is still accepted: a board sends what its
+// firmware knows how to send, and the server does not get to insist.
+func decodeBatch(payload []byte) ([]telemetry, error) {
+	trimmed := bytes.TrimLeft(payload, " \t\r\n")
+	if len(trimmed) == 0 {
+		return nil, nil
+	}
+
+	if trimmed[0] == '[' {
+		var batch []telemetry
+		if err := json.Unmarshal(trimmed, &batch); err != nil {
+			return nil, err
+		}
+		return batch, nil
+	}
+
+	var one telemetry
+	if err := json.Unmarshal(trimmed, &one); err != nil {
+		return nil, err
+	}
+	return []telemetry{one}, nil
 }
 
 // Claims the record's identity and writes the row, both or neither.
@@ -393,13 +429,31 @@ func onTelemetry(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {
 // Without an identity - firmware older than this - the row is written
 // unconditionally. That is the previous behaviour, duplicates and all, and it
 // is the right answer for a board that cannot tell us which message this is.
-func storeTelemetry(ctx context.Context, pool *pgxpool.Pool, id string, t telemetry) (bool, error) {
+func storeTelemetry(ctx context.Context, pool *pgxpool.Pool, id string, batch []telemetry) (int, error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
-		return false, err
+		return 0, err
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // no-op once committed
 
+	stored := 0
+	for _, t := range batch {
+		ok, err := storeOne(ctx, tx, id, t)
+		if err != nil {
+			return 0, err
+		}
+		if ok {
+			stored++
+		}
+	}
+
+	return stored, tx.Commit(ctx)
+}
+
+// One record inside the batch's transaction. The whole batch commits or none
+// of it does, so a redelivery finds either every record already claimed or
+// none of them - never half.
+func storeOne(ctx context.Context, tx pgx.Tx, id string, t telemetry) (bool, error) {
 	if t.BootID != nil && t.Seq != nil {
 		tag, err := tx.Exec(ctx, claimTelemetry, id, *t.BootID, *t.Seq)
 		if err != nil {
@@ -411,7 +465,7 @@ func storeTelemetry(ctx context.Context, pool *pgxpool.Pool, id string, t teleme
 	}
 
 	if _, err := tx.Exec(ctx, insertTelemetry,
-		id, t.TS, t.TimeValid, t.WindowS, t.N,
+		id, t.TS, t.TimeValid, t.TimeSource, t.WindowS, t.N,
 		t.BootID, t.Seq,
 		t.UptimeS, t.HeapFree, t.RSSIdBm, t.ResetReason,
 		t.BatteryV, t.BatteryVMin, t.BatteryVMax,
@@ -425,15 +479,15 @@ func storeTelemetry(ctx context.Context, pool *pgxpool.Pool, id string, t teleme
 		return false, err
 	}
 
-	return true, tx.Commit(ctx)
+	return true, nil
 }
 
-func storeWithRetry(ctx context.Context, pool *pgxpool.Pool, id string, t telemetry) (bool, error) {
+func storeWithRetry(ctx context.Context, pool *pgxpool.Pool, id string, batch []telemetry) (int, error) {
 	var err error
 	delay := 200 * time.Millisecond
 	for attempt := 1; attempt <= 3; attempt++ {
-		var stored bool
-		if stored, err = storeTelemetry(ctx, pool, id, t); err == nil {
+		var stored int
+		if stored, err = storeTelemetry(ctx, pool, id, batch); err == nil {
 			return stored, nil
 		}
 		if attempt < 3 {
@@ -441,7 +495,7 @@ func storeWithRetry(ctx context.Context, pool *pgxpool.Pool, id string, t teleme
 			delay *= 2
 		}
 	}
-	return false, err
+	return 0, err
 }
 
 func onStatus(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {
