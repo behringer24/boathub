@@ -1,4 +1,4 @@
-# --- Secrets: niemals ins Repo ---
+# --- Secrets: never in the repository ---
 secrets.h
 secrets.ini
 *credentials*
@@ -24,12 +24,12 @@ build/
 *.swp
 *~
 
-# --- Betriebssystem ---
+# --- Operating system ---
 Thumbs.db
 desktop.ini
 .DS_Store
 
-# --- Sonstiges ---
+# --- Logs ---
 *.log
 
 # --- Local progress tracking, not documentation ---
