@@ -47,6 +47,11 @@ type telemetry struct {
 	WindowS   *int32     `json:"window_s"`
 	N         *int16     `json:"n"`
 
+	// Identity of the record, for deduplication. Absent on firmware that
+	// predates them, in which case the row is stored without the check.
+	BootID *int32 `json:"boot_id"`
+	Seq    *int64 `json:"seq"`
+
 	UptimeS     *int32  `json:"uptime_s"`
 	HeapFree    *int32  `json:"heap_free"`
 	RSSIdBm     *int16  `json:"rssi_dbm"`
@@ -86,6 +91,7 @@ type telemetry struct {
 const insertTelemetry = `
 INSERT INTO telemetry (
   boat_id, ts, time_valid, window_s, n,
+  boot_id, seq,
   uptime_s, heap_free, rssi_dbm, reset_reason,
   battery_v, battery_v_min, battery_v_max,
   cabin_temp_c, cabin_temp_c_min, cabin_temp_c_max,
@@ -97,15 +103,24 @@ INSERT INTO telemetry (
   seatalk_online
 ) VALUES (
   $1,$2,$3,$4,$5,
-  $6,$7,$8,$9,
-  $10,$11,$12,
-  $13,$14,$15,
-  $16,$17,$18,
-  $19,$20,$21,
-  $22,$23,$24,
-  $25,$26,$27,
-  $28,$29,$30,
-  $31)`
+  $6,$7,
+  $8,$9,$10,$11,
+  $12,$13,$14,
+  $15,$16,$17,
+  $18,$19,$20,
+  $21,$22,$23,
+  $24,$25,$26,
+  $27,$28,$29,
+  $30,$31,$32,
+  $33)`
+
+// Claims an identity before the row is written. Returns no rows when the pair
+// has been seen, which is the whole mechanism: QoS 1 redelivers, and a second
+// copy has to be recognised rather than counted.
+const claimTelemetry = `
+INSERT INTO telemetry_seen (boat_id, boot_id, seq)
+VALUES ($1, $2, $3)
+ON CONFLICT DO NOTHING`
 
 const insertStatus = `INSERT INTO boat_status (boat_id, online) VALUES ($1, $2)`
 
@@ -171,6 +186,7 @@ func insertWithRetry(ctx context.Context, pool *pgxpool.Pool, sql string, args .
 // insert on every single message.
 var required = []string{
 	"boat_id", "ts", "time_valid", "window_s", "n",
+	"boot_id", "seq",
 	"uptime_s", "heap_free", "rssi_dbm", "reset_reason",
 	"battery_v", "battery_v_min", "battery_v_max",
 	"cabin_temp_c", "cabin_temp_c_min", "cabin_temp_c_max",
@@ -308,8 +324,52 @@ func onTelemetry(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {
 		return
 	}
 
-	err := insertWithRetry(ctx, pool, insertTelemetry,
+	stored, err := storeWithRetry(ctx, pool, id, t)
+	if err != nil {
+		// Deliberately NOT acknowledged. The broker redelivers on the next
+		// reconnect, and its inflight limit becomes backpressure rather than
+		// this service quietly dropping measurements it could not store.
+		log.Printf("insert telemetry for %s failed, leaving unacknowledged: %v", id, err)
+		return
+	}
+	if !stored {
+		// A redelivery of something already in the table. Acknowledged, because
+		// it is stored - just not by this delivery.
+		log.Printf("duplicate for %s boot %d seq %d, already stored", id, *t.BootID, *t.Seq)
+	}
+	m.Ack()
+}
+
+// Claims the record's identity and writes the row, both or neither.
+//
+// The order matters. Claiming first means a crash between the two leaves the
+// claim rolled back with the row, so the redelivery that follows still finds
+// its way in. Claiming after a successful write would be the same thing with
+// more ways to go wrong.
+//
+// Without an identity - firmware older than this - the row is written
+// unconditionally. That is the previous behaviour, duplicates and all, and it
+// is the right answer for a board that cannot tell us which message this is.
+func storeTelemetry(ctx context.Context, pool *pgxpool.Pool, id string, t telemetry) (bool, error) {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // no-op once committed
+
+	if t.BootID != nil && t.Seq != nil {
+		tag, err := tx.Exec(ctx, claimTelemetry, id, *t.BootID, *t.Seq)
+		if err != nil {
+			return false, err
+		}
+		if tag.RowsAffected() == 0 {
+			return false, nil
+		}
+	}
+
+	if _, err := tx.Exec(ctx, insertTelemetry,
 		id, t.TS, t.TimeValid, t.WindowS, t.N,
+		t.BootID, t.Seq,
 		t.UptimeS, t.HeapFree, t.RSSIdBm, t.ResetReason,
 		t.BatteryV, t.BatteryVMin, t.BatteryVMax,
 		t.CabinTempC, t.CabinTempCMin, t.CabinTempCMax,
@@ -318,15 +378,27 @@ func onTelemetry(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {
 		t.BilgeTempC, t.BilgeTempCMin, t.BilgeTempCMax,
 		t.FridgeTempC, t.FridgeTempCMin, t.FridgeTempCMax,
 		t.BilgeLevelCm, t.BilgeLevelCmMin, t.BilgeLevelCmMax,
-		t.SeatalkOnline)
-	if err != nil {
-		// Deliberately NOT acknowledged. The broker redelivers on the next
-		// reconnect, and its inflight limit becomes backpressure rather than
-		// this service quietly dropping measurements it could not store.
-		log.Printf("insert telemetry for %s failed, leaving unacknowledged: %v", id, err)
-		return
+		t.SeatalkOnline); err != nil {
+		return false, err
 	}
-	m.Ack()
+
+	return true, tx.Commit(ctx)
+}
+
+func storeWithRetry(ctx context.Context, pool *pgxpool.Pool, id string, t telemetry) (bool, error) {
+	var err error
+	delay := 200 * time.Millisecond
+	for attempt := 1; attempt <= 3; attempt++ {
+		var stored bool
+		if stored, err = storeTelemetry(ctx, pool, id, t); err == nil {
+			return stored, nil
+		}
+		if attempt < 3 {
+			time.Sleep(delay)
+			delay *= 2
+		}
+	}
+	return false, err
 }
 
 func onStatus(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {

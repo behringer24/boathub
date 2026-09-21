@@ -162,8 +162,20 @@ the file is good.
 ## Changing the schema
 
 `db/init/01-schema.sql` runs **only** when the data directory is created. Editing it does nothing
-to a database that already exists. While the contents are still test data, the simplest way to pick
-up a schema change is to throw the volume away:
+to a database that already exists, so every schema change is written twice: into `01-schema.sql`
+for databases yet to be created, and as a numbered file in `db/migrations/` for the one that is
+already running.
+
+```
+docker exec -i boathub-db psql -U boathub -d boathub < db/migrations/001-record-identity.sql
+```
+
+Migrations are written to be safe to run twice - `ADD COLUMN IF NOT EXISTS`, `CREATE TABLE IF NOT
+EXISTS` - because nothing records which of them a given database has had. At this number of
+changes that is cheaper than a migration table, and it means running the whole directory in order
+is always a valid thing to do.
+
+Throwing the volume away is the other option while the contents are still test data:
 
 ```
 docker compose down
@@ -171,8 +183,8 @@ docker volume rm server_db-data
 docker compose up -d
 ```
 
-That deletes every measurement. Once there is anything worth keeping - and certainly once the
-logbook exists - this stops being acceptable and the change needs a migration instead.
+That deletes every measurement, and stops being acceptable the moment there is anything worth
+keeping.
 
 ## Not yet, but planned
 

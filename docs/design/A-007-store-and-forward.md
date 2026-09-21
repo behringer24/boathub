@@ -243,12 +243,24 @@ Implementing this document means three changes outside the board firmware:
 | Where | Change |
 |-------|--------|
 | `server/ingest` | accept a **JSON array** of records, not only a single object |
-| `server/db` | `boot_id` and `seq` columns, plus a unique index on `(boat_id, boot_id, seq)`. QoS 1 is at-least-once, so a redelivered batch **will** arrive twice; insert with `ON CONFLICT DO NOTHING` |
+| `server/db` | `boot_id` and `seq` columns, and a **claim table** keyed on `(boat_id, boot_id, seq)`, written in the same transaction as the row. QoS 1 is at-least-once, so a redelivered batch **will** arrive twice |
 | `server/db`, `server/ingest` | a `time_source` column and field - `ntp`, `gps`, `restored` or `none` (section 5). `time_valid` stays the boolean to filter on |
-| `board` | the buffer itself: segments, cursor, drain. The QoS 1 publisher it needs is in place - section 3 |
+| `board` | the buffer itself: segments, cursor, drain, on top of the QoS 1 publisher in section 3 |
 
-The duplicate case is not theoretical. Without the unique index a reconnect mid-batch double-counts
-rows, and the first place it shows is the dashboard.
+**Why a claim table and not a unique index on `telemetry`.** That table is a hypertable, and
+TimescaleDB refuses any unique index that does not contain the partitioning column:
+
+```
+ERROR: cannot create a unique index without the column "received_at"
+```
+
+Adding `received_at` would satisfy the rule and destroy the purpose - it is stamped on arrival, so
+a redelivered copy carries a different one and collides with nothing. An ordinary table holding
+just the identity has no such constraint, and writing it in the same transaction as the row keeps
+the two from ever disagreeing: either both exist or neither does.
+
+The duplicate case is not theoretical. Without the claim a reconnect mid-batch double-counts rows,
+and the first place it shows is the dashboard.
 
 ## 9. Failure modes
 
