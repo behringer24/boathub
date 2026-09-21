@@ -34,7 +34,6 @@ const uint8_t QOS_TELEMETRY = 1;
 uint32_t retryDelay = RETRY_MIN_MS;
 uint32_t nextAttempt = 0;
 bool publishRequested = false;
-bool connectPending = false;
 const char *status = "not connected";
 
 String topicTelemetry, topicStatus;
@@ -192,12 +191,14 @@ void onConnected(bool sessionPresent) {
   (void)sessionPresent;
   status = "connected";
   retryDelay = RETRY_MIN_MS;
-  connectPending = false;
   Serial.println("[mqtt] connected");
 
   // Retained, so a client arriving later sees the state straight away instead
-  // of waiting for a heartbeat to lapse.
-  mqtt.publish(topicStatus.c_str(), QOS_TELEMETRY, /*retain=*/true, "online");
+  // of waiting for a heartbeat to lapse. Tracked like any other publish: at
+  // QoS 1 it is acknowledged too, and an acknowledgement for something the
+  // table has never heard of is a symptom worth keeping loud.
+  const uint16_t id = mqtt.publish(topicStatus.c_str(), QOS_TELEMETRY, /*retain=*/true, "online");
+  if (id != 0) pendingAdd(id);
 
   // A spot reading straight away. Waiting out a five minute window before the
   // first message would make a working link look like a broken one.
@@ -214,7 +215,6 @@ void onDisconnected(espMqttClientTypes::DisconnectReason reason) {
     case Reason::TCP_DISCONNECTED: status = "unreachable"; break;
     default: status = "not connected"; break;
   }
-  connectPending = false;
 
   // Whatever was in flight died with the session. Without a clean session the
   // broker would hold it for us; the board deliberately does not ask for that
@@ -244,8 +244,7 @@ void beginConnect() {
 
   Serial.printf("[mqtt] connecting to %s:%u\n", cfgHost.c_str(), c.mqttPort);
   status = "connecting";
-  connectPending = mqtt.connect();
-  if (!connectPending) {
+  if (!mqtt.connect()) {
     status = "connect refused";
     Serial.println("[mqtt] connect could not be started");
   }
@@ -290,7 +289,10 @@ void loop() {
   mqtt.loop();
 
   if (!mqtt.connected()) {
-    if (connectPending) return;
+    // Not connected is not the same as ready to connect. Between a dropped
+    // socket and the disconnect callback the client is still tearing the old
+    // connection down, and a connect() attempted in that window is refused.
+    if (!mqtt.disconnected()) return;
     if ((int32_t)(now - nextAttempt) < 0) return;
     beginConnect();
     nextAttempt = now + retryDelay;
