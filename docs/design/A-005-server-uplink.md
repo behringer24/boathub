@@ -183,8 +183,10 @@ A **stale reading still has to be recognisable as stale**. Every record carries 
 the server stores that alongside its own `received_at`, so a backfilled window never masquerades as
 current.
 
-**PubSubClient's default buffer is 256 bytes** and a full payload will exceed that once the sensors
-are in. Call `setBufferSize()` explicitly rather than discovering the limit as silent message loss.
+**Check the payload against its buffer before serialising into it.** `measureJson` gives the
+length the document wants; `serializeJson` into something shorter truncates silently and publishes
+invalid JSON, which looks like a healthy system until somebody reads the table. The firmware
+refuses to publish in that case and says so on the serial port.
 
 ## 6. Failure modes
 

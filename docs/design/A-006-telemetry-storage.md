@@ -129,10 +129,10 @@ acknowledgement it sees comes from the *broker*, not from this service. So a mes
 accepts and this service never stores is a measurement gone for good, with nothing anywhere
 reporting a problem.
 
-> **This requires a QoS 1 publisher on the board.** PubSubClient cannot do it - it publishes at
-> QoS 0 only, so the board receives no acknowledgement and the chain stands open at its very first
-> hop. Choosing the replacement is part of [A-007](A-007-store-and-forward.md). Everything below is
-> the server's half.
+> **This requires a QoS 1 publisher on the board**, or the chain stands open at its very first
+> hop: the board would never learn whether the broker took the message.
+> [A-007](A-007-store-and-forward.md) section 3 covers that half. Everything below is the
+> server's.
 
 Three settings close that gap:
 

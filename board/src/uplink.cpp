@@ -1,8 +1,8 @@
 #include "uplink.h"
 
 #include <ArduinoJson.h>
-#include <PubSubClient.h>
 #include <WiFi.h>
+#include <espMqttClient.h>
 #include <esp_system.h>
 #include <time.h>
 
@@ -12,8 +12,13 @@
 
 namespace {
 
-WiFiClient tcp;
-PubSubClient mqtt(tcp);
+// UseInternalTask::NO on purpose. The library can run its own task and call
+// back from it, which would mean every callback here lands in a different
+// thread from the rest of the firmware - and the store-and-forward buffer in
+// A-007 will mutate a filesystem from exactly these callbacks. Driven from
+// loop() instead, an acknowledgement arrives in the same task that publishes,
+// and no part of this needs a mutex.
+espMqttClient mqtt(espMqttClientTypes::UseInternalTask::NO);
 
 const uint32_t RETRY_MIN_MS = 2000;
 const uint32_t RETRY_MAX_MS = 60000;
@@ -21,12 +26,65 @@ const uint32_t RETRY_MAX_MS = 60000;
 // Anything later than 2023 means NTP has answered; the RTC starts at 1970.
 const time_t TIME_SANE_AFTER = 1700000000;
 
+// QoS 1 for telemetry: the broker answers every message with a PUBACK, which
+// is what A-007's buffer will delete a stored record on. At QoS 0 there is no
+// answer at all, so a buffer would have to delete on a guess.
+const uint8_t QOS_TELEMETRY = 1;
+
 uint32_t retryDelay = RETRY_MIN_MS;
 uint32_t nextAttempt = 0;
 bool publishRequested = false;
+bool connectPending = false;
 const char *status = "not connected";
 
 String topicTelemetry, topicStatus;
+
+// The client stores the pointers it is given rather than copying the strings,
+// so these have to outlive every connection attempt. config::get() returns a
+// reference that the configuration portal may rewrite underneath us.
+String cfgHost, cfgClientId, cfgUser, cfgPass;
+
+// Publishes waiting for their PUBACK.
+//
+// Nothing here acts on the acknowledgement yet - it is logged, and that is
+// enough to prove the round trip works end to end. A-007 replaces the logging
+// with advancing the buffer's read cursor, which is the whole reason this
+// table exists at this stage rather than later.
+struct Pending {
+  uint16_t id = 0;
+  uint32_t sentMs = 0;
+};
+const size_t PENDING_MAX = 8;
+Pending pending[PENDING_MAX];
+
+void pendingAdd(uint16_t id) {
+  for (Pending &p : pending) {
+    if (p.id == 0) {
+      p.id = id;
+      p.sentMs = millis();
+      return;
+    }
+  }
+  // Full means the broker has stopped acknowledging while the link still looks
+  // up. Worth saying, because the symptom is otherwise just silence.
+  Serial.printf("[mqtt] %u publishes outstanding, none acknowledged\n",
+                (unsigned)PENDING_MAX);
+}
+
+void pendingAck(uint16_t id) {
+  for (Pending &p : pending) {
+    if (p.id != id) continue;
+    Serial.printf("[mqtt] packet %u acknowledged after %lu ms\n", id,
+                  (unsigned long)(millis() - p.sentMs));
+    p = Pending{};
+    return;
+  }
+  Serial.printf("[mqtt] packet %u acknowledged, but not outstanding here\n", id);
+}
+
+void pendingClear() {
+  for (Pending &p : pending) p = Pending{};
+}
 
 const char *resetReason() {
   switch (esp_reset_reason()) {
@@ -58,36 +116,6 @@ void buildTopics() {
   const String base = "boathub/" + config::get().boatId + "/";
   topicTelemetry = base + "telemetry";
   topicStatus = base + "status";
-}
-
-bool tryConnect() {
-  const Config &c = config::get();
-  mqtt.setServer(c.mqttHost.c_str(), c.mqttPort);
-
-  const char *user = c.mqttUser.length() ? c.mqttUser.c_str() : nullptr;
-  const char *pass = c.mqttPass.length() ? c.mqttPass.c_str() : nullptr;
-
-  Serial.printf("[mqtt] connecting to %s:%u\n", c.mqttHost.c_str(), c.mqttPort);
-
-  // The last will is retained, so a client connecting after the board has gone
-  // sees "offline" straight away instead of waiting for a heartbeat to lapse.
-  const bool ok = mqtt.connect(c.boatId.c_str(), user, pass, topicStatus.c_str(), 0,
-                               /*retain=*/true, "offline");
-  if (ok) {
-    mqtt.publish(topicStatus.c_str(), "online", /*retain=*/true);
-    status = "connected";
-    Serial.println("[mqtt] connected");
-    return true;
-  }
-
-  switch (mqtt.state()) {
-    case 4: status = "bad credentials"; break;
-    case 5: status = "not authorised"; break;
-    case -2: status = "unreachable"; break;
-    default: status = "connect failed"; break;
-  }
-  Serial.printf("[mqtt] %s (state %d)\n", status, mqtt.state());
-  return false;
 }
 
 // Rounded to the sensor's own accuracy. Seven digits of float noise in every
@@ -148,13 +176,79 @@ void publish(const telemetry::Aggregate &agg) {
   }
   const size_t n = serializeJson(doc, payload, sizeof(payload));
 
-  if (!mqtt.publish(topicTelemetry.c_str(), payload, n)) {
-    // Never silent: a payload outgrowing the buffer looks exactly like a
-    // healthy system until somebody checks the server.
-    Serial.printf("[mqtt] publish failed, %u bytes\n", (unsigned)n);
+  const uint16_t id = mqtt.publish(topicTelemetry.c_str(), QOS_TELEMETRY, /*retain=*/false,
+                                   reinterpret_cast<const uint8_t *>(payload), n);
+  if (id == 0) {
+    // Never silent: a message that never left looks exactly like a healthy
+    // system until somebody checks the server.
+    Serial.printf("[mqtt] publish rejected, %u bytes\n", (unsigned)n);
     return;
   }
+  pendingAdd(id);
   Serial.printf("[mqtt] %s %s\n", topicTelemetry.c_str(), payload);
+}
+
+void onConnected(bool sessionPresent) {
+  (void)sessionPresent;
+  status = "connected";
+  retryDelay = RETRY_MIN_MS;
+  connectPending = false;
+  Serial.println("[mqtt] connected");
+
+  // Retained, so a client arriving later sees the state straight away instead
+  // of waiting for a heartbeat to lapse.
+  mqtt.publish(topicStatus.c_str(), QOS_TELEMETRY, /*retain=*/true, "online");
+
+  // A spot reading straight away. Waiting out a five minute window before the
+  // first message would make a working link look like a broken one.
+  publish(telemetry::spot());
+}
+
+void onDisconnected(espMqttClientTypes::DisconnectReason reason) {
+  using Reason = espMqttClientTypes::DisconnectReason;
+  switch (reason) {
+    case Reason::MQTT_MALFORMED_CREDENTIALS: status = "bad credentials"; break;
+    case Reason::MQTT_NOT_AUTHORIZED: status = "not authorised"; break;
+    case Reason::MQTT_IDENTIFIER_REJECTED: status = "client id rejected"; break;
+    case Reason::MQTT_SERVER_UNAVAILABLE: status = "broker unavailable"; break;
+    case Reason::TCP_DISCONNECTED: status = "unreachable"; break;
+    default: status = "not connected"; break;
+  }
+  connectPending = false;
+
+  // Whatever was in flight died with the session. Without a clean session the
+  // broker would hold it for us; the board deliberately does not ask for that
+  // - see begin().
+  pendingClear();
+
+  Serial.printf("[mqtt] disconnected: %s (%s)\n", status,
+                espMqttClientTypes::disconnectReasonToString(reason));
+}
+
+void onPublished(uint16_t packetId) { pendingAck(packetId); }
+
+void beginConnect() {
+  const Config &c = config::get();
+
+  cfgHost = c.mqttHost;
+  cfgClientId = c.boatId;
+  cfgUser = c.mqttUser;
+  cfgPass = c.mqttPass;
+
+  mqtt.setServer(cfgHost.c_str(), c.mqttPort);
+  mqtt.setClientId(cfgClientId.c_str());
+  if (cfgUser.length()) mqtt.setCredentials(cfgUser.c_str(), cfgPass.c_str());
+
+  // The last will is retained for the same reason the "online" message is.
+  mqtt.setWill(topicStatus.c_str(), QOS_TELEMETRY, /*retain=*/true, "offline");
+
+  Serial.printf("[mqtt] connecting to %s:%u\n", cfgHost.c_str(), c.mqttPort);
+  status = "connecting";
+  connectPending = mqtt.connect();
+  if (!connectPending) {
+    status = "connect refused";
+    Serial.println("[mqtt] connect could not be started");
+  }
 }
 
 }  // namespace
@@ -165,9 +259,16 @@ void begin() {
   buildTopics();
   // UTC only. No local time anywhere in the payload.
   configTime(0, 0, "pool.ntp.org", "time.cloudflare.com");
-  // The default is 256 bytes and the payload grows with every sensor.
-  mqtt.setBufferSize(512);
+
   mqtt.setKeepAlive(30);
+  // A clean session on purpose. The board's durability is its own filesystem
+  // once A-007 exists, not state the broker holds for a client that may be
+  // away for weeks.
+  mqtt.setCleanSession(true);
+
+  mqtt.onConnect(onConnected);
+  mqtt.onDisconnect(onDisconnected);
+  mqtt.onPublish(onPublished);
 }
 
 void loop() {
@@ -183,22 +284,19 @@ void loop() {
     return;
   }
 
+  // Unconditionally: this is what drives the client's state machine, including
+  // the handshake that has not finished yet and the acknowledgements coming
+  // back for messages already sent.
+  mqtt.loop();
+
   if (!mqtt.connected()) {
-    status = "not connected";
+    if (connectPending) return;
     if ((int32_t)(now - nextAttempt) < 0) return;
-    if (tryConnect()) {
-      retryDelay = RETRY_MIN_MS;
-      // A spot reading straight away. Waiting out a five minute window before
-      // the first message would make a working link look like a broken one.
-      publish(telemetry::spot());
-    } else {
-      nextAttempt = now + retryDelay;
-      retryDelay = min(retryDelay * 2, RETRY_MAX_MS);
-    }
+    beginConnect();
+    nextAttempt = now + retryDelay;
+    retryDelay = min(retryDelay * 2, RETRY_MAX_MS);
     return;
   }
-
-  mqtt.loop();
 
   // The BOOT button: the current state, now. It deliberately does not close
   // the running window - you press it to prove the chain works, not to cut a

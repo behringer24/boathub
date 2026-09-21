@@ -40,32 +40,27 @@ One code path, and being offline stops being a mode.
 
 Nothing currently mounts LittleFS. This is the feature that first uses it.
 
-## 3. The blocker: PubSubClient cannot do this
+## 3. Why the board publishes at QoS 1
 
-**PubSubClient publishes at QoS 0 only.** There is no QoS argument in its publish API at all.
+**A buffer needs something to release a record on.** QoS 0 is fire-and-forget: the board gets no
+acknowledgement that the broker accepted the message, so a buffer whose whole purpose is to delete
+a record once it is safely delivered would have to delete on a guess - and lose data whenever a
+publish is dropped in flight - or never delete and fill up.
 
-That is fatal here, and not in an obvious way. QoS 0 is fire-and-forget: the board gets **no
-acknowledgement** that the broker accepted the message. A buffer whose whole purpose is to delete a
-record once it is safely delivered has nothing to trigger the deletion. Either it deletes on a
-guess - and loses data whenever a publish is dropped in flight - or it never deletes and fills up.
+It is also what makes the rest of the chain worth having.
+[A-006](A-006-telemetry-storage.md) makes delivery lossless from broker to database - persistent
+session, QoS 1, acknowledgement after the row is committed - and all of that rests on the board
+publishing at QoS 1. At QoS 0 the chain is sound from the broker onwards and **open at the very
+first hop**.
 
-It also leaves the rest of the chain pointless. [A-006](A-006-telemetry-storage.md) makes delivery
-lossless from broker to database - persistent session, QoS 1, acknowledgement after the row is
-committed - and all of that rests on the board publishing at QoS 1. With a QoS 0 publisher the
-chain is sound from the broker onwards and **open at the very first hop**.
+The client is **espMqttClient**, driven from `loop()` rather than from a task of its own
+(`UseInternalTask::NO`). `publish()` returns the packet id, and `onPublish()` reports that same id
+when the PUBACK arrives - which is the trigger the read cursor in section 6 advances on.
 
-**So the MQTT client has to change before any of this is built.**
-
-| Candidate | For | Against |
-|-----------|-----|---------|
-| **espMqttClient** (bertmelis) | QoS 0/1/2, TLS, maintained, Arduino-style API close to what `uplink.cpp` already does | another third-party dependency |
-| **esp-mqtt** (ESP-IDF native) | no third-party dependency - Arduino sits on ESP-IDF anyway; QoS 1/2; TLS shares the certificate handling 8883 needs | event-driven API, a larger rewrite of `uplink.cpp` |
-| arduino-mqtt (256dpi) | simple, QoS 1 | less active |
-
-**Recommendation: espMqttClient**, because it keeps `uplink.cpp` recognisable and the change stays
-proportionate. `esp-mqtt` is the better long-term answer if the TLS work turns out to want ESP-IDF
-certificate handling regardless - in which case doing both at once is cheaper than doing them
-separately. **Decide before implementing, not during.**
+**Running it synchronously is not a detail.** An acknowledgement then arrives in the task that owns
+the filesystem, so the cursor, the segment files and the outstanding-packet table are touched from
+one thread and none of this needs a mutex. A client with its own task would put a callback from
+elsewhere in the middle of a LittleFS write.
 
 ## 4. Layout on flash
 
@@ -250,7 +245,7 @@ Implementing this document means three changes outside the board firmware:
 | `server/ingest` | accept a **JSON array** of records, not only a single object |
 | `server/db` | `boot_id` and `seq` columns, plus a unique index on `(boat_id, boot_id, seq)`. QoS 1 is at-least-once, so a redelivered batch **will** arrive twice; insert with `ON CONFLICT DO NOTHING` |
 | `server/db`, `server/ingest` | a `time_source` column and field - `ntp`, `gps`, `restored` or `none` (section 5). `time_valid` stays the boolean to filter on |
-| `board` | replace PubSubClient - section 3 |
+| `board` | the buffer itself: segments, cursor, drain. The QoS 1 publisher it needs is in place - section 3 |
 
 The duplicate case is not theoretical. Without the unique index a reconnect mid-batch double-counts
 rows, and the first place it shows is the dashboard.
