@@ -198,7 +198,7 @@ Whatever already manages Let's Encrypt on this machine keeps issuing and renewin
 borrows the result.
 
 ```
-sudo server/deploy/install-certs.sh boathub.behringer24.de
+sudo server/deploy/install-certs.sh boathub.example.com
 ```
 
 That copies `fullchain.pem` and `privkey.pem` into `server/mosquitto/certs/`, gives them to the
@@ -215,11 +215,32 @@ Renewal needs the same command, which certbot will run itself:
 ```
 # /etc/letsencrypt/renewal-hooks/deploy/boathub.sh
 #!/bin/sh
-exec /srv/boathub/server/deploy/install-certs.sh boathub.behringer24.de
+exec /srv/boathub/server/deploy/install-certs.sh boathub.example.com
 ```
 
 Mosquitto re-reads its certificate on `SIGHUP`, which the script sends, so a renewal costs no
 downtime and drops no session.
+
+### Grafana in front of it
+
+The certificate has to be asked for by something, and with `nginx-proxy` plus
+`acme-companion` that something is a container carrying `VIRTUAL_HOST` and
+`LETSENCRYPT_HOST`. The broker is not an HTTP service and cannot be one, so
+Grafana takes the name - which it should anyway: on port 3000 its login
+password crosses the network in the clear.
+
+```
+docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d
+```
+
+An override rather than part of the base file, because the base stack has to
+come up on a machine that has no reverse proxy at all, and because the network
+and domain belong to your own infrastructure rather than in this repository.
+Fill `BOATHUB_DOMAIN`, `LETSENCRYPT_EMAIL` and `PROXY_NETWORK` into `.env`
+first; the file refuses to render without them rather than guessing.
+
+Grafana then answers on 443 through the proxy, port 3000 only from the machine
+itself, and `install-certs.sh` finds the certificate in the proxy's own volume.
 
 ### Then switch the listener on
 

@@ -1,38 +1,37 @@
 #!/bin/sh
-# Copy the broker's certificate out of whatever manages Let's Encrypt on this
-# host, and reload the broker.
+# Give the broker a copy of the certificate, and reload it.
 #
-#   sudo server/deploy/install-certs.sh boathub.behringer24.de
+#   sudo server/deploy/install-certs.sh boathub.example.com
 #
-# Run it once when TLS is first set up, and again after every renewal. certbot
-# can do the second part itself:
+# Run it once TLS is first set up, and again after every renewal.
 #
-#   /etc/letsencrypt/renewal-hooks/deploy/boathub.sh
-#     #!/bin/sh
-#     exec /srv/boathub/server/deploy/install-certs.sh boathub.behringer24.de
+# Two sources, because two things issue certificates and they disagree about
+# names and places:
 #
-# Why a copy rather than mounting /etc/letsencrypt.
+#   acme-companion   <domain>.crt and <domain>.key, in a Docker volume that
+#                    nginx-proxy has mounted. Tried first.
+#   certbot          fullchain.pem and privkey.pem under /etc/letsencrypt/live.
 #
-# privkey.pem is owned by root and readable by nobody else, and the broker runs
-# as an unprivileged user inside its container. Mounting the directory
-# read-only does not change that - the container would still be refused. The
-# alternatives are running the broker as root or loosening the permissions on
-# every key on the host, and a copy that belongs to the broker's own user is
-# better than either.
+# Why a copy rather than mounting the volume into the broker. The private key
+# belongs to root and the broker runs unprivileged inside its container;
+# mounting the volume read-only does not change that, it only makes the refusal
+# read-only too. The alternatives are running the broker as root or loosening
+# permissions on a key that other sites also depend on. A copy owned by the
+# broker's own user is the smaller concession.
 
 set -eu
 
 DOMAIN="${1:?usage: install-certs.sh <domain>}"
-ROOT="${LETSENCRYPT_LIVE:-/etc/letsencrypt/live}"
 
-# Where the certificate actually is.
-#
-# The directory is named after the first name the certificate was issued for,
-# which is not always the name being installed: a wildcard covering the whole
-# domain lives under its own name, and a certificate reissued with extra names
-# keeps the directory of the first one. CERT_DIR skips the guessing:
-#
-#   CERT_DIR=/etc/letsencrypt/live/behringer24.de install-certs.sh boathub.behringer24.de
+# Where acme-companion's certificates can be read from. Any container with the
+# certs volume mounted will do; nginx-proxy has it read-only.
+PROXY_CONTAINER="${PROXY_CONTAINER:-nginx-proxy}"
+PROXY_CERTS_PATH="${PROXY_CERTS_PATH:-/etc/nginx/certs}"
+
+# Where certbot keeps them, if it is certbot. CERT_DIR overrides the guess:
+# the directory is named after the first name a certificate was issued for,
+# which a wildcard's is not.
+ROOT="${LETSENCRYPT_LIVE:-/etc/letsencrypt/live}"
 LIVE="${CERT_DIR:-$ROOT/$DOMAIN}"
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
@@ -42,37 +41,56 @@ CERTS="$HERE/mosquitto/certs"
 # to it because the container has no way to read anything else.
 MOSQUITTO_UID=1883
 
-for f in fullchain.pem privkey.pem; do
-    if [ ! -f "$LIVE/$f" ]; then
-        echo "not found: $LIVE/$f" >&2
-        echo >&2
-        if [ -d "$ROOT" ]; then
-            echo "Certificates this host does have:" >&2
-            ls -1 "$ROOT" 2>/dev/null | sed 's/^/  /' >&2
-            echo >&2
-            echo "If one of those covers $DOMAIN - a wildcard, say - point CERT_DIR at it." >&2
-            echo "\"certbot certificates\" lists which names each one is valid for." >&2
-        else
-            echo "$ROOT does not exist, so certbot is not what manages certificates here." >&2
-            echo "A proxy that handles ACME itself - Caddy, Traefik, acme-companion -" >&2
-            echo "keeps them somewhere of its own, often inside a Docker volume." >&2
-        fi
-        exit 1
-    fi
-done
-
 mkdir -p "$CERTS"
-cp "$LIVE/fullchain.pem" "$CERTS/fullchain.pem"
-cp "$LIVE/privkey.pem" "$CERTS/privkey.pem"
+FOUND=""
+
+# --- acme-companion -----------------------------------------------------
+if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$PROXY_CONTAINER"; then
+    if docker exec "$PROXY_CONTAINER" test -f "$PROXY_CERTS_PATH/$DOMAIN.crt" 2>/dev/null; then
+        docker cp "$PROXY_CONTAINER:$PROXY_CERTS_PATH/$DOMAIN.crt" "$CERTS/fullchain.pem"
+        docker cp "$PROXY_CONTAINER:$PROXY_CERTS_PATH/$DOMAIN.key" "$CERTS/privkey.pem"
+        FOUND="$PROXY_CONTAINER:$PROXY_CERTS_PATH"
+    fi
+fi
+
+# --- certbot ------------------------------------------------------------
+if [ -z "$FOUND" ] && [ -f "$LIVE/fullchain.pem" ] && [ -f "$LIVE/privkey.pem" ]; then
+    cp "$LIVE/fullchain.pem" "$CERTS/fullchain.pem"
+    cp "$LIVE/privkey.pem" "$CERTS/privkey.pem"
+    FOUND="$LIVE"
+fi
+
+if [ -z "$FOUND" ]; then
+    echo "no certificate found for $DOMAIN" >&2
+    echo >&2
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$PROXY_CONTAINER"; then
+        echo "$PROXY_CONTAINER has these:" >&2
+        docker exec "$PROXY_CONTAINER" sh -c "ls -1 $PROXY_CERTS_PATH/*.crt 2>/dev/null" |
+            sed 's|.*/||; s|\.crt$||; s|^|  |' >&2 || echo "  (none)" >&2
+        echo >&2
+        echo "acme-companion issues one per LETSENCRYPT_HOST. If $DOMAIN is not" >&2
+        echo "listed, set BOATHUB_DOMAIN in .env, bring the stack up, and give it" >&2
+        echo "a minute - the name has to resolve to this host first." >&2
+    elif [ -d "$ROOT" ]; then
+        echo "certbot has these:" >&2
+        ls -1 "$ROOT" 2>/dev/null | sed 's/^/  /' >&2
+        echo >&2
+        echo "If one of them covers $DOMAIN - a wildcard, say - point CERT_DIR at it." >&2
+    else
+        echo "Neither $PROXY_CONTAINER nor $ROOT is here, so nothing on this host" >&2
+        echo "is issuing certificates that this script knows how to find." >&2
+    fi
+    exit 1
+fi
 
 chown "$MOSQUITTO_UID:$MOSQUITTO_UID" "$CERTS/fullchain.pem" "$CERTS/privkey.pem"
 chmod 644 "$CERTS/fullchain.pem"
 chmod 600 "$CERTS/privkey.pem"
 
-echo "installed $DOMAIN into $CERTS"
+echo "installed $DOMAIN from $FOUND"
 
 # Mosquitto re-reads its certificate files on SIGHUP, so a renewal costs no
-# downtime and no dropped sessions. If the container is not running - a first
+# downtime and drops no session. If the container is not running - a first
 # install, before the stack is up - there is nothing to reload.
 if docker ps --format '{{.Names}}' | grep -qx boathub-mqtt; then
     docker kill -s HUP boathub-mqtt >/dev/null
