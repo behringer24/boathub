@@ -102,6 +102,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   record written before the clock was known is dated as it is encoded, from the offset
   recovered for that boot - records on flash are never rewritten.
 
+- Status LED brightness halved. It is a comfort setting rather than a power one: averaged over
+  the breathing cycle the light costs some 0.3 mA against a system drawing 52-70 mA, and the
+  WS2812's own controller draws three times that in the dark, where no software setting
+  reaches it.
+
 ### Added
 
 - PlatformIO project for the ESP32-S3 N16R8 in `board/`. PlatformIO ships no board definition for
