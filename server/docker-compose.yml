@@ -67,7 +67,11 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      # Where Grafana answers on the host. Behind a reverse proxy it does not
+      # need to at all - the proxy reaches it over the Docker network - but a
+      # port bound to 127.0.0.1 is worth keeping as a way in that does not
+      # depend on the proxy working.
+      - "${GRAFANA_BIND:-0.0.0.0}:${GRAFANA_PORT:-3000}:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD in .env}
       GF_USERS_ALLOW_SIGN_UP: "false"

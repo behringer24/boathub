@@ -17,10 +17,10 @@
 
 services:
   grafana:
-    ports:
-      # Only from the machine itself. Everything from outside arrives through
-      # the proxy, over TLS.
-      - "127.0.0.1:3000:3000"
+    # No ports entry here on purpose. Compose appends port lists rather than
+    # replacing them, so one named here would be published *alongside* the base
+    # file's, not instead of it. GRAFANA_BIND and GRAFANA_PORT in .env are what
+    # move it.
     environment:
       # Grafana builds redirects and asset links from this. Left at its default
       # it hands a browser that arrived over TLS a link to http://localhost:3000,
