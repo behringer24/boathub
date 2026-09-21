@@ -7,13 +7,19 @@ services:
     container_name: boathub-mqtt
     restart: unless-stopped
     ports:
-      # 1883 is the IANA-registered MQTT port. 8883 is reserved for the TLS
-      # step and is deliberately not published yet.
-      - "1883:1883"
+      # MQTT_BIND decides who can reach the plain listener. On a development
+      # machine "0.0.0.0" lets a board on the LAN connect; on a server facing
+      # the internet it is "127.0.0.1", so that the only way in from outside is
+      # 8883 with TLS. Credentials cross 1883 in the clear.
+      - "${MQTT_BIND:-0.0.0.0}:1883:1883"
+      - "8883:8883"
     volumes:
       # Read-only: the broker never writes here. The passwd file has to exist
       # before the first start - see README.md.
       - ./mosquitto/config:/mosquitto/config:ro
+      # The certificate, put here by deploy/install-certs.sh. The directory may
+      # be empty - the TLS listener stays commented out until it is not.
+      - ./mosquitto/certs:/mosquitto/certs:ro
       - mosquitto-data:/mosquitto/data
       - mosquitto-log:/mosquitto/log
 

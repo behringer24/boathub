@@ -186,10 +186,72 @@ docker compose up -d
 That deletes every measurement, and stops being acceptable the moment there is anything worth
 keeping.
 
+## TLS on 8883
+
+The boat reaches the server over the open internet, across marina Wi-Fi and phone hotspots that
+nobody controls. On 1883 the username and password cross that in the clear, so anything published
+beyond a trusted LAN listens on **8883** instead.
+
+### The certificate comes from the host
+
+Whatever already manages Let's Encrypt on this machine keeps issuing and renewing; the broker only
+borrows the result.
+
+```
+sudo server/deploy/install-certs.sh boathub.behringer24.de
+```
+
+That copies `fullchain.pem` and `privkey.pem` into `server/mosquitto/certs/`, gives them to the
+user the broker runs as, and reloads the broker.
+
+**Why a copy and not a mount.** `privkey.pem` belongs to root and is readable by nobody else, while
+the broker runs unprivileged inside its container - mounting `/etc/letsencrypt` read-only does not
+change that, it only makes the refusal read-only too. The alternatives are running the broker as
+root or loosening the permissions on every key the host holds. A copy owned by the broker's own
+user is the smaller concession.
+
+Renewal needs the same command, which certbot will run itself:
+
+```
+# /etc/letsencrypt/renewal-hooks/deploy/boathub.sh
+#!/bin/sh
+exec /srv/boathub/server/deploy/install-certs.sh boathub.behringer24.de
+```
+
+Mosquitto re-reads its certificate on `SIGHUP`, which the script sends, so a renewal costs no
+downtime and drops no session.
+
+### Then switch the listener on
+
+The TLS block in `mosquitto/config/mosquitto.conf` is commented out on purpose: mosquitto refuses
+to start when a certificate file named in its configuration is missing, and a broker that will not
+start is a worse first experience than one without TLS. Uncomment it once the files are in place,
+and restart.
+
+### Close 1883 from outside
+
+On a server, put this in `.env`:
+
+```
+MQTT_BIND=127.0.0.1
+```
+
+The plain listener then answers only on the machine itself. Everything inside the stack - ingest
+above all - reaches the broker over Docker's own network, where the traffic never leaves the host,
+so nothing inside needs TLS and nothing outside gets the plain port.
+
+### What the board needs
+
+The board validates the server's certificate against a root it carries, and that check needs a
+clock: a wrong date makes a valid certificate look expired or not yet valid. It therefore does not
+attempt a TLS connection before NTP has answered - see [A-005](../docs/design/A-005-server-uplink.md).
+
+8883 is also the port most likely to be blocked by exactly the networks a boat uses. If it turns
+out to be, MQTT over WebSockets on 443 is the fallback, and it is a change on the board rather than
+here.
+
 ## Not yet, but planned
 
-TLS on 8883 once the server is reachable from outside the home network. Until then this belongs on
-a trusted LAN only: on port 1883 the credentials cross the network in the clear.
 
 Device-side buffering (**A-007**): the board stores every aggregate in flash and drains the buffer
 when it finds a connection, so a passage without marina Wi-Fi is recorded rather than lost. The
