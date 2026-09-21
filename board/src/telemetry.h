@@ -13,6 +13,8 @@
 
 #include <Arduino.h>
 
+#include "buffer.h"
+
 namespace telemetry {
 
 // One measured quantity over one window.
@@ -68,17 +70,19 @@ struct Aggregate {
 void begin();
 void loop();
 
-// A closed window, if one is waiting. Taking it clears the slot.
-bool take(Aggregate &out);
-
 // The current state as a one-sample aggregate: n = 1, no extremes. This is
 // what the BOOT button sends and what goes out on connecting, so the chain
 // can be proven without waiting out a whole window.
 Aggregate spot();
 
-// Windows that closed while nothing collected them. Until the buffer exists
-// this is the honest measure of what the uplink lost.
-uint32_t dropped();
+// The stored form. Floats become scaled integers and an empty channel becomes
+// the absent sentinel, so what goes into the buffer and what goes out over the
+// wire cannot drift apart - there is one conversion, used by both.
+void toRecord(const Aggregate &agg, buffer::Record &out);
+
+// This boot's number. Records from an earlier boot cannot be dated from this
+// boot's clock offset, so the encoder has to be able to tell them apart.
+uint16_t bootId();
 
 const char *statusText();
 

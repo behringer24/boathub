@@ -6,6 +6,7 @@
 #include <esp_system.h>
 #include <time.h>
 
+#include "buffer.h"
 #include "config.h"
 #include "net.h"
 #include "telemetry.h"
@@ -30,6 +31,20 @@ const time_t TIME_SANE_AFTER = 1700000000;
 // is what A-007's buffer will delete a stored record on. At QoS 0 there is no
 // answer at all, so a buffer would have to delete on a guess.
 const uint8_t QOS_TELEMETRY = 1;
+
+// Records per message while draining a backlog.
+//
+// Sent one at a time, a day of backlog is 288 round trips, each waiting out a
+// PUBACK over whatever link the boat has. Batching is what decides whether a
+// short window of connectivity is enough to catch up at all. Fifty records is
+// about 9 kB of JSON, comfortably inside what the client will send in one
+// message.
+const size_t BATCH_RECORDS = 50;
+
+// One batch in flight at a time. The cursor is a single position in a single
+// stream, so a second batch could only be the same records again.
+uint16_t batchPacket = 0;
+size_t batchCount = 0;
 
 uint32_t retryDelay = RETRY_MIN_MS;
 uint32_t nextAttempt = 0;
@@ -102,24 +117,11 @@ const char *resetReason() {
 
 bool timeValid() { return time(nullptr) > TIME_SANE_AFTER; }
 
-String isoTime() {
-  const time_t now = time(nullptr);
-  struct tm tm;
-  gmtime_r(&now, &tm);
-  char buf[24];
-  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &tm);
-  return String(buf);
-}
-
 void buildTopics() {
   const String base = "boathub/" + config::get().boatId + "/";
   topicTelemetry = base + "telemetry";
   topicStatus = base + "status";
 }
-
-// Rounded to the sensor's own accuracy. Seven digits of float noise in every
-// message would cost bytes and imply a precision that is not there.
-float round2(float v) { return roundf(v * 100.0f) / 100.0f; }
 
 // One channel becomes one, or three, fields.
 //
@@ -129,68 +131,148 @@ float round2(float v) { return roundf(v * 100.0f) / 100.0f; }
 //
 // A channel with no samples writes nothing at all. On the server "no sensor"
 // and "measured zero" must not look the same.
-void putChannel(JsonDocument &doc, const char *name, const telemetry::Channel &c) {
+void putChannel(JsonObject &o, const char *name, const buffer::StoredChannel &c, float scale) {
   if (!c.has()) return;
 
-  doc[name] = round2(c.mean());
-  if (c.n > 1) {
-    doc[String(name) + "_min"] = round2(c.lo);
-    doc[String(name) + "_max"] = round2(c.hi);
+  o[name] = c.mean / scale;
+  if (c.hasRange()) {
+    o[String(name) + "_min"] = c.lo / scale;
+    o[String(name) + "_max"] = c.hi / scale;
   }
 }
 
-void publish(const telemetry::Aggregate &agg) {
+const char *sourceName(buffer::TimeSource s) {
+  switch (s) {
+    case buffer::TimeSource::Ntp: return "ntp";
+    case buffer::TimeSource::Gps: return "gps";
+    case buffer::TimeSource::Restored: return "restored";
+    default: return "none";
+  }
+}
+
+String isoOf(uint32_t unixSeconds) {
+  const time_t when = (time_t)unixSeconds;
+  struct tm tm;
+  gmtime_r(&when, &tm);
+  char buf[24];
+  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &tm);
+  return String(buf);
+}
+
+// One stored record as one JSON object.
+//
+// This is the only encoder. A live reading goes through it as a batch of one,
+// so a measurement sent immediately and the same measurement drained from
+// flash a week later are byte for byte the same shape on the wire.
+void putRecord(JsonArray &arr, const buffer::Record &r, uint32_t offsetIfUndated) {
+  JsonObject o = arr.add<JsonObject>();
+
+  uint32_t wall = r.tWall;
+  buffer::TimeSource src = r.timeSource;
+
+  // A record written before the clock was known carries no wall time. If the
+  // clock has since been set, the offset recovered for this boot dates it -
+  // as a lower bound, and labelled as one. Records on flash are never
+  // rewritten; this happens as they are encoded.
+  if (wall == 0 && offsetIfUndated > 0 && r.bootId == telemetry::bootId()) {
+    wall = offsetIfUndated + r.tMonoS;
+    src = buffer::TimeSource::Restored;
+  }
+
+  if (wall > 0) o["ts"] = isoOf(wall);
+  o["time_valid"] = (src == buffer::TimeSource::Ntp || src == buffer::TimeSource::Gps);
+  o["time_source"] = sourceName(src);
+
+  o["n"] = r.n;
+  if (r.windowS > 0) o["window_s"] = r.windowS;
+  o["boot_id"] = r.bootId;
+  o["seq"] = r.seq;
+
+  o["uptime_s"] = r.tMonoS;
+  o["heap_free"] = (uint32_t)r.heapKb * 1024;
+  o["rssi_dbm"] = r.rssi;
+  o["reset_reason"] = resetReason();
+  if (buffer::dropped() > 0) o["dropped"] = buffer::dropped();
+
+  putChannel(o, "battery_v", r.ch[buffer::BatteryV], 1000.0f);
+  putChannel(o, "cabin_temp_c", r.ch[buffer::CabinTempC], 100.0f);
+  putChannel(o, "cabin_rh", r.ch[buffer::CabinRh], 10.0f);
+  putChannel(o, "engine_temp_c", r.ch[buffer::EngineTempC], 100.0f);
+  putChannel(o, "bilge_temp_c", r.ch[buffer::BilgeTempC], 100.0f);
+  putChannel(o, "fridge_temp_c", r.ch[buffer::FridgeTempC], 100.0f);
+  putChannel(o, "bilge_level_cm", r.ch[buffer::BilgeLevelCm], 10.0f);
+}
+
+// The offset that dates records written before the clock was known, or 0.
+uint32_t undatedOffset() {
+  if (!timeValid()) return 0;
+  const uint32_t nowMono = millis() / 1000;
+  const uint32_t nowWall = (uint32_t)time(nullptr);
+  return nowWall > nowMono ? nowWall - nowMono : 0;
+}
+
+// Publishes a batch of records as one array. Returns the packet id, or 0.
+uint16_t publishRecords(const buffer::Record *recs, size_t count) {
+  if (count == 0) return 0;
+
   JsonDocument doc;
+  JsonArray arr = doc.to<JsonArray>();
+  const uint32_t offset = undatedOffset();
+  for (size_t i = 0; i < count; i++) putRecord(arr, recs[i], offset);
 
-  if (timeValid()) {
-    doc["ts"] = isoTime();
-    doc["time_valid"] = true;
-  } else {
-    doc["time_valid"] = false;
+  const size_t need = measureJson(doc) + 1;
+  // measureJson is the length the document *wants*. Serialising into something
+  // shorter truncates silently and publishes invalid JSON, which looks like a
+  // healthy system until somebody checks the server.
+  char *payload = (char *)malloc(need);
+  if (!payload) {
+    Serial.printf("[mqtt] no room for a %u byte payload\n", (unsigned)need);
+    return 0;
   }
-
-  doc["n"] = agg.n;
-  if (agg.windowS > 0) doc["window_s"] = agg.windowS;
-
-  // The record's identity, so a message the broker acknowledged but whose
-  // acknowledgement never arrived can be sent again without being counted
-  // twice. Stamped when the record was made, not now.
-  doc["boot_id"] = agg.bootId;
-  doc["seq"] = agg.seq;
-
-  // Diagnostics are read here, at the moment the message is built, rather than
-  // averaged over the window. An averaged uptime would mean nothing.
-  doc["uptime_s"] = millis() / 1000;
-  doc["heap_free"] = ESP.getFreeHeap();
-  doc["rssi_dbm"] = net::rssi();
-  doc["reset_reason"] = resetReason();
-
-  putChannel(doc, "cabin_temp_c", agg.cabinTemp);
-  putChannel(doc, "cabin_rh", agg.cabinRh);
-  putChannel(doc, "engine_temp_c", agg.engineTemp);
-  putChannel(doc, "bilge_temp_c", agg.bilgeTemp);
-  putChannel(doc, "fridge_temp_c", agg.fridgeTemp);
-
-  char payload[512];
-  // measureJson is the length the document *wants*. serializeJson would
-  // silently truncate into a shorter buffer and publish invalid JSON, which
-  // looks like a healthy system until somebody checks the server.
-  if (measureJson(doc) >= sizeof(payload)) {
-    Serial.printf("[mqtt] payload too large: %u bytes\n", (unsigned)measureJson(doc));
-    return;
-  }
-  const size_t n = serializeJson(doc, payload, sizeof(payload));
+  const size_t n = serializeJson(doc, payload, need);
 
   const uint16_t id = mqtt.publish(topicTelemetry.c_str(), QOS_TELEMETRY, /*retain=*/false,
                                    reinterpret_cast<const uint8_t *>(payload), n);
   if (id == 0) {
-    // Never silent: a message that never left looks exactly like a healthy
-    // system until somebody checks the server.
-    Serial.printf("[mqtt] publish rejected, %u bytes\n", (unsigned)n);
-    return;
+    Serial.printf("[mqtt] publish rejected, %u records, %u bytes\n", (unsigned)count, (unsigned)n);
+  } else {
+    pendingAdd(id);
+    if (count == 1) {
+      Serial.printf("[mqtt] %s %s\n", topicTelemetry.c_str(), payload);
+    } else {
+      Serial.printf("[mqtt] %s %u records, %u bytes\n", topicTelemetry.c_str(), (unsigned)count,
+                    (unsigned)n);
+    }
   }
-  pendingAdd(id);
-  Serial.printf("[mqtt] %s %s\n", topicTelemetry.c_str(), payload);
+  free(payload);
+  return id;
+}
+
+// The live reading: what the boat is doing now, as a batch of one.
+void publishSpot() {
+  buffer::Record r;
+  telemetry::toRecord(telemetry::spot(), r);
+  publishRecords(&r, 1);
+}
+
+// One batch of the backlog, if there is any and none is already in flight.
+//
+// The cursor does not move here. It moves in onPublished, when the broker has
+// said it has the records - which is the whole reason the buffer can delete
+// anything at all.
+void drainStep() {
+  if (batchPacket != 0) return;
+  if (buffer::pending() == 0) return;
+
+  static buffer::Record recs[BATCH_RECORDS];
+  const size_t got = buffer::peek(recs, BATCH_RECORDS);
+  if (got == 0) return;
+
+  const uint16_t id = publishRecords(recs, got);
+  if (id == 0) return;
+
+  batchPacket = id;
+  batchCount = got;
 }
 
 void onConnected(bool sessionPresent) {
@@ -206,9 +288,13 @@ void onConnected(bool sessionPresent) {
   const uint16_t id = mqtt.publish(topicStatus.c_str(), QOS_TELEMETRY, /*retain=*/true, "online");
   if (id != 0) pendingAdd(id);
 
-  // A spot reading straight away. Waiting out a five minute window before the
-  // first message would make a working link look like a broken one.
-  publish(telemetry::spot());
+  // A spot reading straight away, before any backlog.
+  //
+  // This looks like a detail and is not. A window of connectivity may be
+  // minutes; spent oldest-first it goes entirely on three-day-old cabin
+  // temperatures, and the one question worth answering - what is the boat
+  // doing right now - is still unanswered when the window closes.
+  publishSpot();
 }
 
 void onDisconnected(espMqttClientTypes::DisconnectReason reason) {
@@ -224,14 +310,32 @@ void onDisconnected(espMqttClientTypes::DisconnectReason reason) {
 
   // Whatever was in flight died with the session. Without a clean session the
   // broker would hold it for us; the board deliberately does not ask for that
-  // - see begin().
+  // - see begin(). The batch is simply unsent: the cursor never moved, so the
+  // next connection reads the same records again.
   pendingClear();
+  batchPacket = 0;
+  batchCount = 0;
 
   Serial.printf("[mqtt] disconnected: %s (%s)\n", status,
                 espMqttClientTypes::disconnectReasonToString(reason));
 }
 
-void onPublished(uint16_t packetId) { pendingAck(packetId); }
+void onPublished(uint16_t packetId) {
+  pendingAck(packetId);
+
+  if (packetId != batchPacket) return;
+
+  // The broker has it. Only now do the records stop being the board's problem,
+  // and the wall time goes to NVS with the cursor so the next boot starts from
+  // a floor rather than from 1970.
+  const uint32_t wallNow = timeValid() ? (uint32_t)time(nullptr) : 0;
+  buffer::commit(batchCount, wallNow);
+  Serial.printf("[mqtt] %u records released, %lu still waiting\n", (unsigned)batchCount,
+                (unsigned long)buffer::pending());
+
+  batchPacket = 0;
+  batchCount = 0;
+}
 
 void beginConnect() {
   const Config &c = config::get();
@@ -311,11 +415,10 @@ void loop() {
   // measurement short.
   if (publishRequested) {
     publishRequested = false;
-    publish(telemetry::spot());
+    publishSpot();
   }
 
-  telemetry::Aggregate agg;
-  if (telemetry::take(agg)) publish(agg);
+  drainStep();
 }
 
 bool connected() { return mqtt.connected(); }

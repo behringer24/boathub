@@ -1,23 +1,63 @@
 #include "telemetry.h"
 
 #include <Preferences.h>
+#include <esp_sntp.h>
+#include <sys/time.h>
+#include <time.h>
 
+#include "buffer.h"
 #include "config.h"
+#include "net.h"
 #include "ds18b20.h"
 #include "sht31.h"
 
 namespace {
 
 telemetry::Aggregate filling;  // the window being filled
-telemetry::Aggregate ready;  // a closed window waiting to be collected
 
 uint32_t windowStart = 0;
-uint32_t droppedWindows = 0;
+
+// Anything later than 2023 means the clock has been set; the RTC starts at
+// 1970 and there is no battery on this board.
+const time_t TIME_SANE_AFTER = 1700000000;
 
 const char *NVS_NS = "boathub-seq";
-uint16_t bootId = 0;
+uint16_t bootNumber = 0;
 uint32_t nextSeq = 0;
+
+// Whether the clock has ever been set by NTP this boot, and whether it was
+// started from the floor the last run left behind.
+//
+// The flag is set from a callback rather than polled: sntp_get_sync_status()
+// reports COMPLETED only in the moment of the sync and then goes back, so
+// anything that asks a second later gets the wrong answer.
+volatile bool ntpSynced = false;
+bool clockFromFloor = false;
+
+void onTimeSync(struct timeval *) { ntpSynced = true; }
+
+bool clockSane() { return time(nullptr) > TIME_SANE_AFTER; }
+
+// Which clock produced the timestamp on a record written now.
+buffer::TimeSource timeSource() {
+  if (ntpSynced) return buffer::TimeSource::Ntp;
+  if (clockFromFloor && clockSane()) return buffer::TimeSource::Restored;
+  return buffer::TimeSource::None;
+}
 char state[40] = "starting";
+
+// One channel into its stored form. An empty channel keeps the absent
+// sentinel rather than becoming a zero, and a channel with a single sample
+// keeps its mean and no range - the same distinction the JSON and the database
+// make.
+void store(buffer::StoredChannel &out, const telemetry::Channel &c, float scale) {
+  if (!c.has()) return;
+  out.mean = (int16_t)lroundf(c.mean() * scale);
+  if (c.n > 1) {
+    out.lo = (int16_t)lroundf(c.lo * scale);
+    out.hi = (int16_t)lroundf(c.hi * scale);
+  }
+}
 
 // Collect whatever the sensors have produced since the last pass.
 //
@@ -92,10 +132,29 @@ void begin() {
   // which is some 180 years of daily restarts.
   Preferences store;
   store.begin(NVS_NS, /*readOnly=*/false);
-  bootId = store.getUShort("boot", 0) + 1;
-  store.putUShort("boot", bootId);
+  bootNumber = store.getUShort("boot", 0) + 1;
+  store.putUShort("boot", bootNumber);
   store.end();
-  Serial.printf("[telemetry] boot %u\n", bootId);
+  Serial.printf("[telemetry] boot %u\n", bootNumber);
+
+  // Registered before uplink::begin() calls configTime, which is the only
+  // reason the order in setup() matters here.
+  sntp_set_time_sync_notification_cb(onTimeSync);
+
+  // A floor beats 1970. The last run wrote the wall time it knew beside its
+  // cursor; starting from that, a record of this boot is dated to within the
+  // length of the outage - seconds after a watchdog reset, and only genuinely
+  // wrong after a long lay-up. Records say `restored` so the server knows the
+  // difference between a timestamp and a lower bound.
+  const uint32_t floorWall = buffer::restoredFloor();
+  if (floorWall > 0 && !clockSane()) {
+    struct timeval tv;
+    tv.tv_sec = (time_t)floorWall;
+    tv.tv_usec = 0;
+    settimeofday(&tv, nullptr);
+    clockFromFloor = true;
+    Serial.printf("[telemetry] clock restored to a floor of %lu\n", (unsigned long)floorWall);
+  }
 
   const uint32_t now = millis();
   windowStart = now;
@@ -113,35 +172,26 @@ void loop() {
 
   if ((now - windowStart) < windowMs) return;
 
-  // Close the window.
+  // Close the window and hand it to the buffer. Whether the uplink happens to
+  // be connected is none of this module's business: a window goes to flash,
+  // and the drain sends it whenever there is somewhere to send it.
   filling.windowS = (now - windowStart) / 1000;
   filling.n = countFor(filling);
   filling.valid = true;
+  filling.bootId = bootNumber;
+  filling.seq = nextSeq++;
 
-  if (ready.valid) {
-    // Nothing collected the previous one. Keep the newer - without a buffer
-    // the fresher state is the more useful of the two - and say so, because a
-    // window quietly disappearing is the failure this whole design is against.
-    droppedWindows++;
-    Serial.printf("[telemetry] window dropped, %lu total - uplink was not ready\n",
-                  (unsigned long)droppedWindows);
+  buffer::Record rec;
+  telemetry::toRecord(filling, rec);
+  if (!buffer::append(rec)) {
+    Serial.println("[telemetry] window could not be stored");
   }
-  ready = filling;
-  ready.bootId = bootId;
-  ready.seq = nextSeq++;
 
-  snprintf(state, sizeof(state), "%u samples/window, %lu dropped", ready.n,
-           (unsigned long)droppedWindows);
+  snprintf(state, sizeof(state), "%u samples/window, %lu waiting", filling.n,
+           (unsigned long)buffer::pending());
 
   filling = Aggregate{};
   windowStart = now;
-}
-
-bool take(Aggregate &out) {
-  if (!ready.valid) return false;
-  out = ready;
-  ready = Aggregate{};
-  return true;
 }
 
 Aggregate spot() {
@@ -149,13 +199,43 @@ Aggregate spot() {
   snapshotInto(one);
   one.n = countFor(one);
   one.windowS = 0;
-  one.bootId = bootId;
+  one.bootId = bootNumber;
   one.seq = nextSeq++;
   one.valid = true;
   return one;
 }
 
-uint32_t dropped() { return droppedWindows; }
+// The stored form.
+//
+// One conversion for both paths, because a live reading and a record coming
+// back off flash have to arrive at the server identically. Doing it twice
+// would be two places for a scale factor to be wrong in.
+void toRecord(const Aggregate &agg, buffer::Record &out) {
+  out = buffer::Record{};
+
+  out.seq = agg.seq;
+  out.bootId = agg.bootId;
+  out.tMonoS = millis() / 1000;
+  out.windowS = (uint16_t)agg.windowS;
+  out.n = agg.n > 255 ? 255 : (uint8_t)agg.n;
+  out.spot = (agg.windowS == 0);
+
+  out.timeSource = timeSource();
+  const time_t wall = time(nullptr);
+  out.tWall = clockSane() ? (uint32_t)wall : 0;
+
+  out.rssi = (int8_t)net::rssi();
+  const uint32_t heap = ESP.getFreeHeap() / 1024;
+  out.heapKb = heap > 65535 ? 65535 : (uint16_t)heap;
+
+  store(out.ch[buffer::CabinTempC], agg.cabinTemp, 100.0f);
+  store(out.ch[buffer::CabinRh], agg.cabinRh, 10.0f);
+  store(out.ch[buffer::EngineTempC], agg.engineTemp, 100.0f);
+  store(out.ch[buffer::BilgeTempC], agg.bilgeTemp, 100.0f);
+  store(out.ch[buffer::FridgeTempC], agg.fridgeTemp, 100.0f);
+}
+
+uint16_t bootId() { return bootNumber; }
 
 const char *statusText() { return state; }
 
