@@ -28,6 +28,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   than around a blocking call. Outstanding packet ids are tracked and their round-trip time logged,
   which is the hook A-007 replaces with advancing the read cursor.
 
+- The serial status line names the probes as well as the cabin sensor, and distinguishes a
+  probe that was never found from one that enumerated and has gone quiet - `-` against `?`.
+  The line predates every sensor and only the SHT31 had been folded into it, so standing at
+  the box told you the cabin climate and nothing about the three probes beside it.
+
 ### Added
 
 - PlatformIO project for the ESP32-S3 N16R8 in `board/`. PlatformIO ships no board definition for
