@@ -117,6 +117,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 - Only one MQTT client is built. Plain and TLS are different types in the library and each carries
   its receive buffer as a member, so the unused one is not constructed at all.
 
+- A clock that survived a soft reset is reported as `restored` rather than `none`. The RTC domain
+  keeps running across a watchdog or a restart from the configuration portal, so the time is real
+  and merely unverified - but records carried a perfectly good timestamp labelled as having no
+  clock at all, which the server has no way to resolve.
+
 ### Added
 
 - PlatformIO project for the ESP32-S3 N16R8 in `board/`. PlatformIO ships no board definition for
