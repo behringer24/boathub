@@ -58,6 +58,15 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   measurements queued for a session that never came back, and the broker's log recorded no
   further attempt from the service at all.
 
+- A telemetry message is a **JSON array of records**. Backfill from the board's buffer and a
+  live reading then have one shape, and ingest needs one code path rather than two. A single
+  object is still accepted - a board sends what its firmware knows how to send.
+- The whole batch is one transaction: a redelivery finds either every record already claimed
+  or none of them, never half.
+- `time_source` says which clock produced a timestamp - `ntp`, `gps`, `restored` or `none`.
+  `time_valid` stays the field to filter on; this one turns "that timestamp looks odd" into a
+  diagnosis.
+
 ### Added
 
 - PlatformIO project for the ESP32-S3 N16R8 in `board/`. PlatformIO ships no board definition for
