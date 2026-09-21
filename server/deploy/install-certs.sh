@@ -9,7 +9,9 @@
 # names and places:
 #
 #   acme-companion   <domain>.crt and <domain>.key, in a Docker volume that
-#                    nginx-proxy has mounted. Tried first.
+#                    nginx-proxy has mounted. Both are symlinks into a
+#                    <domain>/ directory beside them, which is why the copy
+#                    has to follow them. Tried first.
 #   certbot          fullchain.pem and privkey.pem under /etc/letsencrypt/live.
 #
 # Why a copy rather than mounting the volume into the broker. The private key
@@ -47,8 +49,12 @@ FOUND=""
 # --- acme-companion -----------------------------------------------------
 if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$PROXY_CONTAINER"; then
     if docker exec "$PROXY_CONTAINER" test -f "$PROXY_CERTS_PATH/$DOMAIN.crt" 2>/dev/null; then
-        docker cp "$PROXY_CONTAINER:$PROXY_CERTS_PATH/$DOMAIN.crt" "$CERTS/fullchain.pem"
-        docker cp "$PROXY_CONTAINER:$PROXY_CERTS_PATH/$DOMAIN.key" "$CERTS/privkey.pem"
+        # -L follows the symlink. Without it docker cp copies the link
+        # itself, and what lands on the host points at a directory that only
+        # exists inside the container - a file that reports success and is not
+        # there.
+        docker cp -L "$PROXY_CONTAINER:$PROXY_CERTS_PATH/$DOMAIN.crt" "$CERTS/fullchain.pem"
+        docker cp -L "$PROXY_CONTAINER:$PROXY_CERTS_PATH/$DOMAIN.key" "$CERTS/privkey.pem"
         FOUND="$PROXY_CONTAINER:$PROXY_CERTS_PATH"
     fi
 fi
