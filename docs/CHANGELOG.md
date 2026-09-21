@@ -82,6 +82,26 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   proven on hardware before anything depends on it. It refuses to run while records are
   waiting, because committing them there would discard measurements that were never sent.
 
+- **Store and forward is live.** A closed window goes to flash, not to a single slot that the
+  next one overwrites, and the drain sends it whenever there is somewhere to send it. An
+  evening with the server switched off now costs nothing; so does a passage without marina
+  Wi-Fi.
+- On connecting, a **spot reading goes out before any backlog**. A window of connectivity may
+  be minutes, and spent oldest-first it is spent entirely on three-day-old cabin temperatures
+  while the one question worth answering - what is the boat doing right now - is still
+  unanswered when the window closes.
+- The backlog drains in batches of fifty as one array, and **the cursor moves only on the
+  PUBACK**. A batch that is never acknowledged was never read: the next connection sends the
+  same records again. One batch is in flight at a time, because the cursor is one position in
+  one stream and a second batch could only repeat the first.
+- One encoder for both paths. A live reading is a batch of one, so a measurement sent
+  immediately and the same measurement drained from flash a week later are the same shape on
+  the wire.
+- The clock starts from the floor the last run stored beside its cursor rather than from
+  1970, and records say `restored` so the server can tell a timestamp from a lower bound. A
+  record written before the clock was known is dated as it is encoded, from the offset
+  recovered for that boot - records on flash are never rewritten.
+
 ### Added
 
 - PlatformIO project for the ESP32-S3 N16R8 in `board/`. PlatformIO ships no board definition for

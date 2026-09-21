@@ -9,6 +9,7 @@
 
 #include <Arduino.h>
 
+#include "buffer.h"
 #include "button.h"
 #include "config.h"
 #include "ds18b20.h"
@@ -80,6 +81,7 @@ void setup() {
   Serial.printf("boat id: %s\n", config::get().boatId.c_str());
 
   net::begin();
+  buffer::begin();
   sht31::begin();
   ds18b20::begin();
   telemetry::begin();
