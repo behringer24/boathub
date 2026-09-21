@@ -31,16 +31,27 @@ The broker denies anonymous access, so the password file has to exist **before t
 Run this once and pick your own password when prompted:
 
 ```
-docker run --rm -it --user 1883:1883 -v "${PWD}/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 mosquitto_passwd -c /mosquitto/config/passwd boathub
+docker run --rm -it -v "${PWD}/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 mosquitto_passwd -c /mosquitto/config/passwd boathub
+chown 1883:1883 mosquitto/config/passwd
 ```
 
 `boathub` is the username. The file holds only a hash, but it is still excluded from git.
 
-**`--user 1883:1883` is not optional.** `mosquitto_passwd` creates the file with mode 0600 owned by
-whoever ran it. The broker itself drops to the unprivileged `mosquitto` user, uid 1883, and cannot
-read a file owned by root - it starts, fails with `Unable to open pwfile`, and restarts in a loop
-that reads like a broken image rather than a permissions problem. Creating the file as 1883 in the
-first place avoids it.
+**The second command is not optional.** `mosquitto_passwd` creates the file owned by whoever ran it,
+which here is root. The broker drops to the unprivileged `mosquitto` user, uid 1883, and cannot read
+a root-owned file: it starts, fails with `Unable to open pwfile`, and restarts in a loop that reads
+like a broken image rather than a permissions problem.
+
+Running the container as `--user 1883:1883` in the first place looks tidier and only works where the
+directory itself is writable by that uid. On a host where the repository was checked out as root it
+is not, and the attempt fails before it can ask for a password:
+
+```
+Error: Unable to open file /mosquitto/config/passwd for writing. Permission denied.
+```
+
+So: create it as whoever can, then hand it over. What matters is who owns the file at the end, not
+who made it.
 
 If a file created the wrong way already exists, hand it over instead of retyping the password:
 
