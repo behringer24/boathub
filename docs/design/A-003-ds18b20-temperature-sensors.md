@@ -29,7 +29,8 @@ This is built on USB power, on a breadboard, with no 12 V anywhere - see
 All three could share a single 1-Wire bus. Three separate buses cost three GPIOs and buy:
 
 - **fault isolation** - a shorted or broken cable takes out one reading, not all three. That is the
-  guardrail from CLAUDE.md made physical.
+  rule that a broken sensor must not take the system down, made physical rather than left to the
+  firmware.
 - **no addressing ambiguity** - one device per bus means a Skip-ROM read always talks to the
   intended sensor, and you cannot confuse two probes that were enumerated in a different order
   after a reboot.

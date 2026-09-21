@@ -102,6 +102,9 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
 - **No autopilot commands from the internet.** Control lives on the local on-board Wi-Fi only; the
   server receives telemetry.
 - No Wi-Fi or server passwords in source code. Configuration lives in NVS/Preferences.
+- **Sensor and network faults are decoupled.** A broken probe, a silent broker or a marina access
+  point that vanishes may cost its own reading or its own connection, and nothing else. The
+  watchdog is there for what gets past that.
 - The boat is permanently on shore power in the marina, so the BoatHub runs continuously. On the
   2 x 100 Ah AGM bank (~100 Ah usable, no solar or wind) it would still draw 40-60 Ah per month on
   its own, so a **low-voltage backstop stays mandatory** for the case shore power fails and stays
@@ -126,7 +129,6 @@ docs/
 ├── reference/          source documents (project guide PDF)
 ```
 
-Conventions for working in this repository: [CLAUDE.md](CLAUDE.md)
 
 ## Where to start
 
