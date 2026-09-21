@@ -174,6 +174,26 @@ in the Grafana volume and are **not** written back to the JSON files, so a provi
 discards them. Anything worth keeping has to be exported back into
 `grafana/provisioning/dashboards/json/`.
 
+### The reconnect is ours, not the library's
+
+The MQTT client has an automatic reconnect and ingest switches it off. Under Docker a stopped
+container leaves the embedded DNS, so the broker's name stops resolving entirely:
+
+```
+dial tcp: lookup mosquitto on 127.0.0.11:53: no such host
+```
+
+That is a different failure from a refused connection, and the library treats it as final: it stops
+trying and says nothing, while measurements queue up for a session that never comes back. Nothing
+in the service looks wrong from the outside - it is connected to the database, it has not crashed,
+and its log simply ends.
+
+So ingest drives its own connection instead: every few seconds, ask whether the connection is open
+and connect if it is not. The check is **`IsConnectionOpen`**, not `IsConnected` - the latter
+answers optimistically while a reconnect is merely intended. Failures are logged loudly for the
+first few attempts and then occasionally, so a broker that is down overnight neither buries the log
+nor disappears from it.
+
 ## 6. Failure modes
 
 | Case | Detection | Reaction |
@@ -181,7 +201,7 @@ discards them. Anything worth keeping has to be exported back into
 | Database not up yet | connection refused | ingest retries with backoff and acknowledges nothing, so the broker holds the messages and redelivers them |
 | Insert fails | `pool.Exec` returns an error | retried briefly, then left unacknowledged for redelivery. Never acknowledged-and-dropped |
 | Ingest restarting | - | the broker queues for its persistent session; nothing is lost across a redeploy |
-| Broker restarts | subscription drops | reconnect and resubscribe; `status` is retained, so the state is re-learned immediately |
+| Broker restarts | subscription drops | ingest reconnects and resubscribes; `status` is retained, so the state is re-learned immediately. **Reconnecting is supervised by ingest itself** - see below |
 | Malformed payload | JSON parse fails | log the raw message, drop it, carry on |
 | Field the server does not know | absent from the schema | ignored; add the column when the sensor is real |
 | Disk fills | writes fail | with tens of MB a year this is not a realistic failure, but ingest must log and keep retrying rather than exit |
@@ -205,6 +225,9 @@ medium, and a restore that has actually been tried once.
 - [ ] `ts` is null on the first message after a cold start and filled once NTP has synced
 - [ ] A sensor field that is not sent stays null rather than becoming 0
 - [ ] Stopping the database does not kill ingest; it recovers on its own when the database returns
+- [ ] **Stop the broker, wait, start it again: ingest comes back without being restarted.** The
+      broker's own log is the place to check it - a client that has given up silently looks exactly
+      like one that has nothing to say
 - [ ] A deliberately malformed payload is logged and does not stop ingest
 - [ ] Powering the board down writes an `offline` row to `boat_status`
 - [ ] Grafana shows the heartbeat without any manual data source setup

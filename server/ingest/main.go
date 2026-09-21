@@ -264,9 +264,10 @@ func main() {
 		SetClientID(env("MQTT_CLIENT_ID", "boathub-ingest")).
 		SetUsername(env("MQTT_USER", "")).
 		SetPassword(env("MQTT_PASS", "")).
-		SetAutoReconnect(true).
-		SetConnectRetry(true).
-		SetConnectRetryInterval(5 * time.Second).
+		// Reconnecting is supervised here rather than left to the library -
+		// see reconnectLoop.
+		SetAutoReconnect(false).
+		SetConnectRetry(false).
 		SetKeepAlive(30 * time.Second).
 		// A persistent session. While this service is down the broker holds
 		// messages for it instead of dropping them, which is what makes a
@@ -297,13 +298,55 @@ func main() {
 	}
 
 	client := mqtt.NewClient(opts)
-	if tok := client.Connect(); tok.Wait() && tok.Error() != nil {
-		log.Printf("initial broker connect failed, retrying in background: %v", tok.Error())
-	}
+	go reconnectLoop(ctx, client)
 
 	<-ctx.Done()
 	log.Println("shutting down")
 	client.Disconnect(500)
+}
+
+// Keeps the broker connection up, and says so when it cannot.
+//
+// The library has an automatic reconnect of its own and it is deliberately not
+// used. When the broker was restarted underneath a live connection it stayed
+// down silently: the broker's own log recorded no further connection attempt
+// from this service at all, while measurements queued up for a session that
+// never came back. A telemetry service that stops listening without saying so
+// is worse than one that never started.
+//
+// So the connection is driven from here, the way the board drives its own:
+// ask whether it is open, and if it is not, connect. IsConnectionOpen rather
+// than IsConnected, because the latter answers optimistically while a
+// reconnect is merely intended.
+func reconnectLoop(ctx context.Context, client mqtt.Client) {
+	const interval = 5 * time.Second
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	attempts := 0
+	for {
+		if !client.IsConnectionOpen() {
+			attempts++
+			tok := client.Connect()
+			if tok.WaitTimeout(10*time.Second) && tok.Error() != nil {
+				// Loud at first, then occasional. A broker that is down for a
+				// night must not bury everything else in the log, and a broker
+				// that is down at all must not be invisible.
+				if attempts <= 3 || attempts%60 == 0 {
+					log.Printf("broker connect failed, attempt %d: %v", attempts, tok.Error())
+				}
+			} else {
+				attempts = 0
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
 }
 
 func onTelemetry(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {

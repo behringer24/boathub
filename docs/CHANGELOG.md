@@ -51,6 +51,13 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   `db/init` only runs on a fresh data directory, so until now a change meant discarding every
   measurement. Migrations are written to survive being run twice.
 
+- Ingest supervises its own broker connection instead of leaving it to the client library's
+  automatic reconnect. Under Docker a stopped container leaves the embedded DNS, so the
+  broker's name stops resolving rather than refusing a connection - and the library treats
+  that as final, stops trying and says nothing. Observed once for twenty minutes while
+  measurements queued for a session that never came back, and the broker's log recorded no
+  further attempt from the service at all.
+
 ### Added
 
 - PlatformIO project for the ESP32-S3 N16R8 in `board/`. PlatformIO ships no board definition for
