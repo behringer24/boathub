@@ -29,8 +29,9 @@ to the self-hosted server.
 
 Two constraints that bite late if ignored:
 
-- **PubSubClient's default buffer is 256 bytes** and the telemetry JSON below is around 250. Call
-  `setBufferSize()`, or messages are silently dropped as the payload grows.
+- **The telemetry payload grows with every sensor.** Measure it against its buffer before
+  serialising, or a message that outgrew the buffer is published truncated and invalid rather than
+  refused.
 - **NTP must sync before the first MQTT connect.** TLS certificate validation fails on a wrong
   clock. NTP runs over UDP and needs no TLS, so this is an ordering problem, not a circular one.
 

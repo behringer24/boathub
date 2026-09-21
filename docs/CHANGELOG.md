@@ -16,6 +16,18 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ## [Unreleased]
 
+### Changed
+
+- MQTT client is **espMqttClient** rather than PubSubClient, and telemetry publishes at **QoS 1**.
+  The broker now answers every message with a PUBACK, which is what the store-and-forward buffer in
+  A-007 will delete a stored record on - at QoS 0 there was no answer at all, so a buffer would have
+  had to delete on a guess. The client runs from `loop()` rather than its own task
+  (`UseInternalTask::NO`), so an acknowledgement arrives in the task that will own the filesystem
+  and no part of the buffer needs a mutex. Connecting is asynchronous now: `connect()` starts the
+  attempt and the outcome arrives through callbacks, so the backoff sits in `onDisconnect` rather
+  than around a blocking call. Outstanding packet ids are tracked and their round-trip time logged,
+  which is the hook A-007 replaces with advancing the read cursor.
+
 ### Added
 
 - PlatformIO project for the ESP32-S3 N16R8 in `board/`. PlatformIO ships no board definition for
@@ -110,10 +122,8 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 - Design **A-007**: the board buffers every aggregate in LittleFS and drains it when a connection
   exists, so a passage without marina Wi-Fi is recorded rather than lost. Segment files with
   fixed 64-byte records, a reserved share so track points cannot evict temperature history, and a
-  drain that sends the current state first and the backlog second. Not implemented yet, and it
-  surfaced a blocker: **PubSubClient publishes at QoS 0 only**, so the board gets no acknowledgement
-  and cannot know when a buffered record is safe to delete. The MQTT client has to be replaced
-  before any of it is built.
+  drain that sends the current state first and the backlog second. Not implemented yet; the QoS 1
+  publisher it depends on is.
 - `server/ingest`: a Go service that subscribes to the broker and writes rows. It ignores fields it
   does not know so newer firmware cannot stop it, drops malformed payloads with a log line rather
   than exiting, and retries broker and database independently.
