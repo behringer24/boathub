@@ -23,7 +23,18 @@
 set -eu
 
 DOMAIN="${1:?usage: install-certs.sh <domain>}"
-LIVE="${LETSENCRYPT_LIVE:-/etc/letsencrypt/live}/$DOMAIN"
+ROOT="${LETSENCRYPT_LIVE:-/etc/letsencrypt/live}"
+
+# Where the certificate actually is.
+#
+# The directory is named after the first name the certificate was issued for,
+# which is not always the name being installed: a wildcard covering the whole
+# domain lives under its own name, and a certificate reissued with extra names
+# keeps the directory of the first one. CERT_DIR skips the guessing:
+#
+#   CERT_DIR=/etc/letsencrypt/live/behringer24.de install-certs.sh boathub.behringer24.de
+LIVE="${CERT_DIR:-$ROOT/$DOMAIN}"
+
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 CERTS="$HERE/mosquitto/certs"
 
@@ -34,7 +45,18 @@ MOSQUITTO_UID=1883
 for f in fullchain.pem privkey.pem; do
     if [ ! -f "$LIVE/$f" ]; then
         echo "not found: $LIVE/$f" >&2
-        echo "Is the certificate for $DOMAIN issued, and is this the right host?" >&2
+        echo >&2
+        if [ -d "$ROOT" ]; then
+            echo "Certificates this host does have:" >&2
+            ls -1 "$ROOT" 2>/dev/null | sed 's/^/  /' >&2
+            echo >&2
+            echo "If one of those covers $DOMAIN - a wildcard, say - point CERT_DIR at it." >&2
+            echo "\"certbot certificates\" lists which names each one is valid for." >&2
+        else
+            echo "$ROOT does not exist, so certbot is not what manages certificates here." >&2
+            echo "A proxy that handles ACME itself - Caddy, Traefik, acme-companion -" >&2
+            echo "keeps them somewhere of its own, often inside a Docker volume." >&2
+        fi
         exit 1
     fi
 done
