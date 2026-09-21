@@ -122,7 +122,14 @@ void describe() {
 namespace buffer {
 
 bool begin() {
-  if (!LittleFS.begin(/*formatOnFail=*/true)) {
+  // The partition label, spelled out. In partitions.csv the entry is named
+  // "littlefs" and its *subtype* is spiffs - the subtype is what the ESP-IDF
+  // partition table calls this kind of storage, and it is not the name. The
+  // Arduino driver looks up by name and defaults to "spiffs", so leaving this
+  // out finds nothing at all:
+  //
+  //   E esp_littlefs: partition "spiffs" could not be found
+  if (!LittleFS.begin(/*formatOnFail=*/true, "/littlefs", 10, "littlefs")) {
     snprintf(state, sizeof(state), "filesystem unavailable");
     Serial.println("[buffer] LittleFS would not mount - buffering is off");
     return false;

@@ -34,7 +34,7 @@ One code path, and being offline stops being a mode.
 
 | | |
 |---|---|
-| LittleFS partition | **6 MB** (`0x5E0000`), already in `partitions.csv` and `platformio.ini` |
+| LittleFS partition | **6 MB** (`0x5E0000`), already in `partitions.csv` and `platformio.ini`. It is **named** `littlefs`; `spiffs` is its subtype, which is what the partition table calls this kind of storage and is not a name. `LittleFS.begin()` looks up by name and defaults to `"spiffs"`, so the label has to be passed or the mount finds nothing |
 | PSRAM | 8 MB, so RAM buffering before a flash write costs nothing |
 | Aggregate | 5 min window, measured every 10 s - [A-005](A-005-server-uplink.md) |
 
