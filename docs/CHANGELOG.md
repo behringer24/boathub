@@ -67,6 +67,21 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   `time_valid` stays the field to filter on; this one turns "that timestamp looks odd" into a
   diagnosis.
 
+- `buffer`: the store-and-forward storage layer. Fixed 64-byte records in segment files of
+  1024, so record n sits at offset n x 64 - no index, no scanning, and a torn tail is dropped
+  by integer division rather than corrupting what is behind it. Releasing storage is one
+  `remove()` of a drained segment instead of rewriting a file from the front. Channels are
+  scaled into 16 bits with a sentinel for absent, never a zero, so the database's rule that
+  "no sensor" and "measured zero" differ survives the round trip. A quota of 1 MB - some 55
+  days - evicts the oldest segment and counts what that cost.
+- The cursor lives in NVS and is written per acknowledged batch, not per record. The last
+  known wall time goes with it, so the next boot starts from a floor rather than from 1970.
+- `bufcheck` build environment: exercises the buffer on the real filesystem - append, read
+  back field by field, confirm peek does not consume, commit, and check the cursor survives a
+  restart. The buffer is the one module whose failures are invisible from outside, so it is
+  proven on hardware before anything depends on it. It refuses to run while records are
+  waiting, because committing them there would discard measurements that were never sent.
+
 ### Added
 
 - PlatformIO project for the ESP32-S3 N16R8 in `board/`. PlatformIO ships no board definition for
