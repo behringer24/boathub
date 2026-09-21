@@ -188,6 +188,30 @@ length the document wants; `serializeJson` into something shorter truncates sile
 invalid JSON, which looks like a healthy system until somebody reads the table. The firmware
 refuses to publish in that case and says so on the serial port.
 
+### A failed connect stalls the loop for three seconds
+
+The MQTT client hands the TCP connect to a `WiFiClient`, whose default timeout
+is three seconds, and there is no supported way to change it: the client
+library's own `setTimeout` is the interval for retransmitting unacknowledged
+packets and never reaches the transport.
+
+So while the broker is unreachable, every retry stops `loop()` for three
+seconds - no sampling, no configuration portal, and a status LED that holds
+whatever it was showing. Measured against a successful connect on a local
+network, which takes **34 to 52 ms**, the limit is almost entirely dead time.
+
+**It is left alone deliberately.** With the buffer in [A-007](A-007-store-and-forward.md)
+a window closing during that stall is stored rather than lost, so the only
+measurable cost is one sample fewer in the window that contains a retry - and
+that only while the link is already down. Shortening it would mean reaching
+into the library's transport, and the setter takes whole seconds and also
+changes the socket's receive timeout: an untested change to the path every
+measurement travels, bought for two seconds in a state where nothing is being
+lost.
+
+Worth knowing rather than fixing, and worth remembering if the LED is ever
+taken as evidence that the firmware has hung.
+
 ## 6. Failure modes
 
 | Case | Detection | Reaction |
