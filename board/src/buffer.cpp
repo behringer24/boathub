@@ -122,6 +122,25 @@ void describe() {
 namespace buffer {
 
 bool begin() {
+  // The cursor is read first, because whether it exists is what turns a
+  // failed mount from "nothing here yet" into "something was here and is
+  // gone". Opened read/write so the namespace is created rather than reported
+  // missing, and every key asked about before it is read - Preferences logs an
+  // error for one it does not find, which on a fresh board is the normal case.
+  bool hadCursor = false;
+  {
+    Preferences store;
+    if (store.begin(NVS_NS, /*readOnly=*/false)) {
+      hadCursor = store.isKey("rseg");
+      if (hadCursor) {
+        readSeg = store.getULong("rseg", 0);
+        readIdx = store.getULong("ridx", 0);
+      }
+      if (store.isKey("wall")) floorWall = store.getULong("wall", 0);
+      store.end();
+    }
+  }
+
   // The partition label, spelled out. In partitions.csv the entry is named
   // "littlefs" and its *subtype* is spiffs - the subtype is what the ESP-IDF
   // partition table calls this kind of storage, and it is not the name. The
@@ -129,21 +148,25 @@ bool begin() {
   // out finds nothing at all:
   //
   //   E esp_littlefs: partition "spiffs" could not be found
-  if (!LittleFS.begin(/*formatOnFail=*/true, "/littlefs", 10, "littlefs")) {
-    snprintf(state, sizeof(state), "filesystem unavailable");
-    Serial.println("[buffer] LittleFS would not mount - buffering is off");
-    return false;
-  }
-  if (!LittleFS.exists(DIR)) LittleFS.mkdir(DIR);
-
-  {
-    Preferences store;
-    if (store.begin(NVS_NS, /*readOnly=*/true)) {
-      readSeg = store.getULong("rseg", 0);
-      readIdx = store.getULong("ridx", 0);
-      floorWall = store.getULong("wall", 0);
-      store.end();
+  //
+  // Mounted without formatOnFail first, so that a filesystem which had to be
+  // formatted is something this module can say out loud instead of something
+  // it does quietly.
+  if (!LittleFS.begin(/*formatOnFail=*/false, "/littlefs", 10, "littlefs")) {
+    if (hadCursor) {
+      // The one case worth shouting about: records existed, and they are gone.
+      Serial.println("[buffer] !!! the buffer filesystem could not be mounted and was formatted");
+      Serial.println("[buffer] !!! every stored measurement that had not been sent is lost");
+    } else {
+      Serial.println("[buffer] formatting the buffer partition for first use");
     }
+    if (!LittleFS.begin(/*formatOnFail=*/true, "/littlefs", 10, "littlefs")) {
+      snprintf(state, sizeof(state), "filesystem unavailable");
+      Serial.println("[buffer] LittleFS would not mount - buffering is off");
+      return false;
+    }
+    LittleFS.mkdir(DIR);
+    readSeg = readIdx = 0;
   }
 
   // The segments on flash decide what is real, not the cursor: a cursor
@@ -206,6 +229,13 @@ bool append(const Record &r) {
   encode(r, bytes);
 
   File f = LittleFS.open(segPath(writeSeg), writeIdx == 0 ? "w" : "a");
+  if (!f) {
+    // The directory is created with the filesystem, so this means it went
+    // missing afterwards. Repaired here rather than at every boot, where the
+    // check itself would log an error for the normal case.
+    LittleFS.mkdir(DIR);
+    f = LittleFS.open(segPath(writeSeg), writeIdx == 0 ? "w" : "a");
+  }
   if (!f) {
     Serial.printf("[buffer] cannot open segment %lu for writing\n", (unsigned long)writeSeg);
     return false;
