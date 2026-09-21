@@ -54,6 +54,7 @@ void begin() {
   cfg.mqttUser = str("mqtt_user", "");
   cfg.mqttPass = str("mqtt_pass", "");
   cfg.mqttPort = u16("mqtt_port", 1883);
+  cfg.mqttTls = flag("mqtt_tls", false);
   cfg.sampleSecs = u16("smpl_secs", 10);
   cfg.pubSecs = u16("pub_secs", 300);
 
@@ -84,6 +85,7 @@ void save(const Config &incoming) {
   cfg.mqttHost = incoming.mqttHost;
   cfg.mqttUser = incoming.mqttUser;
   cfg.mqttPort = incoming.mqttPort;
+  cfg.mqttTls = incoming.mqttTls;
   cfg.sampleSecs = incoming.sampleSecs;
   cfg.pubSecs = incoming.pubSecs;
   cfg.sht31Heater = incoming.sht31Heater;
@@ -108,6 +110,7 @@ void save(const Config &incoming) {
   prefs.putString("mqtt_user", cfg.mqttUser);
   prefs.putString("mqtt_pass", cfg.mqttPass);
   prefs.putUShort("mqtt_port", cfg.mqttPort);
+  prefs.putBool("mqtt_tls", cfg.mqttTls);
   prefs.putUShort("smpl_secs", cfg.sampleSecs);
   prefs.putUShort("pub_secs", cfg.pubSecs);
   prefs.putBool("sht_heat", cfg.sht31Heater);

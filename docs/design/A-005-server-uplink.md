@@ -188,6 +188,31 @@ length the document wants; `serializeJson` into something shorter truncates sile
 invalid JSON, which looks like a healthy system until somebody reads the table. The firmware
 refuses to publish in that case and says so on the serial port.
 
+### TLS, and the clock it depends on
+
+The board reaches the server across marina Wi-Fi and phone hotspots that nobody
+controls. On 1883 the username and password cross those in the clear, so a
+broker reached over the internet is reached on **8883**, and the setting is a
+checkbox in the configuration portal rather than a build flag - the same
+firmware talks to a broker on the bench and to one on the internet.
+
+**The board carries a root, not a server certificate.** ISRG Root X1, Let's
+Encrypt's, valid until 2035. Pinning the server's own certificate would be
+tighter for ninety days and then the board would fall silent, because that
+certificate is reissued and the board would have no way to say why.
+
+**A certificate is only valid between two dates**, so validating one needs a
+clock. The board's starts at 1970, and after a long lay-up it starts from the
+floor stored beside the buffer's cursor - which can be months behind. Either
+makes a perfectly good certificate look wrong for a reason that has nothing to
+do with it. So a TLS connection is not attempted until NTP has answered. NTP
+runs over UDP and needs no TLS itself, which makes this an ordering problem
+rather than a circular one.
+
+The port is also the one most likely to be blocked by exactly the networks a
+boat uses. If it turns out to be, MQTT over WebSockets on 443 is the fallback -
+a change of client on the board, not of anything on the server.
+
 ### A failed connect stalls the loop for three seconds
 
 The MQTT client hands the TCP connect to a `WiFiClient`, whose default timeout

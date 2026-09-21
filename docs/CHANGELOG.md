@@ -107,6 +107,16 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   WS2812's own controller draws three times that in the dark, where no software setting
   reaches it.
 
+- **TLS to the broker**, switched on by a checkbox in the configuration portal so that one
+  firmware talks both to a broker on the bench and to one across the internet. The board carries
+  ISRG Root X1 rather than the server's own certificate: pinning that would be tighter for ninety
+  days and then the board would fall silent when it was reissued.
+- A TLS connection is not attempted before NTP has answered. A certificate is valid only between
+  two dates, and the board's clock starts at 1970 - or, after a lay-up, at the floor stored beside
+  the buffer's cursor, which can be months behind.
+- Only one MQTT client is built. Plain and TLS are different types in the library and each carries
+  its receive buffer as a member, so the unused one is not constructed at all.
+
 ### Added
 
 - PlatformIO project for the ESP32-S3 N16R8 in `board/`. PlatformIO ships no board definition for

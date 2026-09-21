@@ -107,6 +107,12 @@ void handleRoot() {
   h += F("</fieldset><fieldset><legend>MQTT broker</legend>");
   h += field("mqtt_host", "Host or IP address", c.mqttHost, "text", "192.168.1.10");
   h += field("mqtt_port", "Port", String(c.mqttPort), "number");
+  // A checkbox rather than a field(): an unticked box sends nothing at all, so
+  // the parser reads its absence as false instead of needing a value.
+  h += F("<label><input type=checkbox name=mqtt_tls value=1");
+  if (c.mqttTls) h += F(" checked");
+  h += F("> TLS (port 8883). Needed whenever the broker is reached over the "
+         "internet - without it the password below crosses it in the clear.</label>");
   h += field("mqtt_user", "User", c.mqttUser);
   h += field("mqtt_pass", "Password", "", "password", "unchanged");
   h += field("smpl_secs", "Measure every ... seconds", String(c.sampleSecs), "number");
@@ -127,6 +133,8 @@ void handleSave() {
   if (server.hasArg("mqtt_host")) in.mqttHost = server.arg("mqtt_host");
   if (server.hasArg("mqtt_user")) in.mqttUser = server.arg("mqtt_user");
   if (server.hasArg("mqtt_port")) in.mqttPort = server.arg("mqtt_port").toInt();
+  // Unticked boxes are not submitted, so presence is the value.
+  in.mqttTls = server.hasArg("mqtt_tls");
   if (server.hasArg("smpl_secs")) in.sampleSecs = server.arg("smpl_secs").toInt();
   if (server.hasArg("pub_secs")) in.pubSecs = server.arg("pub_secs").toInt();
 
@@ -142,7 +150,7 @@ void handleSave() {
                   "8 characters. <a href=/>Back</a>"));
     return;
   }
-  if (in.mqttPort == 0) in.mqttPort = 1883;
+  if (in.mqttPort == 0) in.mqttPort = in.mqttTls ? 8883 : 1883;
   if (in.sampleSecs == 0) in.sampleSecs = 10;
   if (in.pubSecs == 0) in.pubSecs = 300;
   // A window shorter than a sample would close before anything went into it.
