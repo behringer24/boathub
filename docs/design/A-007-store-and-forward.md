@@ -267,6 +267,7 @@ and the first place it shows is the dashboard.
 | Case | Detection | Reaction |
 |------|-----------|----------|
 | Power lost mid-write | short or torn tail record | discard the partial record; LittleFS is power-fail safe by design |
+| Filesystem will not mount | the mount fails before any formatting is attempted | format and carry on - but **say so**, and say it differently depending on whether a cursor existed. A partition being used for the first time and a buffer that was silently wiped look identical to the filesystem, and only the cursor in NVS tells them apart |
 | Cursor points past the end | segment shorter than the index | clamp to the end, log, carry on |
 | Segment file missing | open fails | skip to the next, count it as dropped |
 | Filesystem will not mount | mount fails | **keep publishing live** and log loudly. Losing the buffer must not cost the live path as well |
