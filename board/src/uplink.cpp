@@ -152,6 +152,12 @@ void publish(const telemetry::Aggregate &agg) {
   doc["n"] = agg.n;
   if (agg.windowS > 0) doc["window_s"] = agg.windowS;
 
+  // The record's identity, so a message the broker acknowledged but whose
+  // acknowledgement never arrived can be sent again without being counted
+  // twice. Stamped when the record was made, not now.
+  doc["boot_id"] = agg.bootId;
+  doc["seq"] = agg.seq;
+
   // Diagnostics are read here, at the moment the message is built, rather than
   // averaged over the window. An averaged uptime would mean nothing.
   doc["uptime_s"] = millis() / 1000;

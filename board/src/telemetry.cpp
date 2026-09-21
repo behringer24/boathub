@@ -1,5 +1,7 @@
 #include "telemetry.h"
 
+#include <Preferences.h>
+
 #include "config.h"
 #include "ds18b20.h"
 #include "sht31.h"
@@ -11,6 +13,10 @@ telemetry::Aggregate ready;  // a closed window waiting to be collected
 
 uint32_t windowStart = 0;
 uint32_t droppedWindows = 0;
+
+const char *NVS_NS = "boathub-seq";
+uint16_t bootId = 0;
+uint32_t nextSeq = 0;
 char state[40] = "starting";
 
 // Collect whatever the sensors have produced since the last pass.
@@ -82,6 +88,15 @@ uint16_t countFor(const telemetry::Aggregate &agg) {
 namespace telemetry {
 
 void begin() {
+  // One NVS write per boot, not one per message. The counter wraps at 65535,
+  // which is some 180 years of daily restarts.
+  Preferences store;
+  store.begin(NVS_NS, /*readOnly=*/false);
+  bootId = store.getUShort("boot", 0) + 1;
+  store.putUShort("boot", bootId);
+  store.end();
+  Serial.printf("[telemetry] boot %u\n", bootId);
+
   const uint32_t now = millis();
   windowStart = now;
   filling = Aggregate{};
@@ -112,6 +127,8 @@ void loop() {
                   (unsigned long)droppedWindows);
   }
   ready = filling;
+  ready.bootId = bootId;
+  ready.seq = nextSeq++;
 
   snprintf(state, sizeof(state), "%u samples/window, %lu dropped", ready.n,
            (unsigned long)droppedWindows);
@@ -132,6 +149,8 @@ Aggregate spot() {
   snapshotInto(one);
   one.n = countFor(one);
   one.windowS = 0;
+  one.bootId = bootId;
+  one.seq = nextSeq++;
   one.valid = true;
   return one;
 }

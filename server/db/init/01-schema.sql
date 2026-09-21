@@ -45,6 +45,18 @@ CREATE TABLE telemetry (
     window_s       integer,
     n              smallint,
 
+    -- What identifies this record, for deduplication.
+    --
+    -- The board publishes at QoS 1, which is at-least-once: a message whose
+    -- acknowledgement is lost is sent again. Without an identity the second
+    -- copy becomes a second row, and the first place that shows is a dashboard
+    -- counting the same five minutes twice.
+    --
+    -- boot_id increments in the board's NVS on every boot, seq counts records
+    -- within one boot. Null on messages from firmware that predates them.
+    boot_id        integer,
+    seq            bigint,
+
     -- Diagnostics, instantaneous at the moment the window closed. These explain
     -- silent restarts, leaks and radio trouble.
     uptime_s       integer,
@@ -100,6 +112,33 @@ ALTER TABLE telemetry SET (
     timescaledb.compress_orderby   = 'received_at DESC'
 );
 SELECT add_compression_policy('telemetry', INTERVAL '7 days');
+
+-- The identity of every telemetry record already stored.
+--
+-- This cannot be a unique index on `telemetry` itself. That table is a
+-- hypertable, and TimescaleDB requires every unique index to contain the
+-- partitioning column:
+--
+--   ERROR: cannot create a unique index without the column "received_at"
+--
+-- Including `received_at` would satisfy the rule and defeat the purpose, since
+-- it is stamped on arrival and a redelivered copy therefore carries a
+-- different one. So the claim lives in an ordinary table of its own and is
+-- written in the same transaction as the row it belongs to: either both exist
+-- or neither does.
+--
+-- It grows by one row per message - some 105 000 a year, a few megabytes. Old
+-- rows could be pruned once they are older than any backlog the board could
+-- still be holding, but at this size the question does not press.
+CREATE TABLE telemetry_seen (
+    boat_id text        NOT NULL,
+    boot_id integer     NOT NULL,
+    seq     bigint      NOT NULL,
+    seen_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (boat_id, boot_id, seq)
+);
+
+CREATE INDEX telemetry_seen_age_idx ON telemetry_seen (seen_at);
 
 -- Online/offline transitions from the retained status topic. A handful of rows
 -- a week, and the evidence behind any "the boat went quiet" question.

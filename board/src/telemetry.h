@@ -42,6 +42,21 @@ struct Aggregate {
   uint16_t n = 0;        // see below - the fewest samples behind any reported channel
   uint32_t windowS = 0;  // 0 for a spot reading
 
+  // What identifies this record for as long as it exists.
+  //
+  // Publishing is at-least-once: a message whose acknowledgement is lost is
+  // sent again, and the server has to recognise the second copy rather than
+  // count it twice. The identity is stamped when the record is CREATED, not
+  // when it is sent - a retry has to carry the same pair, or it is not a
+  // retry.
+  //
+  // bootId increments in NVS on every boot; seq counts records within one
+  // boot. Keeping seq out of NVS is deliberate: persisting it per message
+  // would be hundreds of flash writes a day, and bootId already separates one
+  // run from the next.
+  uint16_t bootId = 0;
+  uint32_t seq = 0;
+
   Channel cabinTemp;
   Channel cabinRh;
   Channel engineTemp;

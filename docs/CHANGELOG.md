@@ -33,6 +33,24 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   The line predates every sensor and only the SHT31 had been folded into it, so standing at
   the box told you the cabin climate and nothing about the three probes beside it.
 
+- Every telemetry record carries an identity: `boot_id`, incremented in NVS on each boot, and
+  `seq`, counting records within that boot. It is stamped when the record is created rather
+  than when it is sent, so a retry carries the same pair - otherwise it would not be a retry.
+  `seq` deliberately stays out of NVS: persisting it per message would be hundreds of flash
+  writes a day, and `boot_id` already separates one run from the next.
+- Ingest stores the identity and refuses a second copy of it. QoS 1 is at-least-once, so a
+  publish whose acknowledgement is lost is redelivered, and without this the same five
+  minutes would appear twice in every average. The claim and the row are written in one
+  transaction, so a crash between them leaves neither. A redelivered message is acknowledged
+  rather than left outstanding - it is stored, just not by that delivery. Messages without an
+  identity are stored unconditionally, which is what firmware older than this sends.
+- The identity lives in a claim table rather than a unique index on `telemetry`: that is a
+  hypertable, and TimescaleDB requires every unique index to contain the partitioning column
+  `received_at` - which a redelivered copy does not share, since it is stamped on arrival.
+- `server/db/migrations/`, applied by hand to a database that predates a schema change.
+  `db/init` only runs on a fresh data directory, so until now a change meant discarding every
+  measurement. Migrations are written to survive being run twice.
+
 ### Added
 
 - PlatformIO project for the ESP32-S3 N16R8 in `board/`. PlatformIO ships no board definition for
