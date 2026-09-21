@@ -1,0 +1,43 @@
+# Put Grafana behind an existing nginx-proxy, and let acme-companion issue the
+# certificate that the broker then uses for 8883.
+#
+# An override rather than part of the base file, for two reasons. The base
+# stack has to come up on a machine with no reverse proxy at all - an external
+# network that is not there stops `docker compose up` before anything starts.
+# And every name below belongs to somebody's own infrastructure, so none of it
+# has a default here.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d
+#
+# Set BOATHUB_DOMAIN, LETSENCRYPT_EMAIL and PROXY_NETWORK in .env first. The
+# network is the one the proxy is attached to:
+#
+#   docker inspect nginx-proxy \
+#     --format '{{range $n,$v := .NetworkSettings.Networks}}{{$n}}{{end}}'
+
+services:
+  grafana:
+    ports:
+      # Only from the machine itself. Everything from outside arrives through
+      # the proxy, over TLS.
+      - "127.0.0.1:3000:3000"
+    environment:
+      # Grafana builds redirects and asset links from this. Left at its default
+      # it hands a browser that arrived over TLS a link to http://localhost:3000,
+      # and the login round trip breaks.
+      GF_SERVER_ROOT_URL: https://${BOATHUB_DOMAIN:?set BOATHUB_DOMAIN in .env}/
+      # What the proxy and acme-companion read. VIRTUAL_HOST creates the vhost;
+      # LETSENCRYPT_HOST asks for the certificate - and that certificate is what
+      # deploy/install-certs.sh then hands to the broker.
+      VIRTUAL_HOST: ${BOATHUB_DOMAIN}
+      VIRTUAL_PORT: "3000"
+      LETSENCRYPT_HOST: ${BOATHUB_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:?set LETSENCRYPT_EMAIL in .env}
+    networks:
+      - default
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:?set PROXY_NETWORK in .env}
