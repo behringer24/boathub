@@ -21,6 +21,11 @@ struct Config {
   // Three rates that have nothing to do with each other: measuring has to be
   // fast enough for alarms to react, publishing only fast enough to follow a
   // cabin, and an alarm waits for neither. See A-005.
+  // TLS to the broker. Off for a broker on the bench, on for one reached
+  // across the internet - where the credentials would otherwise cross marina
+  // Wi-Fi in the clear.
+  bool mqttTls = false;
+
   uint16_t sampleSecs = 10;
   uint16_t pubSecs = 300;
 

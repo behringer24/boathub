@@ -7,19 +7,30 @@
 #include <time.h>
 
 #include "buffer.h"
+#include "ca_isrg.h"
 #include "config.h"
 #include "net.h"
 #include "telemetry.h"
 
 namespace {
 
+// One client, of whichever kind the configuration asks for.
+//
+// Plain and TLS are different types in this library, and each carries a
+// kilobyte and a half of receive buffer as a member - so the one that is not
+// in use is not built at all rather than sitting there costing RAM. Everything
+// after the connection is set up goes through the base class, which both
+// share.
+//
 // UseInternalTask::NO on purpose. The library can run its own task and call
 // back from it, which would mean every callback here lands in a different
 // thread from the rest of the firmware - and the store-and-forward buffer in
-// A-007 will mutate a filesystem from exactly these callbacks. Driven from
-// loop() instead, an acknowledgement arrives in the same task that publishes,
-// and no part of this needs a mutex.
-espMqttClient mqtt(espMqttClientTypes::UseInternalTask::NO);
+// A-007 mutates a filesystem from exactly these callbacks. Driven from loop()
+// instead, an acknowledgement arrives in the same task that publishes, and no
+// part of this needs a mutex.
+espMqttClient *plain = nullptr;
+espMqttClientSecure *secure = nullptr;
+MqttClient *mqtt = nullptr;
 
 const uint32_t RETRY_MIN_MS = 2000;
 const uint32_t RETRY_MAX_MS = 60000;
@@ -231,7 +242,7 @@ uint16_t publishRecords(const buffer::Record *recs, size_t count) {
   }
   const size_t n = serializeJson(doc, payload, need);
 
-  const uint16_t id = mqtt.publish(topicTelemetry.c_str(), QOS_TELEMETRY, /*retain=*/false,
+  const uint16_t id = mqtt->publish(topicTelemetry.c_str(), QOS_TELEMETRY, /*retain=*/false,
                                    reinterpret_cast<const uint8_t *>(payload), n);
   if (id == 0) {
     Serial.printf("[mqtt] publish rejected, %u records, %u bytes\n", (unsigned)count, (unsigned)n);
@@ -285,7 +296,7 @@ void onConnected(bool sessionPresent) {
   // of waiting for a heartbeat to lapse. Tracked like any other publish: at
   // QoS 1 it is acknowledged too, and an acknowledgement for something the
   // table has never heard of is a symptom worth keeping loud.
-  const uint16_t id = mqtt.publish(topicStatus.c_str(), QOS_TELEMETRY, /*retain=*/true, "online");
+  const uint16_t id = mqtt->publish(topicStatus.c_str(), QOS_TELEMETRY, /*retain=*/true, "online");
   if (id != 0) pendingAdd(id);
 
   // A spot reading straight away, before any backlog.
@@ -337,6 +348,19 @@ void onPublished(uint16_t packetId) {
   batchCount = 0;
 }
 
+// The settings that have to be applied to the concrete client. Both kinds
+// carry them, but on the derived class rather than the base, so this is a
+// template instead of two copies that could drift apart.
+template <typename T>
+void applySettings(T *client, const Config &c) {
+  client->setServer(cfgHost.c_str(), c.mqttPort);
+  client->setClientId(cfgClientId.c_str());
+  if (cfgUser.length()) client->setCredentials(cfgUser.c_str(), cfgPass.c_str());
+
+  // The last will is retained for the same reason the "online" message is.
+  client->setWill(topicStatus.c_str(), QOS_TELEMETRY, /*retain=*/true, "offline");
+}
+
 void beginConnect() {
   const Config &c = config::get();
 
@@ -345,16 +369,13 @@ void beginConnect() {
   cfgUser = c.mqttUser;
   cfgPass = c.mqttPass;
 
-  mqtt.setServer(cfgHost.c_str(), c.mqttPort);
-  mqtt.setClientId(cfgClientId.c_str());
-  if (cfgUser.length()) mqtt.setCredentials(cfgUser.c_str(), cfgPass.c_str());
+  if (plain) applySettings(plain, c);
+  if (secure) applySettings(secure, c);
 
-  // The last will is retained for the same reason the "online" message is.
-  mqtt.setWill(topicStatus.c_str(), QOS_TELEMETRY, /*retain=*/true, "offline");
-
-  Serial.printf("[mqtt] connecting to %s:%u\n", cfgHost.c_str(), c.mqttPort);
+  Serial.printf("[mqtt] connecting to %s:%u%s\n", cfgHost.c_str(), c.mqttPort,
+                secure ? " over TLS" : "");
   status = "connecting";
-  if (!mqtt.connect()) {
+  if (!mqtt->connect()) {
     status = "connect refused";
     Serial.println("[mqtt] connect could not be started");
   }
@@ -364,20 +385,39 @@ void beginConnect() {
 
 namespace uplink {
 
+// Everything that does not depend on which broker is configured.
+template <typename T>
+void applyCommon(T *client) {
+  client->setKeepAlive(30);
+  // A clean session on purpose. The board's durability is its own filesystem,
+  // not state the broker holds for a client that may be away for weeks.
+  client->setCleanSession(true);
+
+  client->onConnect(onConnected);
+  client->onDisconnect(onDisconnected);
+  client->onPublish(onPublished);
+}
+
 void begin() {
   buildTopics();
   // UTC only. No local time anywhere in the payload.
   configTime(0, 0, "pool.ntp.org", "time.cloudflare.com");
 
-  mqtt.setKeepAlive(30);
-  // A clean session on purpose. The board's durability is its own filesystem
-  // once A-007 exists, not state the broker holds for a client that may be
-  // away for weeks.
-  mqtt.setCleanSession(true);
-
-  mqtt.onConnect(onConnected);
-  mqtt.onDisconnect(onDisconnected);
-  mqtt.onPublish(onPublished);
+  // Which kind of client, decided once. Changing it needs a restart, which a
+  // board whose broker has just been reconfigured is going to get anyway.
+  if (config::get().mqttTls) {
+    secure = new espMqttClientSecure(espMqttClientTypes::UseInternalTask::NO);
+    // The root, not the server's own certificate. That one is reissued every
+    // ninety days and a board pinned to it would fall silent in three months.
+    secure->setCACert(CA_ISRG_ROOT_X1);
+    applyCommon(secure);
+    mqtt = secure;
+    Serial.println("[mqtt] TLS enabled, trusting ISRG Root X1");
+  } else {
+    plain = new espMqttClient(espMqttClientTypes::UseInternalTask::NO);
+    applyCommon(plain);
+    mqtt = plain;
+  }
 }
 
 void loop() {
@@ -393,16 +433,26 @@ void loop() {
     return;
   }
 
+  // A certificate is only valid between two dates, so validating one against a
+  // clock that reads 1970 - or against the floor a long lay-up restored -
+  // fails for a reason that has nothing to do with the certificate. NTP runs
+  // over UDP and needs no TLS itself, so this is an ordering problem rather
+  // than a circular one: wait for it.
+  if (secure && !timeValid()) {
+    status = "waiting for the clock";
+    return;
+  }
+
   // Unconditionally: this is what drives the client's state machine, including
   // the handshake that has not finished yet and the acknowledgements coming
   // back for messages already sent.
-  mqtt.loop();
+  mqtt->loop();
 
-  if (!mqtt.connected()) {
+  if (!mqtt->connected()) {
     // Not connected is not the same as ready to connect. Between a dropped
     // socket and the disconnect callback the client is still tearing the old
     // connection down, and a connect() attempted in that window is refused.
-    if (!mqtt.disconnected()) return;
+    if (!mqtt->disconnected()) return;
     if ((int32_t)(now - nextAttempt) < 0) return;
     beginConnect();
     nextAttempt = now + retryDelay;
@@ -421,10 +471,10 @@ void loop() {
   drainStep();
 }
 
-bool connected() { return mqtt.connected(); }
+bool connected() { return mqtt->connected(); }
 
 void publishNow() {
-  if (!mqtt.connected()) {
+  if (!mqtt->connected()) {
     Serial.println("[mqtt] publish requested, but not connected");
     return;
   }
