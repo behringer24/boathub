@@ -1461,7 +1461,7 @@
 		(descr "terminal block Metz Connect Type101_RT01604HBWC, 4 pins, pitch 5.08mm, size 20.3x8mm, drill diameter 1.3mm, pad diameter 2.5mm, https://www.metz-connect.com/externalfiles/311011/863468.PDF")
 		(tags "THT terminal block Metz Connect Type101_RT01604HBWC pitch 5.08mm size 20.3x8mm drill 1.3mm pad 2.5mm")
 		(property "Reference" "J16"
-			(at 7.62 -5.12 90)
+			(at -3.81 0 0)
 			(layer "F.SilkS")
 			(uuid "1fb774ea-c448-4cc6-bed4-8d23645b2fd6")
 			(effects
@@ -5704,7 +5704,7 @@
 		(descr "terminal block Metz Connect Type101_RT01604HBWC, 4 pins, pitch 5.08mm, size 20.3x8mm, drill diameter 1.3mm, pad diameter 2.5mm, https://www.metz-connect.com/externalfiles/311011/863468.PDF")
 		(tags "THT terminal block Metz Connect Type101_RT01604HBWC pitch 5.08mm size 20.3x8mm drill 1.3mm pad 2.5mm")
 		(property "Reference" "J14"
-			(at 7.62 -5.12 90)
+			(at -3.81 0 0)
 			(layer "F.SilkS")
 			(uuid "6135ca7e-6c8e-42fe-b588-e960d40216db")
 			(effects
@@ -6134,7 +6134,7 @@
 		(descr "Resistor, Axial_DIN0309 series, Axial, Horizontal, pin pitch=12.7mm, 0.5W = 1/2W, length*diameter=9*3.2mm^2, http://cdn-reichelt.de/documents/datenblatt/B400/1_4W%23YAG.pdf")
 		(tags "Resistor Axial_DIN0309 series Axial Horizontal pin pitch 12.7mm 0.5W = 1/2W length 9mm diameter 3.2mm")
 		(property "Reference" "R22"
-			(at 6.35 -2.72 0)
+			(at 6.35 0 0)
 			(layer "F.SilkS")
 			(uuid "99effd95-f78a-4de9-b02a-ac8073ff2c50")
 			(effects
@@ -9522,7 +9522,7 @@
 		(descr "terminal block Metz Connect Type101_RT01604HBWC, 4 pins, pitch 5.08mm, size 20.3x8mm, drill diameter 1.3mm, pad diameter 2.5mm, https://www.metz-connect.com/externalfiles/311011/863468.PDF")
 		(tags "THT terminal block Metz Connect Type101_RT01604HBWC pitch 5.08mm size 20.3x8mm drill 1.3mm pad 2.5mm")
 		(property "Reference" "J15"
-			(at 7.62 -5.12 90)
+			(at -3.81 0 0)
 			(layer "F.SilkS")
 			(uuid "96cbccff-2bdf-45fd-bbb7-014090453f12")
 			(effects
@@ -10152,7 +10152,7 @@
 		(descr "terminal block Metz Connect Type101_RT01606HBWC, 6 pins, pitch 5.08mm, size 30.5x8mm, drill diameter 1.3mm, pad diameter 2.5mm, https://www.metz-connect.com/externalfiles/311011/863468.PDF")
 		(tags "THT terminal block Metz Connect Type101_RT01606HBWC pitch 5.08mm size 30.5x8mm drill 1.3mm pad 2.5mm")
 		(property "Reference" "J4"
-			(at 12.7 -5.12 90)
+			(at -3.81 -1.27 0)
 			(layer "F.SilkS")
 			(uuid "d0e56d2d-23e9-4b55-96a8-e24681de226b")
 			(effects
@@ -13101,7 +13101,7 @@
 		(descr "terminal block Metz Connect Type101_RT01604HBWC, 4 pins, pitch 5.08mm, size 20.3x8mm, drill diameter 1.3mm, pad diameter 2.5mm, https://www.metz-connect.com/externalfiles/311011/863468.PDF")
 		(tags "THT terminal block Metz Connect Type101_RT01604HBWC pitch 5.08mm size 20.3x8mm drill 1.3mm pad 2.5mm")
 		(property "Reference" "J2"
-			(at 7.62 -5.12 270)
+			(at -3.81 -1.27 180)
 			(layer "F.SilkS")
 			(uuid "bcd89a37-4f10-471f-89a6-4585480febed")
 			(effects
@@ -15283,7 +15283,7 @@
 		(descr "terminal block Metz Connect Type101_RT01602HBWC, 2 pins, pitch 5.08mm, size 10.2x8mm, drill diameter 1.3mm, pad diameter 2.5mm, https://www.metz-connect.com/externalfiles/311011/863468.PDF")
 		(tags "THT terminal block Metz Connect Type101_RT01602HBWC pitch 5.08mm size 10.2x8mm drill 1.3mm pad 2.5mm")
 		(property "Reference" "J12"
-			(at 2.54 -5.12 0)
+			(at 8.89 0 90)
 			(layer "F.SilkS")
 			(uuid "4f028ec6-5e61-4d42-8e2f-9b33e8c59d5b")
 			(effects
@@ -18133,7 +18133,7 @@
 			(justify right)
 		)
 	)
-	(gr_text "INT SCL SDA GND VIN\nIMU Modulino ABC00101"
+	(gr_text "INT SCL SDA GND VIN\nIMU Modulino ABX00101"
 		(at 71.12 105.41 90)
 		(layer "F.SilkS")
 		(uuid "dc3dd710-0ed5-4555-aa24-69782140120b")
