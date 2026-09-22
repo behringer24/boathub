@@ -244,8 +244,8 @@ space lives with vibration a desk does not. A shunt that works loose does not an
 transmit path simply stops, which is the failure mode this design spends its effort avoiding
 everywhere else.
 
-Give the two pads a **pin header footprint** all the same. The holes take a wire link just as well,
-and nothing about the layout forces the choice before assembly.
+Give the two pads a **two-pad test point footprint** - plain through-holes at 2.54 mm. They take
+a wire link directly, and nothing about the layout forces the choice before assembly.
 
 That costs two pads and keeps the return path a decision rather than an accident. It also keeps
 the second-optocoupler variant available: isolating the transmit side properly requires the link to
