@@ -253,6 +253,26 @@ first; the file refuses to render without them rather than guessing.
 Grafana then answers on 443 through the proxy, port 3000 only from the machine
 itself, and `install-certs.sh` finds the certificate in the proxy's own volume.
 
+**Then set `COMPOSE_FILE` in `.env`:**
+
+```
+COMPOSE_FILE=docker-compose.yml:docker-compose.proxy.yml
+```
+
+Compose reads that and applies both files, so every later `up -d`, `down`,
+`logs` and `ps` does the right thing on its own. Without it, a single command
+typed without the two `-f` flags undoes the whole arrangement: Grafana comes
+back with no `VIRTUAL_HOST`, the proxy no longer has a vhost for the name, and
+the site answers **503** while serving `CN=letsencrypt-nginx-proxy-companion` -
+acme-companion's fallback certificate, which is what nginx-proxy falls back to
+when no vhost matches. Those two together are the signature; if you ever see
+them, this is why.
+
+Compose reports every container as `Running` while it happens, so the stack
+looks healthy from the machine itself. The broker is genuinely unaffected: it
+serves the **copied** certificate under `mosquitto/certs/`, not the proxy's, so
+8883 keeps working with the right name on it and only the dashboard is down.
+
 ### Then switch the listener on
 
 The TLS block in `mosquitto/config/mosquitto.conf` is commented out on purpose: mosquitto refuses
