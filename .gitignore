@@ -17,10 +17,19 @@ build/
 *.elf
 *.map
 
+# --- KiCad: local view state, backups, locks and generated output ---
+*.kicad_prl
+*.bak
+*-backups/
+~*.lck
+hardware/*/production/
+hardware/*/*.rpt
+
 # --- Editor / IDE ---
 .vscode/
 !.vscode/extensions.json
 .idea/
+.history/
 *.swp
 *~
 

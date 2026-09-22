@@ -545,13 +545,27 @@ link**, not a shunt. A shunt on a boat is a contact that vibrates and corrodes -
 
 ## 8. The files
 
-The KiCad project is the source of truth for this board:
+The KiCad project is the source of truth for this board. It lives in `hardware/main-board/`:
 
 ```
+BoatHub.kicad_pro    project settings, net classes, and the REVISION text variable
 BoatHub.kicad_sch    the schematic
 BoatHub.kicad_pcb    the layout
+BoatHub.kicad_sym    the two DevKit socket symbols - the project's own library
 BoatHub-main.net     the exported netlist
+sym-lib-table        binds that library to the project by a relative path
+fp-lib-table         empty: every footprint comes from KiCad's own libraries
+fab/<rev>/           what was actually sent to the fabricator, one directory per revision
 ```
+
+**Nothing in the project points outside its own directory** except KiCad's standard libraries and
+the 3D model path that every installation provides. The folder can be moved, copied or cloned onto
+a machine that has never seen it, and the symbols still resolve. Anything added later - a symbol
+drawn for this board, a footprint that KiCad does not ship - belongs in `BoatHub.kicad_sym` or in a
+`.pretty` directory beside it, registered in the tables above, never in a global library table.
+
+`BoatHub.kicad_prl` and KiCad's `*-backups/` are deliberately not tracked: the first is one
+person's zoom level and visible layers, the second is written on every save.
 
 The tables in sections 4, 5 and 7 are read from that export. **Where the two disagree, the project
 is right and this document is stale** - which is the only workable rule once a board is being

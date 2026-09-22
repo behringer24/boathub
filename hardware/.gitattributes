@@ -1,0 +1,12 @@
+# KiCad writes these as text and reads them on any platform. Pinning them to LF
+# keeps the line endings out of the diffs: without it a clone configured to
+# check out CRLF gets every line rewritten the first time KiCad saves, and a
+# one-component change arrives as a nine-hundred-kilobyte rewrite.
+*.kicad_pro   text eol=lf
+*.kicad_sch   text eol=lf
+*.kicad_pcb   text eol=lf
+*.kicad_sym   text eol=lf
+*.kicad_mod   text eol=lf
+*.net         text eol=lf
+sym-lib-table text eol=lf
+fp-lib-table  text eol=lf
