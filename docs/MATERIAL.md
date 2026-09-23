@@ -87,12 +87,47 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 | Screw terminal 5.08 mm, 2-pole | 2 | B | 12 V entry, and the bilge level sender - a loop-powered 4-20 mA probe is two wires. The bilge terminal is fitted whether or not that probe is bought; 29 cents keeps the channel usable without another board revision | 0,29 each | Reichelt `CTB0509-2` |
 | Screw terminal 5.08 mm, 4-pole | 1 | B | the SHT31 cable. One pitch across the whole board, so there is nothing to confuse when ordering or when soldering | 0,57 | Reichelt `CTB0509-4` |
 | Socket strip 2.54 mm, 1x40 | 3 | B | cut to 1x22 for the DevKit sockets J7 and J11, 1x10 for the ADS1115 breakouts J6 and J10, and 1x08 for the spare analogue channels J1 - 72 positions in all. Three strips rather than two, because cutting a socket strip costs the position it is cut at. Sockets throughout, never pin headers: the DevKit has to come out, and bare pins standing on the board short against a lid. J10 is fitted and left empty until its channels are specified - an empty socket costs nothing and loads nothing. J1 is a socket for the same reason it is not a terminal: the conditioning an unspecified sender needs belongs on a small adapter, not on the board that is hardest to change | 3,15 each | Reichelt `BKL 10120978` |
-| ABS enclosure IP65/IP67, approx. 200 x 120 x 75 mm | 1 | C | electronics box; the main board plus the DevKit standing in its sockets needs roughly 14 mm of height above the board | ~12-20 | [Amazon search](https://www.amazon.de/s?k=ABS+Gehaeuse+IP65+200x120x75) |
+| ABS enclosure IP65/IP67, approx. 200 x 120 x 75 mm | 1 | C | electronics box. **Internal floor at least 151 x 108 mm** - the board is 134.62 x 91.44 and each gland nut stands about 5 mm proud of the wall it passes through. Internal height at least 35 mm: 6 mm under the board for trimmed leads, and the DevKit standing in its sockets needs roughly 14 of the rest | ~12-20 | [Amazon search](https://www.amazon.de/s?k=ABS+Gehaeuse+IP65+200x120x75) |
 | Pressure-equalisation vent membrane (Gore-type) | 1 | C | stops condensation inside the sealed box; fitted pointing down | ~8-15 | [Amazon search](https://www.amazon.de/s?k=Druckausgleichselement+Gehaeuse+IP67+Membran) |
-| Cable glands M12/M16, IP68 | set | C | cable entries, fitted pointing down or sideways, with drip loops | ~7-10 | [Amazon search](https://www.amazon.de/s?k=Kabelverschraubung+IP68+M12+M16) |
+
 | Tinned copper stranded wire 0.5-0.75 mm² | as needed | B, C | 12 V / 5 V and sensor wiring, marine grade | ~15-25 | [Amazon search](https://www.amazon.de/s?k=verzinnte+Kupferlitze+Boot+0.75mm2) |
 | 4-core twisted or shielded cable, max 3 m | 1 | C | I2C run to the SHT31 outside box and cabinet: 3.3 V, GND, SDA, SCL. Twist SDA and SCL each with a ground wire, not with each other | ~5-10 | [Amazon search](https://www.amazon.de/s?k=Steuerleitung+geschirmt+4-adrig+LIYCY) |
 | Clamp-on ferrites | 3 | C | optional, conducted noise on the probe cables at the box entry ([A-003](design/A-003-ds18b20-temperature-sensors.md)) | ~5-8 | [Amazon search](https://www.amazon.de/s?k=Klappferrit+Kabel+5mm) |
+
+### Cable entries
+
+Seven cables leave the box, and every one of them uses the same hole. The gland
+decides what cable fits, not the enclosure, so one diameter serves the 3-4 mm
+probe cables, the 12 V feed and the SeaTalk run alike.
+
+| Part | Qty | Phase | Purpose / requirement | Price | Source |
+|------|-----|-------|-----------------------|-------|--------|
+| Cable gland M12 x 1.5, clamping range 3.5-7 mm, IP69K | 7 | C | one per cable leaving the box, fitted pointing down or sideways with a drip loop | 0,68 each | Reichelt `LAPP 53111000` |
+| Lock nut M12 x 1.5, SW 17, glass-filled PA | 7 | C | holds each gland in the wall. Ordered separately because it is not always in the bag | 0,25 each | Reichelt `LAPP 53119000` |
+
+**Which seven.** The three temperature probes on J14, J15 and J16, the SHT31 on
+J2, 12 V in on J9, SeaTalk on J17, and the bilge level sender on J12. The IMU
+gets none: it is terminated on J4 like the probes, but it lives inside the box
+and its cable never leaves.
+
+**Plastic, not brass.** Both are stocked and the brass ones are better made. A
+boat in salt air already has more dissimilar metals in contact than anyone
+wants, and nothing here needs the strength.
+
+Two of the gland's own dimensions are requirements on whatever encloses the
+board - bought or printed, they apply either way:
+
+- **The thread is 8 mm long.** The wall it passes through can be about 4 mm
+  thick at most, or the nut has nothing left to catch.
+- **The nut is SW 17** and stands roughly 5 mm proud of the inside face. The
+  board has to sit at least that far back from every wall a gland goes through,
+  which is where the 151 x 108 mm internal floor above comes from.
+
+A parametric model of a printed alternative lives in
+[`hardware/case/`](../hardware/case/README.md). It is a bench housing and a way
+of checking reach in three dimensions, not a replacement for the bought box: an
+FDM print leaks along its layer lines, and on a boat the enclosure is the
+corrosion measure.
 
 ### Optional - continuous bilge level
 
