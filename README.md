@@ -118,8 +118,10 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
 ```
 board/                  PlatformIO firmware project - ESP32-S3 N16R8, see board/platformio.ini
 hardware/
-└── main-board/         KiCad project, see docs/design/B-002-main-board.md
-    └── fab/<rev>/      what was actually sent to the fabricator, one directory per revision
+├── main-board/         KiCad project, see docs/design/B-002-main-board.md
+│   └── fab/<rev>/      what was actually sent to the fabricator, one directory per revision
+└── case/               parametric FreeCAD model of a printed enclosure, run rather than
+                        drawn, see hardware/case/README.md
 server/                 MQTT broker in Docker, see server/README.md
 docs/
 ├── ROADMAP.md          planned software functionality, board and server
