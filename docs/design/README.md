@@ -53,7 +53,7 @@ system - no battery measurement, no 12 V robustness - but a real, testable one.
 
 | # | Step |
 |---|------|
-| 1 | Enclosure, cable labelling, and a pressure-equalisation vent membrane fitted pointing down |
+| 1 | Enclosure, cable labelling, and a pressure-equalisation vent membrane fitted pointing down. The cable entries are seven M12 glands of one diameter - [MATERIAL.md](../MATERIAL.md) names the parts and the two requirements they put on any enclosure. A parametric model of a printed alternative is in [`hardware/case/`](../../hardware/case/README.md) |
 | 2 | RSSI at the real mounting point; rework the antenna jumper only if it falls short |
 | 3 | Marina Wi-Fi credentials, server reachable from home |
 

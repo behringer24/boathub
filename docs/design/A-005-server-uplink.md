@@ -103,17 +103,32 @@ That separation is what lets the bilge be sampled often without storing it often
 ### First payload
 
 ```json
-{
-  "ts": "2026-09-14T13:05:00Z",
-  "time_valid": true,
-  "window_s": 300,
-  "n": 30,
-  "uptime_s": 1234,
-  "heap_free": 370244,
-  "rssi_dbm": -58,
-  "reset_reason": "POWERON"
-}
+[
+  {
+    "ts": "2026-09-14T13:05:00Z",
+    "time_valid": true,
+    "time_source": "ntp",
+    "boot_id": 16,
+    "seq": 41,
+    "window_s": 300,
+    "n": 30,
+    "uptime_s": 1234,
+    "heap_free": 370244,
+    "rssi_dbm": -58,
+    "reset_reason": "POWERON"
+  }
+]
 ```
+
+**A message is always an array**, even with one record in it. A live reading and
+a batch drained from the buffer then travel the same way, so there is one encoder
+on the board and one decoder on the server rather than two of each that can drift
+apart - see [A-007](A-007-store-and-forward.md).
+
+`boot_id` and `seq` are the record's identity: `boot_id` counts restarts and
+lives in NVS, `seq` counts records within one boot. They are stamped when the
+record is made, not when it is sent, so a retry carries the same pair - otherwise
+it would not be a retry. `time_source` says which clock produced `ts`.
 
 Diagnostics are **instantaneous at the moment the window closed**, not aggregated. An averaged
 uptime would be meaningless.
@@ -147,9 +162,9 @@ NTP over UDP 123, UTC, no local time anywhere in the payload. The timestamp is I
 time server would mean a failure at the NTP server stops telemetry entirely, which is the wrong
 trade for data that is already timestamped on receipt.
 
-Once TLS is in use this becomes stricter: certificate validation fails on a wrong clock, so NTP
-must succeed before the first connect. NTP runs over plain UDP and needs no TLS itself, so this is
-an ordering requirement, not a circular one.
+With TLS this is stricter: a certificate is valid only between two dates, so validation fails on a
+wrong clock and the uplink waits for NTP before it connects at all. NTP runs over plain UDP and
+needs no TLS itself, so this is an ordering requirement, not a circular one.
 
 ## 5. Publishing
 
@@ -163,6 +178,17 @@ connecting is the same thing, so a working link shows itself at once instead of 
 
 **Nothing in the publish path blocks.** Connection attempts are polled with the same backoff as the
 station connection, and a broker that is down slows nothing else.
+
+**Telemetry publishes at QoS 1.** The broker answers every message, and that
+answer is the only thing that moves the read cursor of the buffer in
+[A-007](A-007-store-and-forward.md). At QoS 0 there is no answer at all, so a
+stored record would have to be deleted on a guess about whether it arrived.
+
+The price is in the name: at-*least*-once. A message whose acknowledgement is
+lost on the way back is sent again, and the second copy is indistinguishable from
+a first unless something marks it. That is what the identity in the payload is
+for, and why the server claims a record before storing it -
+[A-006](A-006-telemetry-storage.md).
 
 ### An unsent message is buffered, not dropped
 
