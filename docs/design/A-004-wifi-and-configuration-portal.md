@@ -108,7 +108,22 @@ Preferences namespace `boathub`. Keys stay within the 15-character limit.
 | `mqtt_port` | broker port | 1883 |
 | `mqtt_user` | broker user | empty |
 | `mqtt_pass` | broker password | empty |
-| `pub_secs` | publish interval in seconds | 10 |
+| `mqtt_tls` | TLS to the broker | off |
+| `smpl_secs` | measurement interval in seconds | 10 |
+| `pub_secs` | publish interval in seconds | 300 |
+
+**TLS is a setting rather than a build option** because one firmware has to serve
+both a broker on the bench and a broker across the internet. Turning it on is a
+checkbox here; the port has to be changed with it, because 8883 and 1883 are
+different listeners rather than the same one with encryption added.
+
+Switching it needs a restart. Plain and TLS are different client types in the
+library, each carrying its own receive buffer, so only the one in use is built -
+and which one that is, is decided once at startup. A board whose broker has just
+been reconfigured is going to be restarted anyway.
+
+See [A-005](A-005-server-uplink.md) for what the board then waits for before it
+connects.
 
 ### The configuration page
 

@@ -57,7 +57,15 @@ Every row carries two times, and the distinction matters:
 | Column | Meaning |
 |--------|---------|
 | `received_at` | when the server took delivery. Always present, always set by the server |
-| `ts` | what the board believed the time was. **Null until NTP has synced** |
+| `ts` | what the board believed the time was. **Null until the board has a clock** |
+| `time_valid` | whether `ts` can be trusted. This is the column to filter on |
+| `time_source` | which clock produced it: `ntp`, `gps`, `restored` or `none` |
+
+`time_source` turns an odd timestamp into a diagnosis rather than a puzzle.
+**`restored`** is the interesting one: the board carries a floor across a restart
+and counts up from it, so the ordering of those rows is right while the absolute
+time is only a lower bound. Without the column, a restored clock and a synced one
+look identical in the data and differ by hours.
 
 The hypertable partitions on **`received_at`**, because a partitioning column cannot be null and
 because the server's clock is the one that can be trusted. `ts` is kept alongside as the board's
@@ -66,6 +74,33 @@ own claim; once NTP is up the two differ by the network delay.
 The track logger will not work this way. Its points carry GPS time and arrive in bulk hours later,
 so it gets its own table partitioned on the point's own timestamp. That is exactly why this table
 is called `telemetry` and not `measurements`.
+
+### What identifies a record
+
+The board publishes at QoS 1, which is at-least-once: a message whose
+acknowledgement is lost on the way back is sent again. Without an identity the
+second copy becomes a second row, and the first place that shows is a dashboard
+counting the same five minutes twice.
+
+| Column | Meaning |
+|--------|---------|
+| `boot_id` | increments in the board's NVS on every boot |
+| `seq` | counts records within one boot |
+
+Both are null on messages from firmware that predates them, which is why neither
+can be `NOT NULL` here.
+
+**The identity lives in a claim table, not in a unique index on `telemetry`.**
+TimescaleDB requires every unique index on a hypertable to contain the
+partitioning column, and `received_at` is the one thing a redelivery does *not*
+repeat - so a unique index over `(boat_id, boot_id, seq)` cannot be created at
+all. Ingest instead inserts the triple into `telemetry_seen` with
+`ON CONFLICT DO NOTHING` and stores the row only if the insert took. Both
+statements run in one transaction per message, so a redelivery finds either every
+record already claimed or none of them.
+
+A `seq` gap in the database is therefore the loss record: contiguous means
+nothing was lost, and the number missing says exactly how much was.
 
 ### Mean, min and max in one row
 
@@ -95,6 +130,7 @@ sensor is not fitted" and "the bilge is dry" is the whole point of the system.
 | Table | Holds |
 |-------|-------|
 | `telemetry` | one row per received message, hypertable on `received_at` |
+| `telemetry_seen` | one row per `(boat_id, boot_id, seq)` ever accepted, so a redelivery is not a second row. About 105 000 rows a year, a few megabytes |
 | `boat_status` | online/offline transitions from the retained `status` topic |
 | `events` | alarms and state changes, for the version that raises them |
 
