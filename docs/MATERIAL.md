@@ -11,10 +11,11 @@ and SHT31 breakouts and the temperature probes - stay with the Amazon listings t
 and tested with. Beyond those, Amazon is the fallback only where Reichelt has no part that meets
 the requirement, and the row says why.
 
-**The Reichelt order as a file.** [`reichelt.csv`](reichelt.csv) holds every Reichelt part of
-stage 1 with its quantity: article number and count, separated by a semicolon, one part per line.
-That is the format myReichelt imports as a list, which then goes into the basket in one step. The
-clamp-on ferrites are optional and in the file; delete their line if they are not wanted.
+**The Reichelt order as a file.** [`reichelt.csv`](reichelt.csv) holds every Reichelt part the main
+board and its installation need, SeaTalk stages included, with its quantity: article number and
+count, separated by a semicolon, one part per line. That is the format myReichelt imports as a
+list, which then goes into the basket in one step. The clamp-on ferrites are optional and in the
+file; delete their line if they are not wanted.
 
 **Prices are an order of magnitude, not a quote.** They are rounded guide values in EUR to show
 where the money goes; check the shop when ordering. What matters is the technical data in the
@@ -191,30 +192,37 @@ Many small parts remain over for later stages.
 
 ---
 
-## Stage 2 - SeaTalk1 (preliminary, do not order yet)
+## Stage 2 - SeaTalk1
 
 The receive stage is specified in [D-001](design/D-001-seatalk-rx-stage.md), the transmit stage in
-[D-003](design/D-003-seatalk-tx-stage.md). **Nothing is connected to the Raymarine S1 until both
-have passed a bench test against a simulated bus.**
+[D-003](design/D-003-seatalk-tx-stage.md). Both sit on the main board and are **soldered with it
+in phase B**, so their parts go into the same order and are in [`reichelt.csv`](reichelt.csv).
+Phase D commissions them; it does not build them. **Nothing is connected to the Raymarine S1 until
+both have passed a bench test against a simulated bus.**
 
-| Part | Qty | Purpose |
-|------|-----|---------|
-| 4-pole screw terminal, 5.08 mm | 1 | SeaTalk +12 V / DATA / GND, one pole unused. Shared by both directions; same part as the probe terminals |
-| PC817 optocoupler (or 6N137) | 1-2 | galvanic isolation of SeaTalk RX; PC817's ~4 µs edges are fine against a 208 µs bit at 4800 baud. Reichelt [`PC817X1NSZ1B`](https://www.reichelt.de/de/de/shop/produkt/optokoppler_5kv_80v_4_8ma_80_dip-4-319088), DIP-4 |
-| 4.7 kΩ resistor | 1 | LED series resistor on the SeaTalk side of the opto. ~2.3 mA is plenty for a PC817 and keeps the load off the instrument bus, which is held high by pull-ups inside the instruments. A 6N137 would want 1-2 kΩ instead ([D-001](design/D-001-seatalk-rx-stage.md)) |
-| 10 kΩ resistor | 1 | pull-up on the ESP side of the opto output |
-| **BC337-25** NPN, TO-92 | 1 | SeaTalk TX driver, Reichelt [`BC 337-25`](https://www.reichelt.de/de/de/shop/produkt/bipolartransistor_npn_45v_0_8a_0_625w_to-92-4986). hFE 160 minimum against the 100 of a 2N3904, and four times the current headroom. **Not a small MOSFET**: the common logic-level types are surface mount, and the through-hole ones specify a gate threshold of up to 3 V, which a 3.3 V pin barely clears ([D-003](design/D-003-seatalk-tx-stage.md)) |
-| 1 kΩ resistor | 1 | base resistor from IO16 - 2.6 mA of base current, ample for a bus that needs ten |
-| **10 kΩ resistor** | 1 | **base to emitter - keeps the transmitter off while the ESP boots, crashes or is unpowered. Not optional**: it is the only thing between a dead board and a dead instrument network |
-| 100 Ω resistor | 1 | series resistor in the collector line. The low end of the usual range on purpose: it divides against the bus pull-up, and 470 Ω would leave the low level too high to be read as low |
-| 1.5KE20A TVS | 1 | protection on the SeaTalk DATA line. **The same part as the supply input's**: a 15 V device would sit at its threshold whenever the bank is in absorption ([D-001](design/D-001-seatalk-rx-stage.md)) |
+| Part | Qty | Phase | Purpose / requirement | Price | Source |
+|------|-----|-------|-----------------------|-------|--------|
+| 4-pole screw terminal, 5.08 mm | 1 | B | J17: SeaTalk `ST_GND` / `ST_DATA` / bus 12 V, one pole unused. Shared by both directions; same part as the probe terminals and **already counted in the four above** | - | - |
+| PC817 optocoupler, DIP-4 | 1 | B | U1, galvanic isolation of SeaTalk RX; PC817's ~4 µs edges are fine against a 208 µs bit at 4800 baud. The board's footprint is DIP-4 - a 6N137 is DIP-8 and does not fit it | under 1 | [Reichelt `PC817X1NSZ1B`](https://www.reichelt.de/de/de/shop/produkt/optokoppler_5kv_80v_4_8ma_80_dip-4-319088) |
+| **BC337-25** NPN, TO-92 | 1 | B | Q1, SeaTalk TX driver. hFE 160 minimum against the 100 of a 2N3904, and four times the current headroom. **Not a small MOSFET**: the common logic-level types are surface mount, and the through-hole ones specify a gate threshold of up to 3 V, which a 3.3 V pin barely clears ([D-003](design/D-003-seatalk-tx-stage.md)) | under 1 | [Reichelt `BC 337-25`](https://www.reichelt.de/de/de/shop/produkt/bipolartransistor_npn_45v_0_8a_0_625w_to-92-4986) |
+| 1.5KE20A TVS | 1 | B | D3, protection on the SeaTalk DATA line. **The same part as the supply input's**: a 15 V device would sit at its threshold whenever the bank is in absorption ([D-001](design/D-001-seatalk-rx-stage.md)) | under 1 | [Reichelt `1,5KE20A`](https://www.reichelt.de/de/de/shop/produkt/tvs-diode_unidirektional_17_1_v_1500_w_do-201-272804) |
 
-The resistors come out of the 1 % assortment.
+The resistors come out of the 1 % assortment:
+
+| Value | Qty | Phase | Purpose |
+|-------|-----|-------|---------|
+| 4.7 kΩ | 1 | B | R10, LED series resistor on the SeaTalk side of the opto. ~2.3 mA is plenty for a PC817 and keeps the load off the instrument bus, which is held high by pull-ups inside the instruments ([D-001](design/D-001-seatalk-rx-stage.md)) |
+| 10 kΩ | 1 | B | R11, pull-up on the ESP side of the opto output |
+| 1 kΩ | 1 | B | R12, base resistor from IO16 - 2.6 mA of base current, ample for a bus that needs ten |
+| **10 kΩ** | 1 | B | **R13, base to emitter - keeps the transmitter off while the ESP boots, crashes or is unpowered. Not optional**: it is the only thing between a dead board and a dead instrument network |
+| 100 Ω | 1 | B | R14, series resistor in the collector line. The low end of the usual range on purpose: it divides against the bus pull-up, and 470 Ω would leave the low level too high to be read as low |
+
+JP2, which joins `ST_GND` to `GND` for transmitting, is a wire link cut from a resistor lead.
 
 **Firmware note:** the ESP32 UART has no 9-bit mode, so the SeaTalk command bit has to be recovered
 another way - [D-002](design/D-002-seatalk-decoding.md) settles on a bit-banged receiver and says
-why. Prove it on the bench before the interface hardware is finalised: a receiver that measures
-edges rather than sampling mid-bit would want the faster 6N137 instead of the PC817.
+why. The PC817's edges suit it. RMT is the fallback if the bit-banger jitters, and RMT measures
+edges - that is the point at which the optocoupler needs revisiting, and with it the board.
 
 ---
 
