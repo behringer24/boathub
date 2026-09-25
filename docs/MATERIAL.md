@@ -11,6 +11,11 @@ and SHT31 breakouts and the temperature probes - stay with the Amazon listings t
 and tested with. Beyond those, Amazon is the fallback only where Reichelt has no part that meets
 the requirement, and the row says why.
 
+**The Reichelt order as a file.** [`reichelt.csv`](reichelt.csv) holds every Reichelt part of
+stage 1 with its quantity: article number and count, separated by a semicolon, one part per line.
+That is the format myReichelt imports as a list, which then goes into the basket in one step. The
+clamp-on ferrites are optional and in the file; delete their line if they are not wanted.
+
 **Prices are an order of magnitude, not a quote.** They are rounded guide values in EUR to show
 where the money goes; check the shop when ordering. What matters is the technical data in the
 "Purpose / requirement" column - any equivalent part will do.
@@ -84,7 +89,7 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 | Blade fuse 2 A, standard size | 2 | B | one fitted, one spare | under 1 each | [Reichelt `FKS 2A`](https://www.reichelt.de/de/de/shop/produkt/kfz-flachsicherung_2a_grau-7787) |
 | TVS diode 1.5KE20A | 1 | B | transient clamp, **fitted ahead of the Schottky**. 17.1 V standoff, clamps 27.7 V at 54 A. Unidirectional - the bidirectional `CA` suffix is the wrong part | under 1 | [Reichelt `1,5KE20A`](https://www.reichelt.de/de/de/shop/produkt/tvs-diode_unidirektional_17_1_v_1500_w_do-201-272804) |
 | 1N5822 Schottky diode | 1 | B | reverse-polarity protection, 3 A / 40 V, DO-201AD | under 1 | [Reichelt `1N 5822`](https://www.reichelt.de/de/de/shop/produkt/schottkydiode_40_v_3_a_do-201ad-41852) |
-| 100 nF / 50 V ceramic, X7R, 5 mm pitch | **at least 6** | B | 12 V input, DC/DC output, the SHT31 far end, and one at each analogue input that has a known source - A0 and the bilge channel. The positions on the unspecified channels stay empty pads: the capacitor suits a high-impedance source and gets in the way of a fast one. Order a few more; they cost next to nothing | under 1 each | [Reichelt `X7R-5 100N`](https://www.reichelt.de/de/de/shop/produkt/vielschicht-kerko_100_nf_50_100_v_x7r_10_rm_5_0-22865) |
+| 100 nF / 50 V ceramic, X7R, 5 mm pitch | **10** | B | 12 V input, DC/DC output, the SHT31 far end, and one at each analogue input that has a known source - A0 and the bilge channel. The positions on the unspecified channels stay empty pads: the capacitor suits a high-impedance source and gets in the way of a fast one. Six are fitted; the rest are spares, since they cost next to nothing | under 1 each | [Reichelt `X7R-5 100N`](https://www.reichelt.de/de/de/shop/produkt/vielschicht-kerko_100_nf_50_100_v_x7r_10_rm_5_0-22865) |
 | 100 µF / 35 V, **105 °C**, 8 mm, 3.5 mm pitch | 1 | B | bulk at the DC/DC input. 105 °C, not 85 °C. Diameter and pitch match the board's footprint (Panasonic FR) | under 1 | [Reichelt `RAD FR 100/35`](https://www.reichelt.de/de/de/shop/produkt/elko_radial_100_f_35v_105_c_low_esr-140121) |
 | 470 µF / 16 V, **105 °C**, 10 mm, 5 mm pitch | 1 | B | bulk on the 5 V output. Diameter and pitch match the board's footprint (Panasonic FC) | under 1 | [Reichelt `RAD FC 470/16`](https://www.reichelt.de/de/de/shop/produkt/elko_radial_470_f_16_v_105_c_low_esr_10_x_12_5_mm_rm_5_0-84668) |
 
