@@ -42,11 +42,11 @@ system - no battery measurement, no 12 V robustness - but a real, testable one.
 
 | # | Step | Document |
 |---|------|----------|
-| 1 | Main board: fuse, TVS, reverse-polarity protection, DC/DC, and the 1-Wire passives moved off the breadboard. **The SeaTalk stages are soldered with it** - phase D commissions them, it does not build them | [B-001](B-001-power-supply.md), [B-002](B-002-main-board.md) |
+| 1 | Main board: fuse, TVS, reverse-polarity protection, DC/DC, and the 1-Wire passives moved off the breadboard. **The SeaTalk stages are soldered with it** - phase D commissions them, it does not build them. The DC/DC converter goes in last, after the populated board has run on the DevKit's USB. Build it from the [assembly guide](../../hardware/main-board/assembly/index.html), opened in a browser | [B-001](B-001-power-supply.md), [B-002](B-002-main-board.md) |
 | 2 | Battery divider and its calibration factor | [B-001](B-001-power-supply.md), [B-002](B-002-main-board.md) |
 | 3 | Battery state machine and debouncing | [B-001](B-001-power-supply.md) |
 | 4 | Shore-power-loss alarm, gated so it stays quiet underway | [B-001](B-001-power-supply.md) |
-| 5 | Changeover from USB to 12 V - never both at once | [B-001](B-001-power-supply.md) |
+| 5 | Changeover from USB to 12 V - never both at once, and no USB at all while the DevKit sits in a board with the converter fitted | [B-001](B-001-power-supply.md) |
 | 6 | Bilge level 4-20 mA, optional | planned |
 
 ### Phase C - into the boat

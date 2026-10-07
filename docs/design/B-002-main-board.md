@@ -556,6 +556,7 @@ BoatHub-main.net     the exported netlist
 sym-lib-table        binds that library to the project by a relative path
 fp-lib-table         empty: every footprint comes from KiCad's own libraries
 fab/<rev>/           what was actually sent to the fabricator, one directory per revision
+assembly/            the interactive assembly guide, drawn from BoatHub.kicad_pcb - see below
 ```
 
 **Nothing in the project points outside its own directory** except KiCad's standard libraries and
@@ -626,6 +627,29 @@ the 1-Wire pull-ups are specified as a range, and a wire-ended resistor is a thi
 Surface mount would earn its place if this board ever carried something that cannot be soldered by
 hand - a fine-pitch converter IC in place of the module, say. It does not.
 
+### The assembly guide
+
+`assembly/index.html` is the build sheet: open it in any browser, from the file. It draws the
+board from the layout and gives, in soldering order, where each part goes, which way round it sits,
+and the checks between the steps. Tapping a row finds the part on the board; ticks are kept in the
+browser.
+
+It is generated. `assembly/build.py` reads `BoatHub.kicad_pcb`, draws silkscreen, pads and module
+areas, and derives each orientation mark from the footprint - the band from a diode's pad 1, the
+minus half from an electrolytic's pad 2, the wire entry from the edge a terminal faces. The words
+are in `assembly/template.html` and are written for this layout. After a layout change, run
+
+```
+python hardware/main-board/assembly/build.py
+```
+
+and read the sentences of every part that moved or turned against the new drawing.
+
+The guide puts **U2 in last**. Until it is soldered nothing joins the 12 V side to the 5 V rail, so
+the board runs from the DevKit's own USB exactly as the breadboard did, and every sensor, the bus
+and the battery divider are proven before the converter can be harmed. Section 9 is ordered the
+same way.
+
 ## 9. Verification
 
 ### Before the board is ordered
@@ -672,20 +696,32 @@ hand - a fine-pitch converter IC in place of the module, say. It does not.
 - [ ] Socket pin 1 of J7 and J11 continuous to the nets section 5 claims
 - [ ] Neighbouring socket pins not continuous to each other
 
-### Populated, on a bench supply
+### Populated except U2, DevKit on USB
 
-- [ ] Divider ratio measured across R7 and R8 in place: (R7+R8)/R8 within a percent of 11.0
-- [ ] 12.0 V in gives 5.0 V ±0.15 V at the socket's 5V pin
-- [ ] `ADS_A0` reads 1.091 V ±10 mV at 12.0 V in - the divider proving itself against a meter
-      before any firmware trusts it
-- [ ] Supply swept 11 to 15 V: the 5 V rail holds, the A0 reading tracks linearly
-- [ ] **A current source on J12 reads back:** 4 mA gives 0.4 V at A1, 20 mA gives 2.0 V. This can
-      be done long before the sender is bought, and it proves R22 and R15 together
-- [ ] **Supply reversed, briefly:** the fuse blows. Intended behaviour from
-      [B-001](B-001-power-supply.md), worth seeing once on the bench rather than in the boat
+Without U2 the 12 V side and the 5 V rail share nothing but ground. The DevKit runs from its own
+USB, and a bench supply on J9 may be connected at the same time.
+
 - [ ] DevKit fitted: boots, reports 16 MB flash and 8 MB PSRAM, all three probes enumerate, and the
       I2C scan finds every device the bench build found - 0x48 answers, 0x49 does not while J10 is
       empty
+- [ ] Divider ratio measured across R7 and R8 in place: (R7+R8)/R8 within a percent of 11.0
+- [ ] `ADS_A0` reads 1.091 V ±10 mV at 12.0 V in - the divider proving itself against a meter
+      before any firmware trusts it. If it does not, the voltage at C2 tells the divider apart from
+      the ADS1115: it is the node the ADS1115 sees
+- [ ] **A current source on J12 reads back:** 4 mA gives 0.4 V at A1, 20 mA gives 2.0 V. This can
+      be done long before the sender is bought, and it proves R22 and R15 together
+
+### U2 fitted, on a bench supply
+
+U2 goes in with the DevKit out of its socket, and from then on the DevKit is never on USB while it
+sits in the board ([B-001](B-001-power-supply.md)).
+
+- [ ] DevKit out: 12.0 V in gives 5.0 V ±0.15 V at the socket's 5V pin
+- [ ] Supply swept 11 to 15 V: the 5 V rail holds
+- [ ] **Supply reversed, briefly:** the fuse blows. Intended behaviour from
+      [B-001](B-001-power-supply.md), worth seeing once on the bench rather than in the boat
+- [ ] DevKit seated, 12 V only: boots and reaches the broker, and the A0 reading tracks the supply
+      linearly from 11 to 15 V
 - [ ] RSSI within a few dB of the breadboard build - a worse figure means the antenna keepout
 - [ ] An hour at 13.6 V; nothing on the board more than hand-warm
 

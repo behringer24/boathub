@@ -232,7 +232,9 @@ with shore power there is no reason to bother.
 ### Flashing
 
 Use the **CH343P port** (the USB-serial one) for flashing; the native USB port occupies GPIO19/20.
-The guide's rule stands for both ports: **external 5 V off while USB is connected.**
+The guide's rule stands for both ports: **external 5 V off while USB is connected.** On the main
+board the converter counts as external 5 V even when its 12 V side is off, so there the DevKit comes
+out of its socket to be flashed ([B-001](B-001-power-supply.md)).
 
 **Which of the two sockets.** Hold the board with the module at the top and both USB-C sockets along
 the bottom edge: the **right-hand socket is the CH343P**, the left-hand one is the native ESP32-S3
