@@ -96,7 +96,9 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
 
 - **12 V is not harmless.** A boat battery can deliver very high short-circuit currents. Every new
   feed gets its own fuse close to the source.
-- Switch off the external 5 V supply while flashing over USB. Never feed 5 V into 3V3.
+- Switch off the external 5 V supply while flashing over USB. Never feed 5 V into 3V3. On the main
+  board the converter is that supply even when the 12 V side is off: **once U2 is fitted, the DevKit
+  comes out of its socket to be flashed** - USB would drive the unpowered converter backwards.
 - **SeaTalk TX stays disabled** until RX runs reliably and the output stage has been tested
   separately on the bench. After a reset or a lost connection the transmit path is passive.
 - **No autopilot commands from the internet.** Control lives on the local on-board Wi-Fi only; the

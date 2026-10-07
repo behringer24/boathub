@@ -276,13 +276,19 @@ not the problem".
 
 When phase B is built, the transition needs care:
 
-1. Flash the final firmware **over USB, with no external 5 V connected**.
+1. Flash the final firmware **over USB, with the DevKit out of the main board's socket**.
 2. Disconnect USB.
-3. Only then connect the 12 V side.
+3. Seat the DevKit, and only then connect the 12 V side.
 
 **Never both at once.** USB, the 5 V pin and 3V3 are alternative supply paths, not parallel ones.
 This is the single rule most likely to be broken in a moment of impatience, and it is the one that
 costs a board.
+
+On the main board the rule reaches further than it looks. The converter's output is wired to the
+5 V pin, so a DevKit on USB in a board with U2 fitted drives the converter backwards even with the
+12 V side switched off, and RECOM warns that this can damage it ([B-001](B-001-power-supply.md)).
+Before U2 is soldered there is no such path, which is why the board is first brought up on USB -
+see [B-002](B-002-main-board.md) section 9.
 
 ## 9. References
 

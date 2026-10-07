@@ -158,9 +158,10 @@ converter never starts - a fault that looks exactly like a dead part.
 **One warning from the datasheet is worth carrying into the build:** current flowing *backwards*
 into the output can damage the converter while it is unpowered, and the remedy is a blocking diode
 on the output. That is precisely the USB case - a DevKit fed from USB pushes 5 V onto the rail the
-converter drives. The changeover rule in section 8 is therefore not tidiness. **USB and 12 V never
-at the same time**, and the reason is now a line in the manufacturer's own document rather than
-caution.
+converter drives, and it does so whether the 12 V side is switched on or not. The changeover rule in
+[A-002](A-002-bench-setup-usb.md) section 8 is therefore not tidiness. **Once U2 is fitted, the
+DevKit is never on USB while it sits in the board**: it comes out of its socket to be flashed. The
+reason is a line in the manufacturer's own document rather than caution.
 
 ### The negative side, and where it returns
 
@@ -388,8 +389,9 @@ every threshold in the table, so they must not be compiled in.
 ## 6. Safety
 
 - **12 V is not harmless.** Fuse at the source, supply disconnected while wiring.
-- **External 5 V off while flashing over USB.** USB, the 5 V pin and 3V3 are alternative supply
-  paths, never parallel ones.
+- **No USB while the DevKit sits in a board with U2 fitted**, whether the 12 V side is on or not.
+  USB, the 5 V pin and 3V3 are alternative supply paths, never parallel ones, and the converter is
+  damaged by being driven from its output while it is off. Flash with the DevKit out of its socket.
 - Reverse polarity blows the fuse by design - see above. Label the enclosure.
 - The 1 kΩ series resistor into A0 is a safety part, and the fault it guards against is one in the
   divider itself rather than a reversed supply. **Do not omit it, and do not hang it off the node
