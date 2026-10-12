@@ -84,10 +84,6 @@ What it settles that a bare adapter does not:
   set would drag it lower still.
 - It runs at 3.3 V natively.
 
-One thing to expect rather than chase: the module carries its own STM32 for the Arduino API, and
-that answers on the bus at **0x7E**. Nothing here talks to it, but a bus scan finds it, and an
-unexplained address is what somebody spends an evening on.
-
 ST's own **STEVAL-MKI217V1** is the alternative at around 21 EUR: a DIL-24 adapter breaking out the
 raw chip pins, with a LIS2MDL magnetometer that would stay unconnected. It works, but it costs
 more, sells as clearance stock, and leaves CS and the address pin for you to tie.
@@ -103,6 +99,44 @@ Requirements:
 - roughly aligned with the boat's axes - within a few degrees, so that heel and pitch stay separate
   quantities rather than mixtures of each other
 - once fixed, it must not move again; every reading afterwards is relative to where it was zeroed
+
+The module has four 3.2 mm holes for M3 screws, 32 mm apart along its length and 16 mm across.
+
+### The cable
+
+The five conductors run on a length of **Cat 5e or Cat 6 patch cable**: eight stranded cores in
+four twisted pairs, thin enough for the module's pads, and an offcut is in most drawers. Two
+things to check before cutting it:
+
+- **Stranded, not solid.** Patch cable is stranded. Installation cable for walls has solid cores,
+  and those break at the solder joint under vibration. A cable that hangs limp is stranded; one
+  that keeps the shape it is bent into is not.
+- **Copper, not CCA.** Cheap cables use copper-clad aluminium, printed `CCA` on the jacket, and it
+  takes solder badly.
+
+| Pair | Core | Signal | Module pad | J4 pole |
+|------|------|--------|------------|---------|
+| blue | blue | SDA | 4-pin side | 3 |
+| | white-blue | GND | 4-pin side | 2 |
+| orange | orange | SCL | 4-pin side | 4 |
+| | white-orange | 3.3 V | 4-pin side | 1 |
+| green | green | INT1 | 10-pin side | 5 |
+| | white-green | unused | | |
+| brown | both | unused, cut back | | |
+
+SDA twisted with ground and SCL with the supply is the four-conductor scheme from
+[A-002](A-002-bench-setup-usb.md); INT1 takes a pair of its own. These are not the red, black,
+blue and yellow of the bench wiring, so write the table inside the enclosure lid.
+
+- **Solder the cores straight into the pads**, without a pin header. The cable is the permanent
+  connection, and a plug-in contact is exactly what [B-002](B-002-main-board.md) keeps off this
+  bus. Tie the cable to a mounting hole so the joints do not carry the movement.
+- **Every core gets a 0.25 mm² ferrule at J4.** A screw on bare thin strands flattens them and the
+  contact loosens over time. Tinning the strands instead does not help: solder creeps under the
+  screw.
+- **Of the ten sensor pads, only INT1 is connected.** CS and SDO/SA0 stay open - CS pulled low
+  switches the chip to SPI and it drops off the bus, and SDO/SA0 sets the address. The VDDIO and
+  address solder jumpers stay as shipped.
 
 ### The zero reference
 
