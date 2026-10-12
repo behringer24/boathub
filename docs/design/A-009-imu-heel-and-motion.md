@@ -71,6 +71,14 @@ after a start - and then slows to a minute, so that a seaway averages out of it 
 learned as offset. After a restart the readings settle within about half a minute, and nothing is
 calibrated by hand.
 
+It learns **no faster than an offset could explain**. An offset of 2 dps - twice what the
+datasheet gives - holds the estimate at most 6 degrees from gravity at tau = 3 s. Anything larger
+is motion: a knock, or the module turned over in the hand on the bench. Learning from all of it
+winds the offset up, and the reading then sits several degrees off for a minute while it unwinds.
+So a larger disagreement counts as 6 degrees and no more. It is capped rather than discarded,
+because a seaway pushes the disagreement far out to both sides: dropping the far samples would
+keep a lopsided remainder and learn an offset that is not there.
+
 The part of the offset about the "up" axis itself cannot be seen this way, and does not matter:
 turning about "up" does not move "up".
 
@@ -227,7 +235,9 @@ else; the traffic is the traffic.
 knock detector on every sample (section 7) and pulls an interrupt line when it fires. The ESP polls
 attitude at a leisurely 25 Hz - about 3 % of the bus - and hears about impacts the instant they
 happen, at a bandwidth it could never afford to poll for. The gyroscope runs at 26 Hz, matched to
-the polling.
+the polling, and at ±1000 dps. A boat never turns anywhere near that fast, but a module turned over
+in the hand easily passes 250 dps, and a gyroscope driven past its range loses the angle it was
+turned through.
 
 That costs one GPIO. **IO2** is free and has no other claim.
 
@@ -235,6 +245,10 @@ The line is **latched**: it stays high until the ESP reads the chip's source reg
 only has to look at the pin each time it comes round - no interrupt routine, and no knock lost to
 a pass that took longer than usual. GPIO2 is pulled down, so with no module fitted the line reads
 quiet rather than floating.
+
+The chip drives the pin only once something is routed to it; until then its own pull-down holds
+it low whatever the configured polarity. Any check of the wire therefore comes after the knock
+detector is armed - before it, a connected line and a missing one read the same.
 
 ## 6. What reaches the aggregate
 

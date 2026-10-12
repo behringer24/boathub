@@ -10,6 +10,11 @@ using attitude::Vec3;
 const float RAD_PER_DEG = 0.017453293f;
 const float DEG_PER_RAD = 57.29578f;
 
+// The largest zero offset the gyroscope is expected to have. The datasheet
+// gives about 1 dps for this part; twice that leaves room without letting
+// motion in.
+const float MAX_OFFSET_DPS = 2.0f;
+
 Vec3 add(const Vec3 &a, const Vec3 &b) { return {a.x + b.x, a.y + b.y, a.z + b.z}; }
 Vec3 sub(const Vec3 &a, const Vec3 &b) { return {a.x - b.x, a.y - b.y, a.z - b.z}; }
 Vec3 scale(const Vec3 &a, float k) { return {a.x * k, a.y * k, a.z * k}; }
@@ -77,10 +82,22 @@ void Filter::update(const Vec3 &accelG, const Vec3 &gyroDps, float dtS) {
   //    learned over 4 x tau - the fastest that does not overshoot. After that
   //    the time constant grows with the running time until it reaches
   //    biasTau, slow enough that a seaway averages out of it.
+  //
+  //    And no faster than an offset could explain. An offset of MAX_OFFSET_DPS
+  //    holds the estimate at most MAX_OFFSET_DPS x tau away from gravity;
+  //    anything larger is motion - a shake, a knock, the module turned over in
+  //    the hand - and learning from all of it would wind the offset up, to be
+  //    unlearned again over the next minute. So a larger disagreement counts
+  //    as that much and no more. Capped, not discarded: a seaway pushes the
+  //    disagreement far out to both sides, and dropping the far samples would
+  //    keep a lopsided remainder and learn an offset that is not there.
   const float warmS = 10.0f * tau_;
   const float grown = 4.0f * tau_ + (runS_ > warmS ? runS_ - warmS : 0.0f);
   const float learnS = grown < biasTau_ ? grown : biasTau_;
-  const Vec3 disagreement = cross(up_, gravity);  // length: sine of the angle between them
+  Vec3 disagreement = cross(up_, gravity);  // length: sine of the angle between them
+  const float explicable = sinf(MAX_OFFSET_DPS * tau_ * RAD_PER_DEG);
+  const float size = length(disagreement);
+  if (size > explicable) disagreement = scale(disagreement, explicable / size);
   bias_ = add(bias_, scale(disagreement, DEG_PER_RAD * dtS / (tau_ * learnS)));
 
   // 3. Gravity pulls the estimate back, with time constant tau.

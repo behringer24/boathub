@@ -60,9 +60,10 @@ static void upAxis(const float a[3], char out[3]) {
 // With nothing pending the chip holds INT1 at its inactive level. Invert that
 // level and the line should follow. GPIO2 is pulled down, so a missing wire
 // reads low both times - and a stuck line reads the same both times either way.
+//
+// Only once the knock detector is armed: until something is routed to INT1 the
+// chip leaves the pin undriven, and it reads low whatever the polarity.
 static void checkInterruptWire() {
-  pinMode(PIN_INT1, INPUT_PULLDOWN);
-
   lsm6dsox::setInterruptActiveLow(false);
   delay(2);
   const int idle = digitalRead(PIN_INT1);
@@ -71,6 +72,7 @@ static void checkInterruptWire() {
   const int inverted = digitalRead(PIN_INT1);
   lsm6dsox::setInterruptActiveLow(false);
   delay(2);
+  lsm6dsox::takeKnock();  // anything that latched meanwhile
 
   Serial.printf("INT1 -> GPIO%d: %s idle, %s inverted - ", PIN_INT1, idle ? "high" : "low",
                 inverted ? "high" : "low");
@@ -150,12 +152,14 @@ void setup() {
   }
   found = true;
   Serial.printf("LSM6DSOX at 0x%02X\n", lsm6dsox::address());
-  Serial.printf("accel +-4 g at %.0f Hz, gyro +-250 dps at %.0f Hz, read at %lu Hz\n",
-                lsm6dsox::ACCEL_HZ, lsm6dsox::GYRO_HZ, (unsigned long)(1000 / READ_MS));
+  Serial.printf("accel +-%.0f g at %.0f Hz, gyro +-%.0f dps at %.0f Hz, read at %lu Hz\n",
+                lsm6dsox::ACCEL_RANGE_G, lsm6dsox::ACCEL_HZ, lsm6dsox::GYRO_RANGE_DPS,
+                lsm6dsox::GYRO_HZ, (unsigned long)(1000 / READ_MS));
 
-  checkInterruptWire();
+  pinMode(PIN_INT1, INPUT_PULLDOWN);
   const float armed = lsm6dsox::armKnock(KNOCK_JUMP_G);
   Serial.printf("knock detector: a jump of %.3f g between two samples, on INT1\n", armed);
+  checkInterruptWire();
 
   filter.configure(TAU_S, BIAS_TAU_S);
 

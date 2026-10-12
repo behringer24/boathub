@@ -146,7 +146,9 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   environment that runs both. The filter tracks the direction of "up" rather than two separate
   angles, because a heeled boat turning about her mast would otherwise read the turn as pitch, and
   it learns the gyroscope's zero offset as it runs: uncorrected, a 1 dps offset holds the reading
-  3 degrees off at a 3 s time constant. The bench reader checks the INT1 wire at start by having
+  3 degrees off at a 3 s time constant. It learns no faster than an offset could explain, so a
+  knock or a module turned over in the hand does not wind the offset up. The gyroscope runs at
+  ±1000 dps for the same reason. The bench reader checks the INT1 wire at start by having
   the chip invert the line, names the axis gravity pulls along so the print on the module can be
   confirmed, and shows heel and pitch beside what gravity alone says. The knock detector compares
   the change between consecutive samples rather than the acceleration itself, which is what tells

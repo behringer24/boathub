@@ -33,17 +33,17 @@ const uint8_t CTRL9_I3C_DISABLE = 0x02;
 const uint8_t XL_ODR_104HZ = 0x4 << 4;
 const uint8_t XL_FS_4G = 0x2 << 2;
 const uint8_t G_ODR_26HZ = 0x2 << 4;
-const uint8_t G_FS_250DPS = 0x0 << 1;
+const uint8_t G_FS_1000DPS = 0x4 << 1;
 
 // Sensitivity at those full scales.
-const float G_PER_LSB = 0.000122f;     // 0.122 mg at +-4 g
-const float DPS_PER_LSB = 0.00875f;    // 8.75 mdps at +-250 dps
+const float G_PER_LSB = 0.000122f;  // 0.122 mg at +-4 g
+const float DPS_PER_LSB = 0.035f;   // 35 mdps at +-1000 dps
 
 // One step of the wake-up threshold is a sixty-fourth of full scale, and the
 // chip compares it against the slope filter, which is half the change between
 // consecutive samples. At +-4 g that makes a step 0.0625 g of slope - a jump
 // of 0.125 g.
-const float JUMP_G_PER_STEP = 2.0f * 4.0f / 64.0f;
+const float JUMP_G_PER_STEP = 2.0f * lsm6dsox::ACCEL_RANGE_G / 64.0f;
 
 const uint8_t TAP_CFG0_LIR = 0x01;              // latch the interrupt
 const uint8_t TAP_CFG0_INT_CLR_ON_READ = 0x40;  // reading the source clears it
@@ -112,7 +112,7 @@ bool begin() {
 
   return writeReg(REG_CTRL3_C, CTRL3_BDU | CTRL3_IF_INC) &&
          writeReg(REG_CTRL1_XL, XL_ODR_104HZ | XL_FS_4G) &&
-         writeReg(REG_CTRL2_G, G_ODR_26HZ | G_FS_250DPS);
+         writeReg(REG_CTRL2_G, G_ODR_26HZ | G_FS_1000DPS);
 }
 
 uint8_t address() { return addr; }

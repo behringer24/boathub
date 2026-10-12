@@ -16,10 +16,14 @@ namespace lsm6dsox {
 
 // Accelerometer at 104 Hz, +-4 g: fast enough for the knock detector to see a
 // jolt that lasts tens of milliseconds, and wide enough not to clip one.
-// Gyroscope at 26 Hz, +-250 dps: a boat rolls at tens of degrees per second at
-// most, and attitude is read at 25 Hz anyway.
+// Gyroscope at 26 Hz, matched to reading attitude at 25 Hz, and at +-1000 dps.
+// A boat never turns anywhere near that fast, but a module turned over in the
+// hand easily passes 250 dps - and a gyroscope driven past its range loses the
+// angle it was turned through.
 const float ACCEL_HZ = 104.0f;
+const float ACCEL_RANGE_G = 4.0f;
 const float GYRO_HZ = 26.0f;
+const float GYRO_RANGE_DPS = 1000.0f;
 
 struct Sample {
   float accelG[3] = {0, 0, 0};    // x, y, z in g; at rest the axis pointing up reads +1
@@ -57,6 +61,10 @@ uint8_t takeKnock();
 // Inverts the interrupt pins' idle level. Used once at start to prove the INT1
 // wire: with nothing pending the line is low, inverted it is high, and a
 // GPIO that sees both is connected to it.
+//
+// Only after armKnock(). Until something is routed to INT1 the chip does not
+// drive the pin at all, and its internal pull-down holds it low whatever the
+// polarity says - which reads exactly like a missing wire.
 bool setInterruptActiveLow(bool activeLow);
 
 }  // namespace lsm6dsox
