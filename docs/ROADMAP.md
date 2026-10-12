@@ -20,6 +20,7 @@ to the self-hosted server.
 | Three DS18B20 on dedicated GPIOs | pin the ROM addresses explicitly rather than letting the library auto-detect; verify the CRC on every read and reject bad frames |
 | SHT31-D on I2C | bus at 100 kHz, address 0x44 |
 | ADS1115 converters on I2C | fix the PGA once and never change it, or an existing calibration silently becomes wrong |
+| LSM6DSOX IMU on I2C, interrupt on GPIO2 | heel, pitch and motion in the aggregate, an event when something hits the boat. The filter's time constant, the axis mapping, the zero reference and the knock threshold live in NVS, see [design/A-009-imu-heel-and-motion.md](design/A-009-imu-heel-and-motion.md) |
 | SoftAP `BOOT-NETZ` plus a local configuration web UI | |
 | Station mode, credentials in NVS/Preferences | **no Wi-Fi or server passwords in source** |
 | Battery state machine with debouncing | thresholds and windows configurable in NVS, see [design/B-001-power-supply.md](design/B-001-power-supply.md) |

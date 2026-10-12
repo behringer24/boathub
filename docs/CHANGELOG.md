@@ -142,6 +142,15 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   dead patch in it. A bus scan proves an address answers; it cannot prove the converter converts.
   Wanted again in phase B, to watch the battery divider against a multimeter before trusting a
   calibration factor.
+- LSM6DSOX driver at register level and the attitude filter for A-009, with an `imuread` bench
+  environment that runs both. The filter tracks the direction of "up" rather than two separate
+  angles, because a heeled boat turning about her mast would otherwise read the turn as pitch, and
+  it learns the gyroscope's zero offset as it runs: uncorrected, a 1 dps offset holds the reading
+  3 degrees off at a 3 s time constant. The bench reader checks the INT1 wire at start by having
+  the chip invert the line, names the axis gravity pulls along so the print on the module can be
+  confirmed, and shows heel and pitch beside what gravity alone says. The knock detector compares
+  the change between consecutive samples rather than the acceleration itself, which is what tells
+  a knock from a seaway.
 - `play` build environment with an LED sandbox for working out patterns on the onboard WS2812 and
   BOOT button, without touching the firmware.
 - Wi-Fi: access point `BOOT-NETZ` and station run at the same time, with the station retried under
