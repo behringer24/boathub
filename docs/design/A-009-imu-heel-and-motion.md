@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Phase** | A |
-| **Software version** | v3 |
+| **Software version** | v1 |
 | **Touches hardware** | yes |
 
 ## 1. Goal
@@ -29,8 +29,8 @@ hull is doing. At a pontoon in still air those are the same thing. Under sail in
 not, and the error is worst exactly at the peaks - which is the number worth having.
 
 So: both, combined. The gyroscope carries the short term, where the accelerometer is polluted by
-wave motion; the accelerometer carries the long term, where the gyroscope has drifted. A
-**complementary filter** is the whole of it:
+wave motion; the accelerometer carries the long term, where the gyroscope has drifted. That is a
+**complementary filter**, and in its textbook form it runs once per angle:
 
 ```
 angle = a * (angle + rate * dt) + (1 - a) * angle_from_gravity
@@ -40,9 +40,47 @@ angle = a * (angle + rate * dt) + (1 - a) * angle_from_gravity
 `tau = a * dt / (1 - a)`.
 
 **For a boat, tau wants to be seconds, not tenths.** Wave-induced acceleration lasts whole seconds,
-so a filter tuned for a handheld device would follow the waves rather than the heel. At 25 Hz,
-`a = 0.987` gives about 3 s. That constant belongs in NVS: it is the one number that will need
-tuning against real motion, and it is the one a boat needs different from everybody else.
+so a filter tuned for a handheld device would follow the waves rather than the heel. Three seconds
+is the starting point. The firmware keeps tau itself in NVS rather than `a`, so that the setting
+means the same at any sampling rate: it is the one number that will need tuning against real
+motion, and it is the one a boat needs different from everybody else.
+
+### One direction, not two angles
+
+The per-angle form breaks down exactly when it matters. Heeled at 25 degrees and bearing away, the
+boat turns about her mast, and the mast is no longer vertical: part of that turn lands on the axis
+the filter calls pitch. Turning at 3 degrees a second, a per-angle filter settles nearly four
+degrees bow-down with the bow perfectly level.
+
+So the firmware does not filter angles. It tracks the **direction of "up" as the boat sees it**:
+the gyroscope turns that direction by however far the boat turned, the accelerometer pulls it back
+towards gravity over tau, and heel and pitch are read off the result at the end. The same filter
+and the same tau, with no geometry left out - some forty lines, and no library.
+
+### The gyroscope's own offset
+
+A MEMS gyroscope reads a small rate when nothing is turning - up to about a degree per second on
+this part. A complementary filter does not drift away on it, but it does settle off by it: the
+offset times tau, **3 degrees at 1 dps and tau = 3 s**. That is the whole error budget several
+times over.
+
+So the filter learns the offset from the same disagreement that corrects the angle: where the
+gyroscope keeps carrying the estimate away from gravity, the disagreement points along the offset.
+Learning starts fast - over 4 x tau, the fastest that does not overshoot, for the first 10 x tau
+after a start - and then slows to a minute, so that a seaway averages out of it rather than being
+learned as offset. After a restart the readings settle within about half a minute, and nothing is
+calibrated by hand.
+
+It learns **no faster than an offset could explain**. An offset of 2 dps - twice what the
+datasheet gives - holds the estimate at most 6 degrees from gravity at tau = 3 s. Anything larger
+is motion: a knock, or the module turned over in the hand on the bench. Learning from all of it
+winds the offset up, and the reading then sits several degrees off for a minute while it unwinds.
+So a larger disagreement counts as 6 degrees and no more. It is capped rather than discarded,
+because a seaway pushes the disagreement far out to both sides: dropping the far samples would
+keep a lopsided remainder and learn an offset that is not there.
+
+The part of the offset about the "up" axis itself cannot be seen this way, and does not matter:
+turning about "up" does not move "up".
 
 ### No magnetometer
 
@@ -59,7 +97,7 @@ number already available elsewhere.
 | **MPU6050**, ~2 EUR | everywhere, endless examples | **0x68 clashes with the DS3231** if that is ever fitted (resolvable on AD0), ageing part, many fakes |
 | **BNO055** (Bosch), ~25 EUR | fusion **on the chip** - read degrees, write no filter | its fusion is tuned for consumer motion and **cannot be retuned**, which is the one thing a boat needs to change |
 
-**Recommendation: LSM6DSOX.** The complementary filter is perhaps thirty lines and it is not the
+**Recommendation: LSM6DSOX.** The complementary filter is some forty lines and it is not the
 hard part of this feature - the zero reference and the mounting are. And a filter of one's own can
 be given the seconds-long time constant that a boat needs, which the BNO055 cannot be told to do at
 any price.
@@ -170,9 +208,14 @@ shows on the first real passage, when the boat appears to pitch twenty degrees a
 all - and by then it has been recorded that way for weeks.
 
 So **decide which of the sensor's axes runs fore and aft before it is bolted down**, mark it, and
-write it in the commissioning notes. If the mounting position makes the right orientation awkward,
-the axis mapping belongs in NVS beside the zero reference rather than being fought mechanically -
-but it has to be a recorded decision either way, because nothing downstream can infer it.
+write it in the commissioning notes. The Modulino prints its X and Y axes and the sense of rotation
+about Z on the board; the bench reader in section 9 confirms them against gravity before anything
+is fixed.
+
+The firmware takes the mapping from a setting in NVS beside the zero reference - which of the
+module's axes points forward and which points up - so a mounting position that makes the natural
+orientation awkward is a configuration change rather than a mechanical fight. It is still a
+recorded decision, because nothing downstream can infer it.
 
 ## 5. Two rates, and why the bus decides
 
@@ -188,12 +231,24 @@ Sampling everything at 100 Hz is not free. Fourteen bytes per sample at 100 kHz 
 SHT31 and the ADS1115 converters. Batching through the FIFO saves the per-transaction overhead and not much
 else; the traffic is the traffic.
 
-**So the chip does the watching.** The LSM6DSOX runs its own high-g detector at full internal rate
-and pulls an interrupt line when a threshold is crossed. The ESP polls attitude at a leisurely
-25 Hz - about 3 % of the bus - and hears about impacts the instant they happen, at a bandwidth it
-could never afford to poll for.
+**So the chip does the watching.** The LSM6DSOX samples its accelerometer at 104 Hz, runs its own
+knock detector on every sample (section 7) and pulls an interrupt line when it fires. The ESP polls
+attitude at a leisurely 25 Hz - about 3 % of the bus - and hears about impacts the instant they
+happen, at a bandwidth it could never afford to poll for. The gyroscope runs at 26 Hz, matched to
+the polling, and at ±1000 dps. A boat never turns anywhere near that fast, but a module turned over
+in the hand easily passes 250 dps, and a gyroscope driven past its range loses the angle it was
+turned through.
 
 That costs one GPIO. **IO2** is free and has no other claim.
+
+The line is **latched**: it stays high until the ESP reads the chip's source register. So `loop()`
+only has to look at the pin each time it comes round - no interrupt routine, and no knock lost to
+a pass that took longer than usual. GPIO2 is pulled down, so with no module fitted the line reads
+quiet rather than floating.
+
+The chip drives the pin only once something is routed to it; until then its own pull-down holds
+it low whatever the configured polarity. Any check of the wire therefore comes after the knock
+detector is armed - before it, a connected line and a missing one read the same.
 
 ## 6. What reaches the aggregate
 
@@ -221,20 +276,32 @@ a 16-bit count leaves less headroom than anyone should have to think about.
 
 ## 7. Impact detection
 
-A threshold crossing on the chip's interrupt raises an event on `boathub/<boat-id>/events` -
-immediately, not at the next window. An unattended boat that was hit at 03:14 is worth knowing
-about at 03:14.
+A knock raises an event on `boathub/<boat-id>/events` - immediately, not at the next window. An
+unattended boat that was hit at 03:14 is worth knowing about at 03:14.
 
-The event carries the peak magnitude and the time. Settings in NVS:
+### What the chip compares
+
+Not the acceleration itself but **how fast it changes**. The chip's slope filter takes the
+difference between consecutive samples, 9.6 ms apart at 104 Hz, and compares it against the
+threshold on every axis. That is what tells a knock from a seaway: a wave can throw the boat about
+by a few tenths of a g, but over seconds, so between two samples it barely moves. A knock against
+the pier delivers its jolt within a sample or two.
+
+The threshold is therefore the size of that **jump**. At the ±4 g range the chip resolves it in
+steps of 0.125 g, up to 7.9 g.
+
+The event carries the time, the axes that crossed, and the acceleration read the moment the line
+rises. Settings in NVS:
 
 | | Starting point | |
 |---|---|---|
-| Threshold | 0.5 g | a guess until there is real data. A boat snatching at her lines runs perhaps 0.1-0.3 g; a knock against the pier is well above it |
+| Threshold | a jump of 0.5 g | a guess until there is real data. A boat snatching at her lines changes her acceleration over tenths of a second; a knock against the pier does it within milliseconds |
 | Hold-off | 60 s | one impact, not forty reports of the same one |
 
 **Expect to tune this.** The threshold that separates "a wave" from "something hit us" is a
-property of this boat at this berth, and nobody can pick it from a datasheet. Until it is tuned,
-`motion_g` max per window is the record to tune it against - which is a good reason to have the
+property of this boat at this berth, and nobody can pick it from a datasheet. Start at the guess
+and raise it a step at a time while ordinary days at the berth still raise events. `motion_g` max
+per window shows how hard she is being thrown about in the meantime - a good reason to have the
 channel whether or not the alarm is ever armed.
 
 ## 8. Failure modes
@@ -246,10 +313,25 @@ channel whether or not the alarm is ever armed.
 | Gyroscope drifting badly | attitude disagrees with gravity while at rest | the filter corrects it continuously; a persistent disagreement is a failing part |
 | Enclosure has moved | heel at rest is no longer near zero | cannot be told apart from the boat's trim changing - which is why re-zeroing belongs in the commissioning notes, not in the firmware's judgement |
 | Interrupt line stuck | impacts reported continuously | hold-off limits the rate; a stuck line shows as a steady stream and is its own diagnosis |
+| INT1 not connected | at start the chip inverts the line's idle level, and GPIO2 does not follow | attitude carries on; knocks go undetected, which is said once in the log and in the status rather than discovered after the first one |
 
 ## 9. Verification
 
+Most of this is done on the desk first, with the bench reader:
+
+```
+pio run -d board -e imuread -t upload -t monitor
+```
+
+It runs the firmware's own driver and filter, prints heel and pitch beside what gravity alone says,
+and takes `z` to level, `c` to clear the level and `r` to restart the filter. It assumes X toward
+the bow and the component side up.
+
 - [ ] Sensor answers at its address, and the bus scan still finds every other device
+- [ ] The bench reader reports the INT1 wire connected
+- [ ] Standing the module on each edge in turn, the bench reader names the printed arrow that
+      points at the ceiling - `+X`, `+Y`, and `+Z` lying flat - and the opposite face as minus
+- [ ] The gyro bias the bench reader shows settles within half a minute of a start, and stays put
 - [ ] At rest and zeroed, heel and pitch read within a fraction of a degree of zero
 - [ ] **Tilting the enclosure bow-up moves `pitch_deg` and not `heel_deg`**, and tilting it to
       starboard moves `heel_deg` and not `pitch_deg`. This is the check for a quarter turn in
