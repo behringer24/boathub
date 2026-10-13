@@ -142,6 +142,14 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   dead patch in it. A bus scan proves an address answers; it cannot prove the converter converts.
   Wanted again in phase B, to watch the battery divider against a multimeter before trusting a
   calibration factor.
+- The IMU runs in the firmware: attitude at 25 Hz, knocks watched by the chip and read off the
+  latched INT1 line, both on the serial log and the status line. Heel and pitch stay out until the
+  boat has been levelled once - **Level now** on the configuration portal, refused for the first
+  half minute while the gyroscope's offset is still being learned. The axis mapping, the filter's
+  time constant, the knock threshold and the hold-off are settings on the portal. The zero
+  reference is stored in the module's own axes, so correcting the axis setting keeps it. A knock
+  during the hold-off is counted into the next report rather than dropped, and a loop pass stalled
+  by a failed MQTT connect is not integrated as three seconds of turning. Not yet in the telemetry.
 - LSM6DSOX driver at register level and the attitude filter for A-009, with an `imuread` bench
   environment that runs both. The filter tracks the direction of "up" rather than two separate
   angles, because a heeled boat turning about her mast would otherwise read the turn as pitch, and

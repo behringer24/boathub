@@ -45,6 +45,12 @@ class Filter {
 
   bool started() const { return started_; }
 
+  // Seconds of samples since the start. The gyroscope's offset is learned
+  // fast for the first 10 x tau of them, so until then the readings are
+  // still settling.
+  float runS() const { return runS_; }
+  bool settling() const { return !started_ || runS_ < 10.0f * tau_; }
+
   // Unit vector, boat axes.
   const Vec3 &up() const { return up_; }
 
@@ -91,5 +97,8 @@ class Level {
 
 // The unit vector along v, or v unchanged if it has no length.
 Vec3 normalised(const Vec3 &v);
+
+float dot(const Vec3 &a, const Vec3 &b);
+Vec3 cross(const Vec3 &a, const Vec3 &b);
 
 }  // namespace attitude

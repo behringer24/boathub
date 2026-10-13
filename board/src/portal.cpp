@@ -5,6 +5,7 @@
 #include <WiFi.h>
 
 #include "config.h"
+#include "imu.h"
 #include "net.h"
 #include "uplink.h"
 
@@ -53,8 +54,10 @@ String esc(const String &in) {
   return out;
 }
 
+// `extra` is raw attributes, for the odd field that needs one - a number with
+// decimals, say, which a browser otherwise refuses as "not a valid value".
 String field(const char *name, const char *label, const String &value, const char *type = "text",
-             const char *hint = "") {
+             const char *hint = "", const char *extra = "") {
   String h = "<label>";
   h += label;
   h += "<input name=\"";
@@ -69,7 +72,48 @@ String field(const char *name, const char *label, const String &value, const cha
     h += hint;
     h += "\"";
   }
+  if (extra[0]) {
+    h += " ";
+    h += extra;
+  }
   h += "></label>";
+  return h;
+}
+
+// The six ways a module axis can point, in the order of the axis codes in
+// config.h.
+const char *AXES[] = {"+X", "-X", "+Y", "-Y", "+Z", "-Z"};
+
+String axisChoice(const char *name, const char *label, uint16_t value) {
+  String h = "<label>";
+  h += label;
+  h += "<select name=\"";
+  h += name;
+  h += "\">";
+  for (uint16_t i = 0; i < 6; i++) {
+    h += "<option value=\"";
+    h += i;
+    h += "\"";
+    if (i == value) h += " selected";
+    h += ">";
+    h += AXES[i];
+    h += "</option>";
+  }
+  h += "</select></label>";
+  return h;
+}
+
+// What the motion sensor is doing, in one line above its settings.
+String imuSummary() {
+  String h = "<p class=s>";
+  h += imu::statusText();
+  const imu::Reading r = imu::latest();
+  if (r.valid && r.level) {
+    char buf[64];
+    snprintf(buf, sizeof(buf), " &middot; heel %+.1f&deg; pitch %+.1f&deg;", r.heelDeg, r.pitchDeg);
+    h += buf;
+  }
+  h += "</p>";
   return h;
 }
 
@@ -87,7 +131,7 @@ void handleRoot() {
                "fieldset{border:1px solid #d9d9d4;border-radius:8px;margin:0 0 1rem;padding:.75rem 1rem 1rem;background:#fff}"
                "legend{padding:0 .35rem;color:#5c5c57;font-size:.85rem}"
                "label{display:block;margin:.6rem 0}"
-               "input{width:100%;box-sizing:border-box;margin-top:.25rem;padding:.5rem;"
+               "input,select{width:100%;box-sizing:border-box;margin-top:.25rem;padding:.5rem;"
                "border:1px solid #c9c9c2;border-radius:6px;font:inherit}"
                "button{width:100%;padding:.7rem;border:0;border-radius:6px;background:#1a1a19;"
                "color:#fff;font:inherit;font-weight:600}"
@@ -117,9 +161,25 @@ void handleRoot() {
   h += field("mqtt_pass", "Password", "", "password", "unchanged");
   h += field("smpl_secs", "Measure every ... seconds", String(c.sampleSecs), "number");
   h += field("pub_secs", "Publish every ... seconds", String(c.pubSecs), "number");
+  h += F("</fieldset><fieldset><legend>Motion sensor</legend>");
+  h += imuSummary();
+  h += axisChoice("imu_fwd", "Module axis pointing forward", c.imuForward);
+  h += axisChoice("imu_up", "Module axis pointing up", c.imuUp);
+  h += field("imu_tau", "Filter time constant, seconds", String(c.imuTauDs / 10.0f, 1), "number",
+             "", "step=0.1");
+  h += field("imu_knock", "Knock: a jump of ... g between samples (steps of 0.125)",
+             String(c.imuKnockMg / 1000.0f, 3), "number", "", "step=0.125");
+  h += field("imu_hold", "Hold-off after a knock, seconds", String(c.imuHoldoffSecs), "number");
   h += F("</fieldset><fieldset><legend>This access point</legend>");
   h += field("ap_pass", "BOOT-NETZ password", "", "password", "unchanged, min. 8 characters");
-  h += F("</fieldset><button>Save and restart</button></form></main>");
+  h += F("</fieldset><button>Save and restart</button></form>");
+
+  // Its own form: an action on the running board, not a setting, so it neither
+  // takes the rest of the page with it nor restarts anything.
+  h += F("<form method=post action=/level><fieldset><legend>Zero reference</legend>"
+         "<p class=s>Records the boat's present attitude as zero for heel and pitch. "
+         "Only with the boat at rest and loaded as usual, and again whenever the box is "
+         "remounted.</p><button>Level now</button></fieldset></form></main>");
 
   server.send(200, "text/html", h);
 }
@@ -137,6 +197,11 @@ void handleSave() {
   in.mqttTls = server.hasArg("mqtt_tls");
   if (server.hasArg("smpl_secs")) in.sampleSecs = server.arg("smpl_secs").toInt();
   if (server.hasArg("pub_secs")) in.pubSecs = server.arg("pub_secs").toInt();
+  if (server.hasArg("imu_fwd")) in.imuForward = server.arg("imu_fwd").toInt();
+  if (server.hasArg("imu_up")) in.imuUp = server.arg("imu_up").toInt();
+  if (server.hasArg("imu_tau")) in.imuTauDs = lroundf(server.arg("imu_tau").toFloat() * 10.0f);
+  if (server.hasArg("imu_knock")) in.imuKnockMg = lroundf(server.arg("imu_knock").toFloat() * 1000.0f);
+  if (server.hasArg("imu_hold")) in.imuHoldoffSecs = server.arg("imu_hold").toInt();
 
   in.wifiPass = server.arg("wifi_pass");
   in.mqttPass = server.arg("mqtt_pass");
@@ -150,11 +215,26 @@ void handleSave() {
                   "8 characters. <a href=/>Back</a>"));
     return;
   }
+  // Forward and up along the same axis leave the third undefined - and the
+  // board would otherwise fall back to a default nobody chose.
+  if (in.imuForward > 5 || in.imuUp > 5 || (in.imuForward >> 1) == (in.imuUp >> 1)) {
+    server.send(400, "text/html",
+                F("<!doctype html><meta charset=utf-8><p>Forward and up have to be two different "
+                  "axes of the module. <a href=/>Back</a>"));
+    return;
+  }
   if (in.mqttPort == 0) in.mqttPort = in.mqttTls ? 8883 : 1883;
   if (in.sampleSecs == 0) in.sampleSecs = 10;
   if (in.pubSecs == 0) in.pubSecs = 300;
   // A window shorter than a sample would close before anything went into it.
   if (in.pubSecs < in.sampleSecs) in.pubSecs = in.sampleSecs;
+  // Half a second follows the waves, a minute stops following the boat. The
+  // knock range is what the chip can be set to; see A-009.
+  if (in.imuTauDs < 5) in.imuTauDs = 5;
+  if (in.imuTauDs > 600) in.imuTauDs = 600;
+  if (in.imuKnockMg < 125) in.imuKnockMg = 125;
+  if (in.imuKnockMg > 7875) in.imuKnockMg = 7875;
+  if (in.imuHoldoffSecs == 0) in.imuHoldoffSecs = 1;
 
   config::save(in);
 
@@ -165,6 +245,29 @@ void handleSave() {
                 "<p>Saved. The board is restarting."));
   delay(250);  // let the response reach the browser before the reset
   ESP.restart();
+}
+
+// "Level now". Answered with a page rather than a redirect, so that a refusal
+// says why instead of quietly showing the form again.
+void handleLevel() {
+  if (!allowed()) return;
+
+  String h = F("<!doctype html><meta charset=utf-8>"
+               "<meta name=viewport content=\"width=device-width,initial-scale=1\">"
+               "<body style=\"font:16px system-ui,sans-serif;padding:16px\"><p>");
+  if (imu::levelNow()) {
+    h += F("Levelled. Heel and pitch are measured from the boat's present attitude.");
+  } else {
+    const char *why = imu::statusText();
+    h += F("Not levelled: the motion sensor is ");
+    h += why;
+    h += F(".");
+    if (strncmp(why, "settling", 8) == 0) {
+      h += F(" Its readings settle within half a minute of a start - try again then.");
+    }
+  }
+  h += F(" <a href=/>Back</a>");
+  server.send(200, "text/html", h);
 }
 
 void handleStatus() {
@@ -180,6 +283,8 @@ void handleStatus() {
   j += net::rssi();
   j += ",\"broker\":\"";
   j += uplink::statusText();
+  j += "\",\"imu\":\"";
+  j += imu::statusText();
   j += "\",\"uptime_s\":";
   j += millis() / 1000;
   j += "}";
@@ -196,6 +301,7 @@ void begin() {
 
   server.on("/", HTTP_GET, handleRoot);
   server.on("/save", HTTP_POST, handleSave);
+  server.on("/level", HTTP_POST, handleLevel);
   server.on("/status", HTTP_GET, handleStatus);
   server.onNotFound([]() {
     if (!allowed()) return;

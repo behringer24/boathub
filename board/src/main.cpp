@@ -13,6 +13,7 @@
 #include "button.h"
 #include "config.h"
 #include "ds18b20.h"
+#include "imu.h"
 #include "net.h"
 #include "portal.h"
 #include "sht31.h"
@@ -84,6 +85,7 @@ void setup() {
   buffer::begin();
   sht31::begin();
   ds18b20::begin();
+  imu::begin();
   telemetry::begin();
   portal::begin();
   uplink::begin();
@@ -98,6 +100,7 @@ void loop() {
   net::loop();
   sht31::loop();
   ds18b20::loop();
+  imu::loop();
   telemetry::loop();
   portal::loop();
   uplink::loop();
@@ -129,9 +132,21 @@ void loop() {
                                    ds18b20::present(p) ? "?" : "-");
     }
 
-    Serial.printf("[status] wifi %s %s | broker %s | %s (%s) | %s | heap %lu\n", net::stateName(),
-                  net::stationIp().c_str(), uplink::statusText(), cabin, sht31::statusText(),
-                  probes, (unsigned long)ESP.getFreeHeap());
+    // Heel and pitch only once levelled: against an unknown mounting angle
+    // they would be numbers without a meaning.
+    const imu::Reading att = imu::latest();
+    char motion[48] = "imu --";
+    if (att.valid && att.level) {
+      snprintf(motion, sizeof(motion), "heel %+.1f pitch %+.1f %.2fg", att.heelDeg, att.pitchDeg,
+               att.motionG);
+    } else if (att.valid) {
+      snprintf(motion, sizeof(motion), "imu %.2fg", att.motionG);
+    }
+
+    Serial.printf("[status] wifi %s %s | broker %s | %s (%s) | %s | %s (%s) | heap %lu\n",
+                  net::stateName(), net::stationIp().c_str(), uplink::statusText(), cabin,
+                  sht31::statusText(), probes, motion, imu::statusText(),
+                  (unsigned long)ESP.getFreeHeap());
   }
 
   delay(1);  // hand the core back to FreeRTOS
