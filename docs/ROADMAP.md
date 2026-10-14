@@ -25,7 +25,7 @@ to the self-hosted server.
 | Station mode, credentials in NVS/Preferences | **no Wi-Fi or server passwords in source** |
 | Battery state machine with debouncing | thresholds and windows configurable in NVS, see [design/B-001-power-supply.md](design/B-001-power-supply.md) |
 | Shore-power-loss alarm | gated on at least 6 h of prior charging so it stays quiet underway |
-| Alarm and threshold logic | frost, fridge too warm, humidity |
+| Alarm and threshold logic | frost, fridge too warm, humidity; a list or trim that keeps changing while the boat lies unattended, and a knock once its threshold has been set from recorded counts - both from [design/A-009-imu-heel-and-motion.md](design/A-009-imu-heel-and-motion.md) |
 | Fault handling and watchdog | a sensor failure must not take the network path down |
 
 Two constraints that bite late if ignored:
@@ -65,9 +65,18 @@ boathub/<boat-id>/events
   "bilge_temp_c": 6.1,
   "fridge_temp_c": 5.2, "fridge_temp_c_min": 3.8, "fridge_temp_c_max": 6.9,
   "bilge_level_cm": 1.3,
+  "heel_deg": 0.4, "heel_deg_min": -2.9, "heel_deg_max": 3.6, "heel_deg_sd": 1.2,
+  "pitch_deg": -0.2, "pitch_deg_min": -0.9, "pitch_deg_max": 0.5, "pitch_deg_sd": 0.3,
+  "motion_g": 0.04, "motion_g_min": 0.01, "motion_g_max": 0.21,
+  "knocks": 0,
   "seatalk_online": false
 }
 ```
+
+Heel and pitch carry a fourth figure, the standard deviation within the window: the extremes are
+set by a single wake, the spread by the whole five minutes. `knocks` is a count, so 0 is a quiet
+window and an absent key is a board without an IMU. See
+[design/A-009-imu-heel-and-motion.md](design/A-009-imu-heel-and-motion.md) section 6.
 
 **A message is an aggregate, not a reading.** The board measures every **10 s** and publishes every
 **5 min**: the bare field is the mean over the window, `_min`/`_max` are the extremes. A mean alone

@@ -52,8 +52,8 @@ type telemetry struct {
 	// the board's uptime order this record. TimeValid stays the field to
 	// filter on; this one says why.
 	TimeSource *string `json:"time_source"`
-	WindowS   *int32     `json:"window_s"`
-	N         *int16     `json:"n"`
+	WindowS    *int32  `json:"window_s"`
+	N          *int16  `json:"n"`
 
 	// Identity of the record, for deduplication. Absent on firmware that
 	// predates them, in which case the row is stored without the check.
@@ -93,6 +93,26 @@ type telemetry struct {
 	BilgeLevelCmMin *float32 `json:"bilge_level_cm_min"`
 	BilgeLevelCmMax *float32 `json:"bilge_level_cm_max"`
 
+	// The IMU. Heel and pitch also carry their standard deviation within the
+	// window - how much she rolls, as opposed to the one wake that set the
+	// extremes.
+	HeelDeg    *float32 `json:"heel_deg"`
+	HeelDegMin *float32 `json:"heel_deg_min"`
+	HeelDegMax *float32 `json:"heel_deg_max"`
+	HeelDegSD  *float32 `json:"heel_deg_sd"`
+
+	PitchDeg    *float32 `json:"pitch_deg"`
+	PitchDegMin *float32 `json:"pitch_deg_min"`
+	PitchDegMax *float32 `json:"pitch_deg_max"`
+	PitchDegSD  *float32 `json:"pitch_deg_sd"`
+
+	MotionG    *float32 `json:"motion_g"`
+	MotionGMin *float32 `json:"motion_g_min"`
+	MotionGMax *float32 `json:"motion_g_max"`
+
+	// A count, not a measurement: zero is a quiet window, absent is no IMU.
+	Knocks *int32 `json:"knocks"`
+
 	SeatalkOnline *bool `json:"seatalk_online"`
 }
 
@@ -108,6 +128,10 @@ INSERT INTO telemetry (
   bilge_temp_c, bilge_temp_c_min, bilge_temp_c_max,
   fridge_temp_c, fridge_temp_c_min, fridge_temp_c_max,
   bilge_level_cm, bilge_level_cm_min, bilge_level_cm_max,
+  heel_deg, heel_deg_min, heel_deg_max, heel_deg_sd,
+  pitch_deg, pitch_deg_min, pitch_deg_max, pitch_deg_sd,
+  motion_g, motion_g_min, motion_g_max,
+  knocks,
   seatalk_online
 ) VALUES (
   $1,$2,$3,$4,$5,$6,
@@ -120,7 +144,11 @@ INSERT INTO telemetry (
   $25,$26,$27,
   $28,$29,$30,
   $31,$32,$33,
-  $34)`
+  $34,$35,$36,$37,
+  $38,$39,$40,$41,
+  $42,$43,$44,
+  $45,
+  $46)`
 
 // Claims an identity before the row is written. Returns no rows when the pair
 // has been seen, which is the whole mechanism: QoS 1 redelivers, and a second
@@ -203,6 +231,10 @@ var required = []string{
 	"bilge_temp_c", "bilge_temp_c_min", "bilge_temp_c_max",
 	"fridge_temp_c", "fridge_temp_c_min", "fridge_temp_c_max",
 	"bilge_level_cm", "bilge_level_cm_min", "bilge_level_cm_max",
+	"heel_deg", "heel_deg_min", "heel_deg_max", "heel_deg_sd",
+	"pitch_deg", "pitch_deg_min", "pitch_deg_max", "pitch_deg_sd",
+	"motion_g", "motion_g_min", "motion_g_max",
+	"knocks",
 	"seatalk_online",
 }
 
@@ -475,6 +507,10 @@ func storeOne(ctx context.Context, tx pgx.Tx, id string, t telemetry) (bool, err
 		t.BilgeTempC, t.BilgeTempCMin, t.BilgeTempCMax,
 		t.FridgeTempC, t.FridgeTempCMin, t.FridgeTempCMax,
 		t.BilgeLevelCm, t.BilgeLevelCmMin, t.BilgeLevelCmMax,
+		t.HeelDeg, t.HeelDegMin, t.HeelDegMax, t.HeelDegSD,
+		t.PitchDeg, t.PitchDegMin, t.PitchDegMax, t.PitchDegSD,
+		t.MotionG, t.MotionGMin, t.MotionGMax,
+		t.Knocks,
 		t.SeatalkOnline); err != nil {
 		return false, err
 	}

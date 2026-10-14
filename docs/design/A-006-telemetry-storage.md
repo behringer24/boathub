@@ -205,6 +205,12 @@ shaded behind it**. That is the whole reason for keeping the extremes: on the fr
 *is* the compressor cycle, and on the battery panel it is the sag under load. Those panels stay
 empty until the probes are wired, which is the point at which they start earning their place.
 
+The IMU's row adds the one figure the band cannot give: **Rolling and pitching** plots the standard
+deviation of heel and pitch within each window, because a band is set by the single largest wake
+and the spread by the whole five minutes ([A-009](A-009-imu-heel-and-motion.md) section 6). Beside
+it, **Motion and knocks** draws the knock count as bars on its own axis - the record the knock
+threshold is set against.
+
 `allowUiUpdates` is on, so panels can be tried out in the browser. Note what that means: edits live
 in the Grafana volume and are **not** written back to the JSON files, so a provisioning reload
 discards them. Anything worth keeping has to be exported back into

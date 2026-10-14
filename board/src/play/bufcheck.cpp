@@ -52,6 +52,13 @@ buffer::Record make(uint32_t seq) {
       (int16_t)(2800 + seq));
   r.ch[buffer::EngineTempC].mean = (int16_t)(2600 + seq);
   set(r.ch[buffer::BatteryV], 12800, 12700, 12900);
+
+  // The IMU's: negative values, to catch a sign lost on the way, and a knock
+  // count of zero, which is a value and not an absence.
+  set(r.ch[buffer::HeelDeg], (int16_t)(-1250 - seq), -3100, 420);
+  set(r.ch[buffer::MotionG], 31, 2, 1870);
+  r.heelSd = (int16_t)(375 + seq);
+  r.knocks = (uint16_t)(seq % 3);
   return r;
 }
 
@@ -66,6 +73,8 @@ bool same(const buffer::Record &a, const buffer::Record &b) {
     if (a.ch[i].lo != b.ch[i].lo) return false;
     if (a.ch[i].hi != b.ch[i].hi) return false;
   }
+  if (a.heelSd != b.heelSd || a.pitchSd != b.pitchSd) return false;
+  if (a.knocks != b.knocks) return false;
   return true;
 }
 
@@ -112,6 +121,8 @@ void setup() {
   ok("a mean without a range keeps its mean", back[0].ch[buffer::EngineTempC].has());
   ok("and reports no range", !back[0].ch[buffer::EngineTempC].hasRange());
   ok("the spot flag survives", back[0].spot && !back[1].spot);
+  ok("an absent spread stays absent", back[0].pitchSd == buffer::StoredChannel::ABSENT);
+  ok("a knock count of zero stays zero", back[0].knocks == 0);
 
   Serial.println("\npeek() does not consume");
   buffer::Record again[4];

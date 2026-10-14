@@ -9,6 +9,7 @@
 #include "config.h"
 #include "net.h"
 #include "ds18b20.h"
+#include "imu.h"
 #include "sht31.h"
 
 namespace {
@@ -57,17 +58,32 @@ buffer::TimeSource timeSource() {
 }
 char state[40] = "starting";
 
+// A scaled value as stored. Clamped, so that an absurd reading saturates
+// rather than wrapping round into a plausible one - and never onto the absent
+// sentinel.
+int16_t scaled(float v, float scale) {
+  const long s = lroundf(v * scale);
+  if (s > INT16_MAX) return INT16_MAX;
+  if (s <= INT16_MIN) return INT16_MIN + 1;
+  return (int16_t)s;
+}
+
 // One channel into its stored form. An empty channel keeps the absent
-// sentinel rather than becoming a zero, and a channel with a single sample
+// sentinel rather than becoming a zero, and a channel with a single reading
 // keeps its mean and no range - the same distinction the JSON and the database
 // make.
 void store(buffer::StoredChannel &out, const telemetry::Channel &c, float scale) {
   if (!c.has()) return;
-  out.mean = (int16_t)lroundf(c.mean() * scale);
-  if (c.n > 1) {
-    out.lo = (int16_t)lroundf(c.lo * scale);
-    out.hi = (int16_t)lroundf(c.hi * scale);
+  out.mean = scaled(c.mean(), scale);
+  if (c.hasRange()) {
+    out.lo = scaled(c.lo, scale);
+    out.hi = scaled(c.hi, scale);
   }
+}
+
+// The spread, where there is one to report.
+int16_t spread(const telemetry::Channel &c, float scale) {
+  return c.hasRange() ? scaled(c.sd(), scale) : buffer::StoredChannel::ABSENT;
 }
 
 // Collect whatever the sensors have produced since the last pass.
@@ -93,6 +109,18 @@ void collectInto(telemetry::Aggregate &agg) {
   if (ds18b20::takeFresh(ds18b20::Engine, probe)) agg.engineTemp.add(probe.tempC);
   if (ds18b20::takeFresh(ds18b20::Bilge, probe)) agg.bilgeTemp.add(probe.tempC);
   if (ds18b20::takeFresh(ds18b20::Fridge, probe)) agg.fridgeTemp.add(probe.tempC);
+
+  // The IMU hands over a summary of a whole measurement interval's readings,
+  // which merges in as one measurement.
+  imu::Summary motion;
+  if (imu::takeFresh(motion)) {
+    agg.heel.merge(motion.heel);
+    agg.pitch.merge(motion.pitch);
+    agg.motion.merge(motion.motion);
+    const uint32_t knocks = (uint32_t)agg.knocks + motion.knocks;
+    agg.knocks = knocks > 0xFFFE ? 0xFFFE : (uint16_t)knocks;
+    agg.knocksSeen = true;
+  }
 }
 
 // The current state rather than a new measurement: a spot message must not
@@ -110,6 +138,17 @@ void snapshotInto(telemetry::Aggregate &agg) {
   if (bilge.valid) agg.bilgeTemp.add(bilge.tempC);
   const ds18b20::Reading fridge = ds18b20::latest(ds18b20::Fridge);
   if (fridge.valid) agg.fridgeTemp.add(fridge.tempC);
+
+  // The present attitude. No knock count: a spot reading is a state, and a
+  // count needs a window to be counted in.
+  const imu::Reading att = imu::latest();
+  if (att.valid) {
+    agg.motion.add(att.motionG);
+    if (att.level) {
+      agg.heel.add(att.heelDeg);
+      agg.pitch.add(att.pitchDeg);
+    }
+  }
 }
 
 // How many samples to claim for the window as a whole.
@@ -124,8 +163,9 @@ uint16_t countFor(const telemetry::Aggregate &agg) {
   uint16_t lowest = 0;
   bool any = false;
 
-  const telemetry::Channel *channels[] = {&agg.cabinTemp,  &agg.cabinRh,   &agg.engineTemp,
-                                         &agg.bilgeTemp, &agg.fridgeTemp};
+  const telemetry::Channel *channels[] = {&agg.cabinTemp,  &agg.cabinRh, &agg.engineTemp,
+                                         &agg.bilgeTemp,  &agg.fridgeTemp, &agg.heel,
+                                         &agg.pitch,      &agg.motion};
   for (const telemetry::Channel *c : channels) {
     if (!c->has()) continue;
     if (!any || c->n < lowest) lowest = c->n;
@@ -248,6 +288,13 @@ void toRecord(const Aggregate &agg, buffer::Record &out) {
   store(out.ch[buffer::EngineTempC], agg.engineTemp, 100.0f);
   store(out.ch[buffer::BilgeTempC], agg.bilgeTemp, 100.0f);
   store(out.ch[buffer::FridgeTempC], agg.fridgeTemp, 100.0f);
+
+  store(out.ch[buffer::HeelDeg], agg.heel, 100.0f);
+  store(out.ch[buffer::PitchDeg], agg.pitch, 100.0f);
+  store(out.ch[buffer::MotionG], agg.motion, 1000.0f);
+  out.heelSd = spread(agg.heel, 100.0f);
+  out.pitchSd = spread(agg.pitch, 100.0f);
+  if (agg.knocksSeen) out.knocks = agg.knocks;  // absent otherwise, from Record{}
 }
 
 uint16_t bootId() { return bootNumber; }

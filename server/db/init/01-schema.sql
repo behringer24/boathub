@@ -105,6 +105,27 @@ CREATE TABLE telemetry (
     bilge_level_cm_min real,
     bilge_level_cm_max real,
 
+    -- The IMU. Heel and pitch carry a fourth figure, the standard deviation
+    -- within the window: min and max are set by a single wake, the spread by
+    -- the whole five minutes. Null until the boat has been levelled.
+    heel_deg           real,
+    heel_deg_min       real,
+    heel_deg_max       real,
+    heel_deg_sd        real,
+
+    pitch_deg          real,
+    pitch_deg_min      real,
+    pitch_deg_max      real,
+    pitch_deg_sd       real,
+
+    -- Acceleration less gravity: how hard she is being thrown about.
+    motion_g           real,
+    motion_g_min       real,
+    motion_g_max       real,
+
+    -- Knocks detected in the window. Zero is a quiet window; null is no IMU.
+    knocks             integer,
+
     -- Boolean: nothing to aggregate, taken at window close.
     seatalk_online     boolean
 );

@@ -5,11 +5,14 @@
 // an evening when the server is switched off. Without this a window that
 // closes while the uplink is down is simply overwritten by the next one.
 //
-// Records are fixed at 64 bytes, so record n sits at offset n * 64: no index,
+// Records are fixed at 96 bytes, so record n sits at offset n * 96: no index,
 // no scanning, and a torn write at the tail is detectable rather than
 // corrupting what is behind it. They live in segment files of 1024 records,
 // because releasing storage then costs one remove() instead of rewriting a
 // file from the front.
+//
+// Segments written in the earlier 64-byte format are still read. Firmware that
+// changes the format must not strand a backlog that was waiting to be sent.
 //
 // See docs/design/A-007-store-and-forward.md.
 
@@ -19,14 +22,14 @@
 
 namespace buffer {
 
-// 64 bytes on flash, little-endian. Changing this layout is changing the file
-// format: bump RECORD_VERSION and decide what happens to what is already
-// stored.
-const size_t RECORD_BYTES = 64;
-const uint8_t RECORD_VERSION = 1;
+// 96 bytes on flash, little-endian. Changing this layout is changing the file
+// format: bump RECORD_VERSION, give its segments their own extension, and keep
+// reading the previous one - see buffer.cpp.
+const size_t RECORD_BYTES = 96;
+const uint8_t RECORD_VERSION = 2;
 
-const size_t RECORDS_PER_SEGMENT = 1024;  // 64 kB
-const size_t MAX_SEGMENTS = 16;           // 1 MB, some 55 days of aggregates
+const size_t RECORDS_PER_SEGMENT = 1024;  // 96 kB
+const size_t MAX_SEGMENTS = 16;           // 1.5 MB, some 55 days of aggregates
 
 // Which clock dated a record. Two bits of `flags`, and the reason the server
 // can tell a synced timestamp from a lower bound.
@@ -52,7 +55,7 @@ struct StoredChannel {
 };
 
 // The channels, in the order they occupy the record. Adding one is a format
-// change; the reserved byte is not room for a channel.
+// change; the reserved bytes are not room for a channel.
 enum Channel : uint8_t {
   BatteryV = 0,   // mV
   CabinTempC,     // 0.01 C
@@ -61,7 +64,10 @@ enum Channel : uint8_t {
   BilgeTempC,     // 0.01 C
   FridgeTempC,    // 0.01 C
   BilgeLevelCm,   // mm
-  ChannelCount,   // 7
+  HeelDeg,        // 0.01 degree, positive to starboard
+  PitchDeg,       // 0.01 degree, positive bow-up
+  MotionG,        // mg
+  ChannelCount,   // 10
 };
 
 struct Record {
@@ -77,6 +83,16 @@ struct Record {
   uint16_t heapKb = 0;
 
   StoredChannel ch[ChannelCount];
+
+  // The spread of heel and pitch within the window, 0.01 degree. Absent on a
+  // spot reading, before the boat is levelled, and on records from before
+  // they existed.
+  int16_t heelSd = StoredChannel::ABSENT;
+  int16_t pitchSd = StoredChannel::ABSENT;
+
+  // Knocks in the window. Absent - not zero - when no IMU reported.
+  uint16_t knocks = KNOCKS_ABSENT;
+  static const uint16_t KNOCKS_ABSENT = 0xFFFF;
 };
 
 // Mounts the filesystem, finds the segments and restores the cursor. Safe to

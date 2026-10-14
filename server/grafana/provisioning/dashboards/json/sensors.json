@@ -512,6 +512,237 @@
           "rawSql": "SELECT received_at AS time, cabin_rh AS mean, cabin_rh_min AS min, cabin_rh_max AS max FROM telemetry WHERE $__timeFilter(received_at) AND cabin_rh IS NOT NULL ORDER BY 1"
         }
       ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Heel",
+      "description": "Mean over each 5 min window, positive to starboard, with the range behind it. The mean is how she lies: one that keeps drifting at the berth is water coming in, or a boat hanging in her lines on a falling tide. The band is the single largest roll - one wake, one gust. Empty until the boat has been levelled on the portal.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "degree",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "min"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 18
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "min"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, heel_deg AS mean, heel_deg_min AS min, heel_deg_max AS max FROM telemetry WHERE $__timeFilter(received_at) AND heel_deg IS NOT NULL ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Trim",
+      "description": "Pitch, positive bow-up: mean over each window with the range behind it. At rest the mean is the trim, and water collecting aft or forward shows here first. Empty until the boat has been levelled.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "degree",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "min"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 18
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "min"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, pitch_deg AS mean, pitch_deg_min AS min, pitch_deg_max AS max FROM telemetry WHERE $__timeFilter(received_at) AND pitch_deg IS NOT NULL ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Rolling and pitching",
+      "description": "Standard deviation within each window: how much she moves, typically. A steady roll of plus or minus 5 degrees reads about 3.5. The bands above are set by single events; this is set by the whole five minutes - together they tell restless from once, hard.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "degree",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, heel_deg_sd AS roll, pitch_deg_sd AS pitch FROM telemetry WHERE $__timeFilter(received_at) AND heel_deg_sd IS NOT NULL ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Motion and knocks",
+      "description": "How hard she is thrown about: acceleration less gravity, as the mean and the hardest jolt in each window - including the up and down that no angle shows. The bars are knocks the IMU detected. While the knock threshold is being set, these are the record to set it against (A-009 section 7).",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "accG",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "knocks"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "bars"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 60
+              },
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, motion_g AS mean, motion_g_max AS max, knocks FROM telemetry WHERE $__timeFilter(received_at) AND motion_g IS NOT NULL ORDER BY 1"
+        }
+      ]
     }
   ]
 }

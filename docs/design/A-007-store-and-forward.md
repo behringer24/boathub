@@ -66,17 +66,18 @@ elsewhere in the middle of a LittleFS write.
 
 ### Segments, not one file
 
-Records go into **append-only segment files** of 64 kB, `seg-00000123.dat`, numbered monotonically.
+Records go into **append-only segment files** of 1024 records, `/tel/000123.sg2`, numbered
+monotonically.
 
 The alternative - one large ring file - means deleting from the front, which on a filesystem
 requires rewriting everything behind it. **Deleting a whole segment is one `remove()`**, and
 LittleFS reclaims the blocks. This is the ordinary log-structured answer and it is why the segment
-size matters more than elegance: 64 kB is 1024 telemetry records, about three and a half days, so a
-fully drained segment is released promptly without the file count ever getting silly.
+size matters more than elegance: 1024 telemetry records, 96 kB, are about three and a half days,
+so a fully drained segment is released promptly without the file count ever getting silly.
 
 ### Fixed-size records
 
-64 bytes, fixed, little-endian. Fixed size means record *n* is at offset `n * 64` - no scanning, no
+96 bytes, fixed, little-endian. Fixed size means record *n* is at offset `n * 96` - no scanning, no
 index, and a torn write at the tail is detectable and discardable rather than corrupting the file.
 
 | Field | Bytes | Note |
@@ -90,24 +91,43 @@ index, and a torn write at the tail is detectable and discardable rather than co
 | `flags` | 1 | time source (2 bits, section 5), spot reading, sensor-fault bits |
 | `rssi` | 1 | dBm, signed |
 | `heap_kb` | 2 | |
-| 7 channels x mean/min/max | 42 | scaled integers, see below |
-| reserved | 1 | |
+| 10 channels x mean/min/max | 60 | scaled integers, see below |
+| spread of heel and pitch | 4 | standard deviation within the window, [A-009](A-009-imu-heel-and-motion.md) |
+| `knocks` | 2 | count in the window |
+| reserved | 8 | |
+| version | 1 | the record format, 2 |
 
 Scaling keeps everything in 16 bits: temperatures in 0.01 °C (`int16`, ±327 °C), battery in mV
-(`uint16`), humidity in 0.1 % (`uint16`), bilge level in mm (`uint16`). A channel with no sensor
-stores a sentinel that the encoder turns back into an **absent JSON key**, never a zero - the same
-rule the database follows.
+(`uint16`), humidity in 0.1 % (`uint16`), bilge level in mm (`uint16`), heel, pitch and their spread
+in 0.01° (`int16`), motion in mg (`int16`). A channel with no sensor stores a sentinel that the
+encoder turns back into an **absent JSON key**, never a zero - the same rule the database follows.
+The knock count has its own: no IMU and a quiet window must not both read 0.
 
-**JSON is not stored.** The same record as JSON is about 250 bytes; binary is 64. Storing what goes
-on the wire would cost a factor of four of the one resource that is actually scarce.
+**JSON is not stored.** The same record as JSON is about 600 bytes; binary is 96. Storing what goes
+on the wire would cost a factor of six of the one resource that is actually scarce.
+
+### When the record changes
+
+A new firmware can change the record, and the flash may still hold a backlog in the old one - a
+passage that was waiting for a connection when the board was updated. That backlog has to drain,
+not be misread at the new record size or thrown away.
+
+So the format is marked twice: by a **version byte** at the end of every record, and by the
+**segment file's extension** - `.seg` for the first, 64-byte format, `.sg2` for the current one.
+At start the firmware notes the highest old-format segment it finds. Those it keeps reading at their
+own record size until they have drained; it never appends to them, and new records start a fresh
+segment in the current format. Nothing on flash is rewritten.
+
+Fields a record of the old format did not carry come out absent, as they would from a board without
+that sensor.
 
 ### What fits
 
 | | per record | per day | 6 MB alone |
 |---|---|---|---|
-| Telemetry, 5 min aggregates | 64 B | 18 kB | ~325 days |
+| Telemetry, 5 min aggregates | 96 B | 27 kB | ~220 days |
 | Track points at 25 m (stage 2.5) | 32 B | ~160 kB | ~37 days |
-| **Both, under way** | | ~178 kB | **~34 days** |
+| **Both, under way** | | ~187 kB | **~32 days** |
 
 ### Telemetry gets a reserved share
 
@@ -115,8 +135,8 @@ Tracks and telemetry share the partition, and tracks outweigh telemetry nine to 
 quota, **one hard day of tacking evicts weeks of temperature history** - the record that is cheap
 to keep gets thrown away to make room for the one that is expensive.
 
-So telemetry gets a guaranteed **1 MB** (some 55 days) that track segments may not take. Tracks get
-the rest and evict among themselves.
+So telemetry gets a guaranteed **1.5 MB** - sixteen segments, some 55 days - that track segments
+may not take. Tracks get the rest and evict among themselves.
 
 ## 5. Time
 
@@ -208,9 +228,11 @@ After that, oldest first, so the record stays contiguous.
 
 ### Batched, acknowledged, resumable
 
-- **Batch** about 50 records into one message as a JSON array. Individually, a day of backlog is 288
+- **Batch** 20 records into one message as a JSON array. Individually, a day of backlog is 288
   round trips, each waiting for its PUBACK over a satellite link - the batching is what decides
-  whether a window is enough.
+  whether a window is enough. Twenty is about 20 kB of JSON with every sensor reporting, and
+  fifteen round trips a day of backlog; larger batches save little more and cost a payload that
+  has to be held in RAM twice, once built and once queued.
 - **QoS 1**, and the read cursor advances **only on PUBACK**.
 - The cursor (`segment`, `index`) is persisted in NVS after each batch, not each record - roughly a
   hundred writes a day, which NVS wear levelling does not notice. **The last known wall time is

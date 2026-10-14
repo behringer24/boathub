@@ -21,9 +21,30 @@ uint32_t floorWall = 0;
 bool mounted = false;
 char state[48] = "not started";
 
+// Two record formats can sit on flash at once: segments written before the
+// record grew, and those written since. The extension says which, so a backlog
+// in the old format drains at its own record size instead of being misread at
+// the new one - or abandoned.
+//
+// Old-format segments are never written again, and every one of them is older
+// than every new one. So a single number, the highest old segment found at
+// start, says which format any segment is in, without asking the filesystem -
+// whose open() logs an error for every file it does not find.
+struct Format {
+  const char *ext;
+  size_t bytes;
+};
+const Format V1 = {".seg", 64};
+const Format V2 = {".sg2", buffer::RECORD_BYTES};
+
+bool haveV1 = false;
+uint32_t lastV1 = 0;
+
+const Format &formatOf(uint32_t n) { return (haveV1 && n <= lastV1) ? V1 : V2; }
+
 String segPath(uint32_t n) {
   char buf[32];
-  snprintf(buf, sizeof(buf), "%s/%06lu.seg", DIR, (unsigned long)n);
+  snprintf(buf, sizeof(buf), "%s/%06lu%s", DIR, (unsigned long)n, formatOf(n).ext);
   return String(buf);
 }
 
@@ -47,6 +68,16 @@ uint32_t get32(const uint8_t *p) {
 
 // Layout, little-endian. Offsets are written out rather than derived, because
 // the one thing that must never drift is where a field sits.
+//
+//   0  seq          4   10  t_wall    4   18  rssi       1
+//   4  boot_id      2   14  window_s  2   19  heap_kb    2
+//   6  t_mono_s     4   16  n         1   21  10 channels x mean, lo, hi
+//                       17  flags     1   81  heel_sd 2, 83 pitch_sd 2,
+//                                         85  knocks 2, 87-94 reserved,
+//                                         95  version
+//
+// The first 21 bytes and the first seven channels sit where the 64-byte
+// format had them.
 void encode(const buffer::Record &r, uint8_t *b) {
   memset(b, 0, buffer::RECORD_BYTES);
 
@@ -67,12 +98,18 @@ void encode(const buffer::Record &r, uint8_t *b) {
     put16(c + i * 6 + 4, (uint16_t)r.ch[i].hi);
   }
 
-  b[63] = buffer::RECORD_VERSION;
+  put16(b + 81, (uint16_t)r.heelSd);
+  put16(b + 83, (uint16_t)r.pitchSd);
+  put16(b + 85, r.knocks);
+
+  b[95] = buffer::RECORD_VERSION;
 }
 
-bool decode(const uint8_t *b, buffer::Record &r) {
-  if (b[63] != buffer::RECORD_VERSION) return false;
-
+// The header and the channels both formats share. A record of either format
+// comes out as a current Record, with whatever the old one did not carry left
+// absent.
+void decodeCommon(const uint8_t *b, buffer::Record &r, uint8_t channels) {
+  r = buffer::Record{};
   r.seq = get32(b + 0);
   r.bootId = get16(b + 4);
   r.tMonoS = get32(b + 6);
@@ -85,11 +122,25 @@ bool decode(const uint8_t *b, buffer::Record &r) {
   r.heapKb = get16(b + 19);
 
   const uint8_t *c = b + 21;
-  for (uint8_t i = 0; i < buffer::ChannelCount; i++) {
+  for (uint8_t i = 0; i < channels; i++) {
     r.ch[i].mean = (int16_t)get16(c + i * 6 + 0);
     r.ch[i].lo = (int16_t)get16(c + i * 6 + 2);
     r.ch[i].hi = (int16_t)get16(c + i * 6 + 4);
   }
+}
+
+bool decode(const uint8_t *b, const Format &fmt, buffer::Record &r) {
+  if (&fmt == &V1) {
+    if (b[63] != 1) return false;
+    decodeCommon(b, r, 7);
+    return true;
+  }
+
+  if (b[95] != buffer::RECORD_VERSION) return false;
+  decodeCommon(b, r, buffer::ChannelCount);
+  r.heelSd = (int16_t)get16(b + 81);
+  r.pitchSd = (int16_t)get16(b + 83);
+  r.knocks = get16(b + 85);
   return true;
 }
 
@@ -100,7 +151,7 @@ uint32_t recordsIn(uint32_t seg) {
   f.close();
   // A torn tail is discarded rather than read: integer division drops any
   // partial record, and the next append overwrites it.
-  return bytes / buffer::RECORD_BYTES;
+  return bytes / formatOf(seg).bytes;
 }
 
 void saveCursor(uint32_t wallNow) {
@@ -177,10 +228,13 @@ bool begin() {
   File dir = LittleFS.open(DIR);
   for (File f = dir.openNextFile(); f; f = dir.openNextFile()) {
     const String name = String(f.name());
-    if (!name.endsWith(".seg")) continue;
+    const bool old = name.endsWith(V1.ext);
+    if (!old && !name.endsWith(V2.ext)) continue;
     const uint32_t n = (uint32_t)strtoul(name.c_str(), nullptr, 10);
     if (n < lowest) lowest = n;
     if (n > highest) highest = n;
+    if (old && (!haveV1 || n > lastV1)) lastV1 = n;
+    haveV1 |= old;
     any = true;
   }
   dir.close();
@@ -196,6 +250,17 @@ bool begin() {
     writeSeg = highest;
     writeIdx = recordsIn(writeSeg);
     if (readSeg == writeSeg && readIdx > writeIdx) readIdx = writeIdx;
+
+    // An old-format segment is drained, never appended to: new records start
+    // a segment of their own after it.
+    if (haveV1 && writeSeg <= lastV1) {
+      writeSeg = lastV1 + 1;
+      writeIdx = 0;
+    }
+  }
+  if (haveV1) {
+    Serial.printf("[buffer] segments up to %lu are in the 64-byte format and drain as they are\n",
+                  (unsigned long)lastV1);
   }
 
   mounted = true;
@@ -279,11 +344,12 @@ size_t peek(Record *out, size_t max) {
       idx = 0;
       continue;
     }
-    f.seek(idx * RECORD_BYTES);
+    const Format &fmt = formatOf(seg);
+    f.seek(idx * fmt.bytes);
     while (got < max && idx < have) {
-      uint8_t bytes[RECORD_BYTES];
-      if (f.read(bytes, RECORD_BYTES) != RECORD_BYTES) break;
-      if (decode(bytes, out[got])) got++;
+      uint8_t bytes[RECORD_BYTES];  // the larger of the two formats
+      if (f.read(bytes, fmt.bytes) != fmt.bytes) break;
+      if (decode(bytes, fmt, out[got])) got++;
       idx++;
     }
     f.close();
