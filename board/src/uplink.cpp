@@ -47,10 +47,11 @@ const uint8_t QOS_TELEMETRY = 1;
 //
 // Sent one at a time, a day of backlog is 288 round trips, each waiting out a
 // PUBACK over whatever link the boat has. Batching is what decides whether a
-// short window of connectivity is enough to catch up at all. Fifty records is
-// about 9 kB of JSON, comfortably inside what the client will send in one
-// message.
-const size_t BATCH_RECORDS = 50;
+// short window of connectivity is enough to catch up at all. A record with
+// every sensor reporting is about a kilobyte of JSON, so twenty make some
+// 20 kB - held twice while it goes out, once built and once in the client's
+// queue - and a day of backlog takes fifteen round trips.
+const size_t BATCH_RECORDS = 20;
 
 // One batch in flight at a time. The cursor is a single position in a single
 // stream, so a second batch could only be the same records again.
@@ -152,6 +153,13 @@ void putChannel(JsonObject &o, const char *name, const buffer::StoredChannel &c,
   }
 }
 
+// A spread is a single number beside its channel, written only when there is
+// one: never on a spot reading, never before there is a channel to spread.
+void putSpread(JsonObject &o, const char *name, int16_t value, float scale) {
+  if (value == buffer::StoredChannel::ABSENT) return;
+  o[name] = value / scale;
+}
+
 const char *sourceName(buffer::TimeSource s) {
   switch (s) {
     case buffer::TimeSource::Ntp: return "ntp";
@@ -212,6 +220,13 @@ void putRecord(JsonArray &arr, const buffer::Record &r, uint32_t offsetIfUndated
   putChannel(o, "bilge_temp_c", r.ch[buffer::BilgeTempC], 100.0f);
   putChannel(o, "fridge_temp_c", r.ch[buffer::FridgeTempC], 100.0f);
   putChannel(o, "bilge_level_cm", r.ch[buffer::BilgeLevelCm], 10.0f);
+
+  putChannel(o, "heel_deg", r.ch[buffer::HeelDeg], 100.0f);
+  putSpread(o, "heel_deg_sd", r.heelSd, 100.0f);
+  putChannel(o, "pitch_deg", r.ch[buffer::PitchDeg], 100.0f);
+  putSpread(o, "pitch_deg_sd", r.pitchSd, 100.0f);
+  putChannel(o, "motion_g", r.ch[buffer::MotionG], 1000.0f);
+  if (r.knocks != buffer::Record::KNOCKS_ABSENT) o["knocks"] = r.knocks;
 }
 
 // The offset that dates records written before the clock was known, or 0.

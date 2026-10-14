@@ -14,34 +14,13 @@
 #include <Arduino.h>
 
 #include "buffer.h"
+#include "channel.h"
 
 namespace telemetry {
 
-// One measured quantity over one window.
-struct Channel {
-  uint16_t n = 0;
-  float sum = 0.0f;
-  float lo = 0.0f;
-  float hi = 0.0f;
-
-  void add(float v) {
-    if (n == 0) {
-      lo = hi = v;
-    } else {
-      if (v < lo) lo = v;
-      if (v > hi) hi = v;
-    }
-    sum += v;
-    n++;
-  }
-
-  bool has() const { return n > 0; }
-  float mean() const { return n ? sum / (float)n : 0.0f; }
-};
-
 struct Aggregate {
   bool valid = false;
-  uint16_t n = 0;        // see below - the fewest samples behind any reported channel
+  uint16_t n = 0;        // the fewest measurements behind any reported channel
   uint32_t windowS = 0;  // 0 for a spot reading
 
   // What identifies this record for as long as it exists.
@@ -64,6 +43,18 @@ struct Aggregate {
   Channel engineTemp;
   Channel bilgeTemp;
   Channel fridgeTemp;
+
+  // The IMU. Heel and pitch also report their spread; see A-009 section 6.
+  Channel heel;
+  Channel pitch;
+  Channel motion;
+
+  // Knocks the chip detected in the window, hold-off or not. A count rather
+  // than a channel: there is no mean of a knock. `knocksSeen` is false when no
+  // IMU reported at all, which is not the same thing as a quiet window.
+  uint16_t knocks = 0;
+  bool knocksSeen = false;
+
   // Further channels land here as the sensors arrive.
 };
 

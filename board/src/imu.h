@@ -10,7 +10,18 @@
 
 #include <Arduino.h>
 
+#include "channel.h"
+
 namespace imu {
+
+// One measurement interval of motion, summarised over every 25 Hz reading in
+// it: what the telemetry window merges in, in place of a single reading.
+struct Summary {
+  telemetry::Channel heel;    // empty until the boat has been levelled
+  telemetry::Channel pitch;
+  telemetry::Channel motion;
+  uint16_t knocks = 0;        // every knock detected, through the hold-off
+};
 
 struct Reading {
   bool valid = false;  // the sensor is answering and the filter has started
@@ -26,6 +37,10 @@ void loop();
 // The present state. Heel and pitch are only meaningful when `level` is set:
 // measured against an unknown mounting angle they are worse than nothing.
 Reading latest();
+
+// Consumes the last finished measurement interval: true once per interval,
+// never twice - the same contract as every other sensor's takeFresh().
+bool takeFresh(Summary &out);
 
 bool present();
 

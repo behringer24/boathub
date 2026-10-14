@@ -18,6 +18,16 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ### Changed
 
+- **Telemetry records are 96 bytes, format 2**, to carry the IMU. Segments of the 64-byte format
+  stay readable: the extension tells them apart (`.seg`, `.sg2`), the firmware notes the highest old
+  one at start, drains those at their own size and appends only in the new format. A backlog that
+  was waiting when the board was updated is sent, not stranded. Sixteen segments now hold 1.5 MB,
+  still some 55 days.
+- A channel counts its readings apart from its measurements, and keeps a sum of squares in double
+  precision. The IMU summarises each measurement interval's 250 readings into one channel and the
+  window merges it: mean, spread and extremes are exact over every reading, and `n` still counts
+  measurements - 30 for a full window. A stored value saturates instead of wrapping round.
+
 - MQTT client is **espMqttClient** rather than PubSubClient, and telemetry publishes at **QoS 1**.
   The broker now answers every message with a PUBACK, which is what the store-and-forward buffer in
   A-007 will delete a stored record on - at QoS 0 there was no answer at all, so a buffer would have
@@ -142,6 +152,16 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   dead patch in it. A bus scan proves an address answers; it cannot prove the converter converts.
   Wanted again in phase B, to watch the battery divider against a multimeter before trusting a
   calibration factor.
+- Heel, pitch and motion in the telemetry: `heel_deg` and `pitch_deg` with min, max and their
+  standard deviation within the window, `motion_g` with min and max, and `knocks`, counted straight
+  through the hold-off. The spread is there because the extremes are set by a single wake and say
+  nothing about the other five minutes. Heel and pitch stay absent until the boat is levelled; a
+  spot reading carries them without spread. The half minute after a start, while the gyroscope's
+  offset is still being learned, stays out of the window: kept, it set the first window's extremes
+  a degree away from a boat lying perfectly still. Batches drained from the buffer shrink from 50
+  records to 20, because a record with every sensor is now about a kilobyte of JSON. Ingest stores the new fields, migration
+  `003-motion.sql` adds their columns, and the sensor dashboard gains heel, trim, rolling and
+  pitching, and motion with the knock count.
 - The IMU runs in the firmware: attitude at 25 Hz, knocks watched by the chip and read off the
   latched INT1 line, both on the serial log and the status line. Heel and pitch stay out until the
   boat has been levelled once - **Level now** on the configuration portal, refused for the first
@@ -149,7 +169,7 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   time constant, the knock threshold and the hold-off are settings on the portal. The zero
   reference is stored in the module's own axes, so correcting the axis setting keeps it. A knock
   during the hold-off is counted into the next report rather than dropped, and a loop pass stalled
-  by a failed MQTT connect is not integrated as three seconds of turning. Not yet in the telemetry.
+  by a failed MQTT connect is not integrated as three seconds of turning.
 - LSM6DSOX driver at register level and the attitude filter for A-009, with an `imuread` bench
   environment that runs both. The filter tracks the direction of "up" rather than two separate
   angles, because a heeled boat turning about her mast would otherwise read the turn as pitch, and

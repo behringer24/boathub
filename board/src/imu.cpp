@@ -56,6 +56,13 @@ bool knocked = false;
 uint32_t knocksHeld = 0;  // detected during a hold-off, reported with the next one
 uint8_t emptyHighs = 0;   // line high with nothing latched behind it
 
+// The measurement interval being summarised, and the last finished one until
+// telemetry takes it.
+imu::Summary building;
+imu::Summary ready;
+bool unread = false;
+uint32_t intervalStart = 0;
+
 Vec3 axisVector(uint16_t code) {
   const float sign = (code & 1) ? -1.0f : 1.0f;
   switch (code >> 1) {
@@ -154,11 +161,60 @@ void sample() {
   lastReadUs = nowUs;
 
   filter.update(toBoat(s.accelG), toBoat(s.gyroDps), dt);
+
+  // Every reading goes into the interval's summary, not just the one that
+  // happens to be current when telemetry asks - except while the filter is
+  // still learning the gyroscope's offset. Those readings drift by up to a
+  // couple of degrees, and kept they would set the extremes and the spread of
+  // the first window after every start. Left out, they make `n` dip in that
+  // window instead, the same as the SHT31's heater does.
+  if (!filter.started() || filter.settling()) return;
+  building.motion.add(filter.motionG());
+  if (level.isSet()) {
+    const Vec3 u = level.apply(filter.up());
+    building.heel.add(attitude::heelDeg(u));
+    building.pitch.add(attitude::pitchDeg(u));
+  }
+}
+
+uint32_t sampleMs() {
+  const uint16_t secs = config::get().sampleSecs;
+  return (secs == 0 ? 1u : secs) * 1000UL;
+}
+
+// Closes the measurement interval on the same rhythm as every other sensor.
+// Telemetry collects on every pass, so the last summary is normally gone long
+// before the next is ready; if it is not, the two are merged rather than one
+// overwriting the other.
+void closeInterval(uint32_t now) {
+  if ((now - intervalStart) < sampleMs()) return;
+  intervalStart = now;
+
+  if (gone()) {
+    building = imu::Summary{};
+    return;
+  }
+
+  if (unread) {
+    ready.heel.merge(building.heel);
+    ready.pitch.merge(building.pitch);
+    ready.motion.merge(building.motion);
+    const uint32_t knocks = (uint32_t)ready.knocks + building.knocks;
+    ready.knocks = knocks > 0xFFFE ? 0xFFFE : (uint16_t)knocks;
+  } else {
+    ready = building;
+  }
+  building = imu::Summary{};
+  unread = true;
 }
 
 void onKnock(uint8_t axes, uint32_t now) {
   sample();  // the nearest sample to the knock, for its size
   const float size = filter.motionG();
+
+  // Counted whether or not it is reported: the count is what the threshold is
+  // set against, and the hold-off is about not repeating a report.
+  if (building.knocks < 0xFFFE) building.knocks++;
 
   const uint32_t holdMs = (uint32_t)config::get().imuHoldoffSecs * 1000UL;
   if (knocked && (now - lastKnockMs) < holdMs) {
@@ -239,6 +295,7 @@ void loop() {
     sample();
   }
   checkKnock(now);
+  closeInterval(now);
 }
 
 Reading latest() {
@@ -254,6 +311,13 @@ Reading latest() {
     r.pitchDeg = attitude::pitchDeg(u);
   }
   return r;
+}
+
+bool takeFresh(Summary &out) {
+  if (!unread) return false;
+  unread = false;
+  out = ready;
+  return true;
 }
 
 bool present() { return found; }

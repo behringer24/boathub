@@ -11,9 +11,11 @@
 Two questions from one sensor:
 
 - **Under sail:** how far is she laying over, and how far did she lay over in the gust?
-- **At the berth:** how hard is she working in her lines, and **did something hit her?**
+- **At the berth:** is it rough, how much is she rolling, is the way she lies changing - and
+  **did something hit her?**
 
-Reported as `heel_deg`, `pitch_deg` and `motion_g` in the aggregate, plus an impact event.
+Reported in the aggregate as heel and pitch with their spread, `motion_g`, and a count of knocks;
+plus an impact event.
 
 **Out of scope:** heading, which comes from the SeaTalk compass in stage 2. Nothing here acts on the
 boat - this is a sensor, and the autopilot is not connected to it.
@@ -263,27 +265,73 @@ turn over such a gap would swing the estimate by that rate times the gap, so a s
 
 ## 6. What reaches the aggregate
 
-| Channel | Meaning | What min/max are worth |
-|---------|---------|------------------------|
-| `heel_deg` | positive to starboard | **min and max are the roll range** in that window; the mean is the settled heel |
-| `pitch_deg` | positive bow-up | pitching in a seaway, and trim at rest |
-| `motion_g` | magnitude of acceleration less gravity | **max is the hardest single jolt** - how much she is being thrown about |
+The window is the same five minutes as every other sensor's. What it has to answer: how is she
+lying, how is she moving, and is either changing.
 
-The existing channel structure already does exactly this. A five minute window that reports
-`heel_deg` mean 18, min 12, max 31 says more about a passage than any single number could.
+| Field | Meaning | What it answers |
+|-------|---------|-----------------|
+| `heel_deg` | mean heel, positive to starboard | the settled list. Over days, a slow change is water collecting, stores shifting, or a boat hanging in her lines on a falling tide |
+| `heel_deg_min`, `heel_deg_max` | the extremes | the single largest roll - one passing wake, one gust |
+| `heel_deg_sd` | standard deviation within the window | **how much she rolls**, typically. A steady roll of ±5° reads about 3.5 |
+| `pitch_deg`, with `_min`, `_max`, `_sd` | the same for pitch, positive bow-up | trim at rest, and pitching in a seaway |
+| `motion_g`, with `_min`, `_max` | acceleration less gravity | **how hard she is thrown about**, including the up and down that no angle shows. The max is the hardest jolt the 25 Hz polling caught |
+| `knocks` | knocks the chip detected, counted straight through the hold-off | the record the knock threshold is set against - section 7 |
 
-### One extension is needed
+Under sail a window reading `heel_deg` 18, min 12, max 31, sd 4 says more about the passage than
+any single number could. At the berth the same four numbers say whether it is blowing.
 
-Every other sensor produces a reading slower than the window and hands it over one at a time. This
-one produces 25 a second, and it is the **peak between handovers** that matters - a maximum taken
-from downsampled values is not the maximum.
+**The spread beside the extremes.** Min and max are set by a single event. Five quiet minutes with
+one ferry wake read exactly like five rough ones. The standard deviation describes the whole
+window, and the two together tell "restless" from "once, hard".
 
-So the IMU keeps its own running min, mean and max at full rate and hands over a **sub-aggregate**,
-once a second. `Channel` gains a `merge(min, mean, max, count)` beside its `add(value)`. The count
-that arrives is real samples, so `n` keeps meaning what it says.
+**Not the rate of turn.** It is the obvious candidate and it does not earn a channel. Its minimum
+is always near zero, because a rolling boat stops at the end of every roll. Its mean is the roll
+amplitude divided by the roll period, and the period is a property of the boat that hardly
+changes - so it says what the spread already says, in a less intuitive unit.
 
-`Channel::n` becomes 32-bit while this is done: at 25 Hz a ten minute window is 15 000 samples, and
-a 16-bit count leaves less headroom than anyone should have to think about.
+**What the IMU cannot see is how deep she lies.** A boat that settles evenly does not tilt. Water
+coming in usually shows anyway - in the trim, as it runs aft or forward, and in the bilge level -
+but not in any number from here directly. Trends below about 0.3° over months are not worth
+reading either: the accelerometer's offset drifts that much with temperature.
+
+Heel and pitch are left out until the boat has been levelled (section 4). `motion_g` and `knocks`
+are there from the start.
+
+### Summarised at full rate, handed over per measurement
+
+Every other sensor produces one reading per measurement interval, 10 s. This one produces 250 in
+that time, and it is what happens between handovers that matters: the maximum of one reading in
+250 is not the maximum, and a spread computed from thirty readings is a guess.
+
+So the IMU keeps its own running statistics at 25 Hz - count, sum, sum of squares, min and max -
+and hands them over as **one sub-aggregate per measurement interval**. `Channel` gains a sum of
+squares and a `merge()` beside its `add()`, and counts samples separately from measurements:
+
+- the window's mean, spread, min and max are exact over every sample
+- `n` keeps counting measurements, as for every other sensor - 30 for a full window
+
+The sums are kept in double precision. A spread of a tenth of a degree beside a heel of twenty is
+a difference in the fifth digit of the sum of squares, and seven and a half thousand additions in a
+float's seven digits lose it.
+
+**The first half minute after a start is left out.** While the filter is still learning the
+gyroscope's offset (section 2) the reading drifts by up to a couple of degrees, and kept, those
+readings would set the extremes and the spread of the first window after every restart. Left out,
+they make `n` dip in that window instead - 27 rather than 30 - the same as the SHT31's heater does
+in [A-008](A-008-sht31-cabin-climate.md). Knocks are counted regardless.
+
+A spot reading carries the present heel, pitch and motion and no spread, the same as every other
+spot reading carries no range.
+
+### The alarm these channels carry
+
+**A list or trim that keeps changing while the boat is unattended** is the alarm worth having from
+this sensor, more than the knock: water coming in, or lines too short on a falling tide, show as a
+mean that drifts window after window. A wake or a gust moves the extremes and the spread, but not
+the mean for long. A sustained drift over several windows therefore rarely raises a false alarm.
+
+The rule belongs on the server, which has the history, as part of the alarm logic. The board only
+has to deliver the means.
 
 ## 7. Impact detection
 
@@ -315,11 +363,18 @@ counted, and the count travels with the next report. A boat banging against the 
 is then reported once a minute, each report saying how many knocks it stands for - rather than
 once, followed by an hour of silence that looks like calm.
 
-**Expect to tune this.** The threshold that separates "a wave" from "something hit us" is a
-property of this boat at this berth, and nobody can pick it from a datasheet. Start at the guess
-and raise it a step at a time while ordinary days at the berth still raise events. `motion_g` max
-per window shows how hard she is being thrown about in the meantime - a good reason to have the
-channel whether or not the alarm is ever armed.
+**Expect to tune this - before anything is notified.** The threshold that separates "life aboard"
+from "something hit us" is a property of this boat at this berth, and nobody can pick it from a
+datasheet. A boat being rammed by one that is berthing badly jolts far harder than a crew moving
+about a 10 m yacht. How much harder is what has to be measured, and an alarm that cries wolf while
+that is being found out gets ignored for good.
+
+So it is set in two steps:
+
+1. **Record without alarming.** `knocks` per window shows what the threshold catches. Leave it a
+   week or two, with days aboard and windy days among them.
+2. **Set the threshold above all of that, with margin**, until those windows count none. Only then
+   is a knock event turned into a notification.
 
 ## 8. Settings and the portal
 
@@ -388,7 +443,12 @@ the bow and the component side up.
 - [ ] A tap on the enclosure raises an impact event; a gentle rock does not
 - [ ] A knock during the hold-off is not reported on its own, and is counted in the next report
 - [ ] `motion_g` sits near zero at rest and rises with deliberate rocking
-- [ ] A window shows a roll range in min/max rather than a flat mean
+- [ ] A window shows a roll range in min/max rather than a flat mean, and `heel_deg_sd` near zero
+      at rest that rises with a steady rocking - about 0.7 of the rocking's amplitude
+- [ ] Heel and pitch are absent from the telemetry until the boat is levelled; `motion_g` and
+      `knocks` are present from the start, and `knocks` reads 0 rather than absent in a quiet window
+- [ ] Knocks during a hold-off still count in `knocks`
+- [ ] A spot reading carries heel, pitch and motion without `_sd`, `_min` or `_max`
 - [ ] Removing the sensor leaves the other channels and the uplink untouched
 
 ## 11. References
