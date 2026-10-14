@@ -39,6 +39,17 @@ struct Config {
   uint16_t sht31HeatSecs = 10;     // how long to heat
   uint16_t sht31CoolSecs = 120;    // how long to wait before trusting it again
 
+  // IMU. Which of the module's printed axes points forward and which points
+  // up, as an axis code: 0 = +X, 1 = -X, 2 = +Y, 3 = -Y, 4 = +Z, 5 = -Z. A
+  // setting rather than a soldering decision, because nothing downstream can
+  // tell a module turned a quarter in the horizontal from a boat that pitches
+  // instead of heeling - see A-009 section 4.
+  uint16_t imuForward = 0;     // +X
+  uint16_t imuUp = 4;          // +Z, component side up
+  uint16_t imuTauDs = 30;      // filter time constant in tenths of a second
+  uint16_t imuKnockMg = 500;   // knock threshold: a jump of this many mg between samples
+  uint16_t imuHoldoffSecs = 60;  // one knock reported, not forty
+
   bool hasStation() const { return wifiSsid.length() > 0; }
   bool hasBroker() const { return mqttHost.length() > 0; }
 };

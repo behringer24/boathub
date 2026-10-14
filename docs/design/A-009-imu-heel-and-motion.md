@@ -191,8 +191,11 @@ Consequences worth being explicit about:
   enclosure is ever remounted.
 - It records the boat's own trim as zero, so this measures **change in attitude**, not absolute
   angle from the waterline. That is the useful quantity anyway.
-- The action needs somewhere to live: the configuration portal, alongside the probe re-learn from
-  [A-003](A-003-ds18b20-temperature-sensors.md).
+- It is refused for the first half minute after a start. The gyroscope's offset is still being
+  learned then (section 2), and a zero taken while the reading is off by it keeps that error for
+  good.
+- Until it has been done once, heel and pitch are left out entirely (section 9). The action lives
+  on the configuration portal - section 8.
 
 ### The one misalignment zeroing cannot catch
 
@@ -209,7 +212,7 @@ all - and by then it has been recorded that way for weeks.
 
 So **decide which of the sensor's axes runs fore and aft before it is bolted down**, mark it, and
 write it in the commissioning notes. The Modulino prints its X and Y axes and the sense of rotation
-about Z on the board; the bench reader in section 9 confirms them against gravity before anything
+about Z on the board; the bench reader in section 10 confirms them against gravity before anything
 is fixed.
 
 The firmware takes the mapping from a setting in NVS beside the zero reference - which of the
@@ -249,6 +252,14 @@ quiet rather than floating.
 The chip drives the pin only once something is routed to it; until then its own pull-down holds
 it low whatever the configured polarity. Any check of the wire therefore comes after the knock
 detector is armed - before it, a connected line and a missing one read the same.
+
+A line that is high is read at most every 10 ms. One held up from outside then costs a little bus
+time rather than a register read on every pass, and is reported once as stuck.
+
+**A slow pass is not integrated.** `loop()` can stall for far longer than 40 ms - a failed MQTT
+connect holds it for three seconds ([A-005](A-005-server-uplink.md)). Integrating the last rate of
+turn over such a gap would swing the estimate by that rate times the gap, so a step longer than
+0.1 s counts as one ordinary step, and the accelerometer closes whatever the boat did meanwhile.
 
 ## 6. What reaches the aggregate
 
@@ -290,13 +301,19 @@ the pier delivers its jolt within a sample or two.
 The threshold is therefore the size of that **jump**. At the ±4 g range the chip resolves it in
 steps of 0.125 g, up to 7.9 g.
 
-The event carries the time, the axes that crossed, and the acceleration read the moment the line
-rises. Settings in NVS:
+The event carries the time, the axes that crossed - named as the boat's, fore-and-aft,
+athwartships or vertical, through the axis setting - and the acceleration read the moment the
+line rises.
 
 | | Starting point | |
 |---|---|---|
 | Threshold | a jump of 0.5 g | a guess until there is real data. A boat snatching at her lines changes her acceleration over tenths of a second; a knock against the pier does it within milliseconds |
 | Hold-off | 60 s | one impact, not forty reports of the same one |
+
+The hold-off runs from a report and is **not restarted** by the knocks it suppresses. Those are
+counted, and the count travels with the next report. A boat banging against the pier for an hour
+is then reported once a minute, each report saying how many knocks it stands for - rather than
+once, followed by an hour of silence that looks like calm.
 
 **Expect to tune this.** The threshold that separates "a wave" from "something hit us" is a
 property of this boat at this berth, and nobody can pick it from a datasheet. Start at the guess
@@ -304,7 +321,31 @@ and raise it a step at a time while ordinary days at the berth still raise event
 per window shows how hard she is being thrown about in the meantime - a good reason to have the
 channel whether or not the alarm is ever armed.
 
-## 8. Failure modes
+## 8. Settings and the portal
+
+Everything a boat needs different from the next one is a setting, in the `boathub` namespace
+beside the rest of the configuration, and on the configuration portal under **Motion sensor**.
+Saving restarts the board, like every other setting.
+
+| Key | Meaning | Default |
+|-----|---------|---------|
+| `imu_fwd` | module axis pointing forward: 0 = +X, 1 = -X, 2 = +Y, 3 = -Y, 4 = +Z, 5 = -Z | 0, +X |
+| `imu_up` | module axis pointing up, same codes | 4, +Z - component side up |
+| `imu_tau` | filter time constant, in tenths of a second | 30 |
+| `imu_knock` | knock threshold, the jump in mg between samples | 500 |
+| `imu_hold` | hold-off after a reported knock, in seconds | 60 |
+
+The portal refuses forward and up along the same axis, which would leave the third undefined. It
+clamps tau to between half a second, which follows the waves, and a minute, which stops following
+the boat, and the threshold to what the chip can be set to.
+
+**Level now** is a button of its own under the settings, posting to `/level`. It acts on the
+running board rather than changing a setting, so it restarts nothing, and it answers with a page
+that says why when it is refused. The reference it records goes into its own namespace, `imu`,
+**in the module's own axes**. It is a fact about how the module sits, so correcting the axis
+setting later does not throw it away.
+
+## 9. Failure modes
 
 | Case | Detection | Reaction |
 |------|-----------|----------|
@@ -315,7 +356,7 @@ channel whether or not the alarm is ever armed.
 | Interrupt line stuck | impacts reported continuously | hold-off limits the rate; a stuck line shows as a steady stream and is its own diagnosis |
 | INT1 not connected | at start the chip inverts the line's idle level, and GPIO2 does not follow | attitude carries on; knocks go undetected, which is said once in the log and in the status rather than discovered after the first one |
 
-## 9. Verification
+## 10. Verification
 
 Most of this is done on the desk first, with the bench reader:
 
@@ -332,25 +373,28 @@ the bow and the component side up.
 - [ ] Standing the module on each edge in turn, the bench reader names the printed arrow that
       points at the ceiling - `+X`, `+Y`, and `+Z` lying flat - and the opposite face as minus
 - [ ] The gyro bias the bench reader shows settles within half a minute of a start, and stays put
-- [ ] At rest and zeroed, heel and pitch read within a fraction of a degree of zero
+- [ ] In the firmware, the status line reads `settling` after a start and `not level` within half
+      a minute, and **Level now** is refused until it does
+- [ ] At rest and zeroed, heel and pitch read within a fraction of a degree of zero, and the zero
+      survives a restart and a change of the axis setting
 - [ ] **Tilting the enclosure bow-up moves `pitch_deg` and not `heel_deg`**, and tilting it to
       starboard moves `heel_deg` and not `pitch_deg`. This is the check for a quarter turn in
       the horizontal plane, which zeroing cannot detect
 - [ ] Tilting the enclosure by a known angle reads that angle back
 - [ ] Shaking it does **not** move the heel reading much - that is the filter's time constant doing
       its job, and the test that distinguishes a working fusion from a bare accelerometer
-- [ ] Rotating it quickly and returning it leaves the reading back where it started, with no
-      accumulated offset
+- [ ] Rotating it quickly and returning it leaves the reading back where it started within about
+      ten seconds, with no lasting offset
 - [ ] A tap on the enclosure raises an impact event; a gentle rock does not
-- [ ] The hold-off suppresses a second report from the same knock
+- [ ] A knock during the hold-off is not reported on its own, and is counted in the next report
 - [ ] `motion_g` sits near zero at rest and rises with deliberate rocking
 - [ ] A window shows a roll range in min/max rather than a flat mean
 - [ ] Removing the sensor leaves the other channels and the uplink untouched
 
-## 10. References
+## 11. References
 
 - [A-002-bench-setup-usb.md](A-002-bench-setup-usb.md) - the I2C bus this shares
-- [A-003-ds18b20-temperature-sensors.md](A-003-ds18b20-temperature-sensors.md) - the re-learn action
-  this borrows a home from
+- [A-004-wifi-and-configuration-portal.md](A-004-wifi-and-configuration-portal.md) - the portal
+  that holds the settings and Level now
 - [A-005-server-uplink.md](A-005-server-uplink.md) - the aggregate these channels join
 - [ST LSM6DSOX datasheet](https://www.st.com/en/mems-and-sensors/lsm6dsox.html)

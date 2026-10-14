@@ -64,6 +64,12 @@ void begin() {
   cfg.sht31HeatSecs = u16("sht_on", 10);
   cfg.sht31CoolSecs = u16("sht_cool", 120);
 
+  cfg.imuForward = u16("imu_fwd", 0);
+  cfg.imuUp = u16("imu_up", 4);
+  cfg.imuTauDs = u16("imu_tau", 30);
+  cfg.imuKnockMg = u16("imu_knock", 500);
+  cfg.imuHoldoffSecs = u16("imu_hold", 60);
+
   prefs.end();
 }
 
@@ -93,6 +99,11 @@ void save(const Config &incoming) {
   cfg.sht31SoakMins = incoming.sht31SoakMins;
   cfg.sht31HeatSecs = incoming.sht31HeatSecs;
   cfg.sht31CoolSecs = incoming.sht31CoolSecs;
+  cfg.imuForward = incoming.imuForward;
+  cfg.imuUp = incoming.imuUp;
+  cfg.imuTauDs = incoming.imuTauDs;
+  cfg.imuKnockMg = incoming.imuKnockMg;
+  cfg.imuHoldoffSecs = incoming.imuHoldoffSecs;
 
   // An empty password field means "leave it alone". Without this the form
   // would have to send the stored passwords to the browser just to save an
@@ -118,6 +129,11 @@ void save(const Config &incoming) {
   prefs.putUShort("sht_soak", cfg.sht31SoakMins);
   prefs.putUShort("sht_on", cfg.sht31HeatSecs);
   prefs.putUShort("sht_cool", cfg.sht31CoolSecs);
+  prefs.putUShort("imu_fwd", cfg.imuForward);
+  prefs.putUShort("imu_up", cfg.imuUp);
+  prefs.putUShort("imu_tau", cfg.imuTauDs);
+  prefs.putUShort("imu_knock", cfg.imuKnockMg);
+  prefs.putUShort("imu_hold", cfg.imuHoldoffSecs);
   prefs.end();
 }
 
