@@ -405,7 +405,9 @@ figure compared with the board's station pressure - the reduction in section 11 
 | Case | Detection | Reaction |
 |------|-----------|----------|
 | Sensor does not answer | I2C NACK at 0x76 | fields absent, event once, retried each interval; the other devices on the bus carry on |
-| A different chip at 0x76 | chip ID is not 0x61 | not read, logged once. `i2cscan` names what it is || Sensor reset itself | raw values read as skipped | sample discarded; the next measurement writes the configuration again |
+| A different chip at 0x76 | chip ID is not 0x61 | not read, logged once. `i2cscan` names what it is |
+| A BME688 at 0x76 | chip ID 0x61, variant ID 0x01 | pressure, temperature and humidity read as from a BME680. Its gas readout differs and is not implemented, so its heater stays off whatever `bme_gas` says |
+| Sensor reset itself | raw values read as skipped | sample discarded; the next measurement writes the configuration again |
 | Value implausible | range and rate checks | sample discarded, counted |
 | Answered once, then never again after a disturbance | NACK, and a power cycle brings it back | `CS` caught a low edge. The link from `CS` to `VCC` is what prevents it |
 | Reads a hard 100 %RH for hours | plausibility over time | the sensor is wet. There is no heater to dry it; pressure and temperature stay valid. Look at the placement - section 5 |
