@@ -14,7 +14,7 @@ Based on the project guide v0.1 of 2026-09-13
 
 | | Scope |
 |---|-------|
-| **v1** | Base monitoring: temperatures, humidity, battery, optional bilge level, on-board Wi-Fi, marina Wi-Fi, server uplink |
+| **v1** | Base monitoring: temperatures, humidity, air pressure, battery, optional bilge level, on-board Wi-Fi, marina Wi-Fi, server uplink |
 | **v2** | Read SeaTalk1: log, depth, compass, GPS, autopilot status |
 | **v2.5** | Store GPS tracks locally and sync them as a digital logbook |
 | **v2B** | Write SeaTalk1: local autopilot control - only after RX runs reliably |
@@ -56,6 +56,9 @@ tolerate reconnects, and no local UI may treat a dropped socket as anything unus
   antenna needs a solder rework to activate
 - **Temperature:** 3 x DS18B20 (engine bay, bilge water, fridge), each on its own 1-Wire GPIO
 - **Cabin climate:** SHT31-D (I2C, address 0x44)
+- **Barometer and battery bay:** BME680 (I2C, address 0x76) on a short cable in the battery bay -
+  air pressure for the weather trend, and the bay's air temperature and humidity. Its gas heater
+  stays off - [A-010](docs/design/A-010-bme680-barometer-and-battery-bay.md)
 - **Analog:** 2 x ADS1115 on the shared I2C bus, 0x48 and 0x49. The second is socketed and may
   stay empty until its channels are specified
 - **Attitude and motion:** LSM6DSOX IMU on the I2C bus at 0x6A, with its interrupt on GPIO2 -
@@ -79,8 +82,8 @@ Full parts list with prices and sources: [docs/MATERIAL.md](docs/MATERIAL.md)
 | 5 | DS18B20 bilge water | dedicated 1-Wire bus |
 | 6 | DS18B20 fridge | dedicated 1-Wire bus |
 | 7 | spare | optional water tank DS18B20 |
-| 8 | I2C SDA | SHT31, both ADS1115, IMU |
-| 9 | I2C SCL | SHT31, both ADS1115, IMU |
+| 8 | I2C SDA | SHT31, BME680, both ADS1115, IMU |
+| 9 | I2C SCL | SHT31, BME680, both ADS1115, IMU |
 | 15 | reserved | SeaTalk RX (stage 2) |
 | 16 | reserved | SeaTalk TX (stage 2) |
 | 17 | reserved | TWAI TX (stage 3) |

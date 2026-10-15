@@ -139,7 +139,8 @@ query with the AP's own address so that a phone offers the page by itself. Brows
 | `GET /status` | JSON: state, station address, RSSI, broker connection, IMU state, uptime |
 
 The IMU's settings share the `boathub` namespace and the form; they are listed in
-[A-009](A-009-imu-heel-and-motion.md) section 8.
+[A-009](A-009-imu-heel-and-motion.md) section 8. So do the BME680's, in
+[A-010](A-010-bme680-barometer-and-battery-bay.md) section 8.
 
 **Passwords are never sent back to the browser.** The form shows an empty field with a placeholder;
 an empty field on save means "keep what is stored", so the page can be used to change the SSID
