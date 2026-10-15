@@ -18,6 +18,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ### Changed
 
+- The **Temperatures** panel on the sensor dashboard shows every temperature the boat measures:
+  the cabin from the SHT31 and the battery bay from the BME680 beside the three probes. They
+  share one axis, so a warm battery bay can be read against the cabin and the engine bay at a
+  glance.
+
 - `i2cscan` tells a BME688 from a BME680 by the variant register at 0xF0. Both report chip ID
   0x61, and a board sold as a CJMCU-680 can carry either; named by the chip ID alone, a BME688
   passed as a BME680. Pressure, temperature and humidity are the same on both; only the gas

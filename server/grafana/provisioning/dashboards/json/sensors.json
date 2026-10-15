@@ -148,7 +148,7 @@
     {
       "type": "timeseries",
       "title": "Temperatures",
-      "description": "Mean per window. Engine bay rising is also the clearest sign the engine is running. Empty until the DS18B20 probes are wired.",
+      "description": "Mean per window, every temperature the boat measures on one axis: the cabin air (SHT31), the battery bay's air (BME680) and the three probes. Engine bay rising is also the clearest sign the engine is running. A sensor that is not fitted has no line.",
       "datasource": {
         "type": "postgres",
         "uid": "boathub"
@@ -174,7 +174,7 @@
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT received_at AS time, engine_temp_c AS \"engine bay\", bilge_temp_c AS \"bilge water\", fridge_temp_c AS \"fridge\" FROM telemetry WHERE $__timeFilter(received_at) AND (engine_temp_c IS NOT NULL OR bilge_temp_c IS NOT NULL OR fridge_temp_c IS NOT NULL) ORDER BY 1"
+          "rawSql": "SELECT received_at AS time, cabin_temp_c AS \"cabin\", bay_temp_c AS \"battery bay\", engine_temp_c AS \"engine bay\", bilge_temp_c AS \"bilge water\", fridge_temp_c AS \"fridge\" FROM telemetry WHERE $__timeFilter(received_at) AND (cabin_temp_c IS NOT NULL OR bay_temp_c IS NOT NULL OR engine_temp_c IS NOT NULL OR bilge_temp_c IS NOT NULL OR fridge_temp_c IS NOT NULL) ORDER BY 1"
         }
       ]
     },
