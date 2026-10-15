@@ -82,7 +82,7 @@ spacing or a pin order that is out by one is a scrapped run.
 | 2 A fuse | inline, **close to the supply** - it protects the cable, not the load |
 | SHT31 | outside the enclosure entirely, on its own cable ([A-008](A-008-sht31-cabin-climate.md)) |
 | BME680 | outside the enclosure in the battery bay, about 15 cm away, on its own cable into the same terminal as the SHT31 ([A-010](A-010-bme680-barometer-and-battery-bay.md)) |
-| IMU | inside the enclosure, bolted down, on five cores of a patch cable ([A-009](A-009-imu-heel-and-motion.md)) |
+| IMU | inside the enclosure, bolted down, on a patch cable wired like the sensor runs plus INT1 ([A-009](A-009-imu-heel-and-motion.md)) |
 | Conditioning for any future analogue sender | on a small adapter plugged into J1, designed when that sender is known |
 
 **The unallocated GPIO do not come out on headers.** Breaking out the GPIO is what made the

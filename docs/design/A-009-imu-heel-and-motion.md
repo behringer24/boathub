@@ -144,9 +144,9 @@ The module has four 3.2 mm holes for M3 screws, 32 mm apart along its length and
 
 ### The cable
 
-The five conductors run on a length of **Cat 5e or Cat 6 patch cable**: eight stranded cores in
-four twisted pairs, thin enough for the module's pads, and an offcut is in most drawers. Two
-things to check before cutting it:
+The five signals run on a length of **Cat 5e or Cat 6 patch cable**: eight stranded cores in four
+twisted pairs, thin enough for the module's pads, and an offcut is in most drawers. Two things to
+check before cutting it:
 
 - **Stranded, not solid.** Patch cable is stranded. Installation cable for walls has solid cores,
   and those break at the solder joint under vibration. A cable that hangs limp is stranded; one
@@ -156,24 +156,32 @@ things to check before cutting it:
 
 | Pair | Core | Signal | Module pad | J4 pole |
 |------|------|--------|------------|---------|
-| blue | blue | SDA | 4-pin side | 3 |
-| | white-blue | GND | 4-pin side | 2 |
+| brown | brown | 3.3 V | 4-pin side | 1 |
+| | white | GND | 4-pin side | 2 |
 | orange | orange | SCL | 4-pin side | 4 |
-| | white-orange | 3.3 V | 4-pin side | 1 |
+| | white | GND | 4-pin side | 2 |
+| blue | blue | SDA | 4-pin side | 3 |
+| | white | GND | 4-pin side | 2 |
 | green | green | INT1 | 10-pin side | 5 |
-| | white-green | unused | | |
-| brown | both | unused, cut back | | |
+| | white | **cut off at both ends** | | |
 
-SDA twisted with ground and SCL with the supply is the four-conductor scheme from
-[A-002](A-002-bench-setup-usb.md); INT1 takes a pair of its own. These are not the red, black,
-blue and yellow of the bench wiring, so write the table inside the enclosure lid.
+The first three pairs are wired exactly like the sensor runs in [A-002](A-002-bench-setup-usb.md):
+brown is the supply, and every white is ground. **In these cables the white partner of each pair is
+plain white** - there is no white-blue or white-orange to tell one from another - so no white core
+may carry anything but ground: a supply on one of them is indistinguishable from the grounds beside
+it at the far end. INT1 takes the green, and its white partner is cut off flush with the jacket at
+both ends; find it by following the twist before anything is stripped.
+
+These are not the red, black, blue and yellow of the bench wiring, so write the table inside the
+enclosure lid.
 
 - **Solder the cores straight into the pads**, without a pin header. The cable is the permanent
   connection, and a plug-in contact is exactly what [B-002](B-002-main-board.md) keeps off this
   bus. Tie the cable to a mounting hole so the joints do not carry the movement.
-- **Every core gets a 0.25 mm² ferrule at J4.** A screw on bare thin strands flattens them and the
-  contact loosens over time. Tinning the strands instead does not help: solder creeps under the
-  screw.
+- **Ferrules at J4: 0.25 mm² on brown, orange, blue and green, and one 0.5 mm² over the three
+  whites twisted together.** A screw on bare thin strands flattens them and the contact loosens
+  over time. Tinning the strands instead does not help: solder creeps under the screw. At the
+  module the three whites go twisted together into the ground pad.
 - **Of the ten sensor pads, only INT1 is connected.** CS and SDO/SA0 stay open - CS pulled low
   switches the chip to SPI and it drops off the bus, and SDO/SA0 sets the address. The VDDIO and
   address solder jumpers stay as shipped.

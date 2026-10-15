@@ -178,8 +178,9 @@ the jacket at both ends.
   to sit within the gland's 3.5-7 mm.
 - Each run leaves the box through **its own gland**. A gland seals around one cable, not two.
 
-The IMU's cable inside the box is the same patch cable with its own pair assignment, in
-[A-009](A-009-imu-heel-and-motion.md).
+The IMU's cable inside the box is the same patch cable, wired the same way, with its interrupt on
+the green core - [A-009](A-009-imu-heel-and-motion.md). On every cable in this system **brown is
+3.3 V and white is only ever ground.**
 
 Write the scheme on the inside of the enclosure lid. Somebody will be looking at these wires years
 from now, in a dark locker, with a torch.
