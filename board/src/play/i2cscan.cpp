@@ -64,8 +64,13 @@ static const char *describe(uint8_t addr) {
 // address alone cannot say which chip answered. Each keeps a chip ID in
 // register 0xD0, and that is what tells the project's BME680 from the BMP280
 // that is often sold on a board printed "BME280" - the one without humidity.
-// A BME688 reports the same ID as the BME680.
+//
+// The BME680 and the BME688 share chip ID 0x61; the variant register at 0xF0
+// tells them apart, 0x00 for the BME680 and 0x01 for the BME688. A board sold
+// as a BME680 may carry either.
 static const uint8_t BOSCH_REG_CHIP_ID = 0xD0;
+static const uint8_t BOSCH_REG_VARIANT_ID = 0xF0;
+static const uint8_t BME68X_CHIP_ID = 0x61;
 
 struct Chip {
   uint8_t id;
@@ -76,7 +81,13 @@ static const Chip BOSCH_CHIPS[] = {
   {0x55, "BMP180 - pressure only, no humidity"},
   {0x58, "BMP280 - pressure only, no humidity"},
   {0x60, "BME280 - pressure and humidity, no gas sensor"},
-  {0x61, "BME680"},
+};
+
+// For chip ID 0x61, by the variant register. Pressure, temperature and
+// humidity are the same on both; the gas readout is not.
+static const Chip BME68X_VARIANTS[] = {
+  {0x00, "BME680"},
+  {0x01, "BME688 - reads like a BME680; the firmware keeps its gas heater off"},
 };
 
 // Register pointer write and read in one transaction, with a repeated start.
@@ -99,6 +110,24 @@ static void printDevice(uint8_t addr) {
   uint8_t id;
   if (!readRegister(addr, BOSCH_REG_CHIP_ID, id)) {
     Serial.printf("  0x%02X  Bosch pressure sensor (%s) - chip ID unreadable\n", addr, sdo);
+    return;
+  }
+  if (id == BME68X_CHIP_ID) {
+    uint8_t variant;
+    if (!readRegister(addr, BOSCH_REG_VARIANT_ID, variant)) {
+      Serial.printf("  0x%02X  BME680 or BME688 (%s), chip ID 0x%02X - variant unreadable\n", addr,
+                    sdo, id);
+      return;
+    }
+    for (const Chip &v : BME68X_VARIANTS) {
+      if (v.id == variant) {
+        Serial.printf("  0x%02X  %s (%s), chip ID 0x%02X, variant 0x%02X\n", addr, v.what, sdo, id,
+                      variant);
+        return;
+      }
+    }
+    Serial.printf("  0x%02X  BME68x of unknown variant 0x%02X (%s), chip ID 0x%02X\n", addr, variant,
+                  sdo, id);
     return;
   }
   for (const Chip &c : BOSCH_CHIPS) {

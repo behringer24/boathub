@@ -143,7 +143,7 @@ Off means two register bits, both written with every measurement (section 6): `r
 
 **With the switch on**, each measurement adds a heater phase - Bosch's starting values are 320 °C
 for 150 ms - and the gas resistance joins the aggregate as `bay_gas_kohm`, mean, min and max like
-the others. Bay temperature and humidity then read warm and dry by an amount that depends on the
+the others. That holds for a BME680; a BME688 keeps its heater off regardless (section 5). Bay temperature and humidity then read warm and dry by an amount that depends on the
 interval and the mounting. The switch is there for a sensor mounted somewhere else; in the battery
 bay it stays off.
 
@@ -153,7 +153,7 @@ bay it stays off.
 
 | Part | Qty | Purpose | Note |
 |------|-----|---------|------|
-| BME680 breakout, CJMCU-680 | 1 | barometer, bay temperature and humidity | sold in pairs; the second is the spare |
+| BME680 breakout, CJMCU-680 | 1 | barometer, bay temperature and humidity | sold in pairs; the second is the spare. May carry a BME688, which serves as well |
 | Cat 5e or Cat 6 patch cable, round | ~0.3 m | the run to J2 | stranded, copper |
 | Ferrules 0.25 mm² and 0.5 mm² | 3 + 1 | at J2 | from the ferrule kit |
 | Cable gland and lock nut, M12 x 1.5 | 1 each | where the cable leaves the box | the same part as every other entry |
@@ -168,9 +168,13 @@ J2.
 The CJMCU-680 brings out six pins: `VCC`, `GND`, `SCL`, `SDA`, `SDO` and `CS`. Three things to
 check before anything is soldered:
 
-- **That it is a BME680.** Boards are sold under the wrong name, and a BMP280 on a board printed
-  BME280 or BME680 has no humidity sensor at all. `i2cscan` reads the chip ID and names it: a
-  BME680 reports 0x61.
+- **That it is a BME680 or a BME688.** Boards are sold under the wrong name, and a BMP280 on a
+  board printed BME280 or BME680 has no humidity sensor at all. `i2cscan` reads the chip ID and
+  names it: both report 0x61, and the variant register at 0xF0 tells them apart - 0x00 for the
+  BME680, 0x01 for the BME688. A CJMCU-680 may carry either. **Either will do here**: pressure,
+  temperature and humidity are measured and compensated identically. Only the gas readout
+  differs, and the firmware reads it on a BME680 alone - on a BME688 the heater stays off whatever
+  `bme_gas` says.
 - **Its pull-ups.** Measure `SDA` to `VCC` and `SCL` to `VCC` on the unpowered module. Most
   breakouts carry 10 kΩ or 4.7 kΩ. Leave them fitted: with the SHT31 and both converters beside
   them the bus stays well above the 1.1 kΩ at which the 3 mA every device here can sink runs out.
@@ -396,9 +400,7 @@ figure compared with the board's station pressure - the reduction in section 11 
 | Case | Detection | Reaction |
 |------|-----------|----------|
 | Sensor does not answer | I2C NACK at 0x76 | fields absent, event once, retried each interval; the other devices on the bus carry on |
-| A different chip at 0x76 | chip ID is not 0x61 | not read, logged once. `i2cscan` names what it is |
-| A BME688 at 0x76 | chip ID 0x61, variant ID 0x01 | pressure, temperature and humidity read as from a BME680. Its gas readout differs and is not implemented, so its heater stays off whatever `bme_gas` says |
-| Sensor reset itself | raw values read as skipped | sample discarded; the next measurement writes the configuration again |
+| A different chip at 0x76 | chip ID is not 0x61 | not read, logged once. `i2cscan` names what it is || Sensor reset itself | raw values read as skipped | sample discarded; the next measurement writes the configuration again |
 | Value implausible | range and rate checks | sample discarded, counted |
 | Answered once, then never again after a disturbance | NACK, and a power cycle brings it back | `CS` caught a low edge. The link from `CS` to `VCC` is what prevents it |
 | Reads a hard 100 %RH for hours | plausibility over time | the sensor is wet. There is no heater to dry it; pressure and temperature stay valid. Look at the placement - section 5 |
@@ -434,7 +436,8 @@ the one-metre lift below reads directly; `g` switches the gas heater on for the 
 
 - [ ] `CS` measures 0 Ω to `VCC` and `SDO` 0 Ω to `GND` on the module, before power is applied
 - [ ] The module's pull-ups measured on the unpowered module and written down
-- [ ] `i2cscan` names a BME680 at 0x76 (`SDO` to GND), and still finds 0x44, 0x48 and 0x6A
+- [ ] `i2cscan` names a BME680 or a BME688 at 0x76 (`SDO` to GND), and still finds 0x44, 0x48
+      and 0x6A
 - [ ] Pressure within a few hPa of a nearby station's reading before any offset is applied
 - [ ] At rest, consecutive pressure readings differ by a few hundredths of a hPa
 - [ ] **Lifting the module by one metre lowers the pressure by about 0.12 hPa**, and putting it

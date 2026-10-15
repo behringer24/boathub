@@ -18,6 +18,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ### Changed
 
+- `i2cscan` tells a BME688 from a BME680 by the variant register at 0xF0. Both report chip ID
+  0x61, and a board sold as a CJMCU-680 can carry either; named by the chip ID alone, a BME688
+  passed as a BME680. Pressure, temperature and humidity are the same on both; only the gas
+  readout differs, and the firmware keeps a BME688's heater off.
+
 - **Telemetry records are 128 bytes, format 3**, to carry the BME680: four more channels, for
   pressure in 0.1 hPa, the battery bay's temperature and humidity, and gas resistance in 0.1 kΩ.
   Segments of the 64- and 96-byte formats still drain at their own size - `.seg`, `.sg2`, and now
