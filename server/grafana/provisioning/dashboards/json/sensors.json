@@ -747,14 +747,14 @@
     {
       "type": "timeseries",
       "title": "Barometer",
-      "description": "Station pressure at the sensor's own height: the mean over each window, with its range. A weather report gives sea level, which is higher by about 0.12 hPa for every metre of height. The absolute figure is good to half a hectopascal; what this sensor is for is the trend, in the panel beside it.",
+      "description": "Station pressure at the sensor's own height, as the board sends it: the mean over each window, with its range. A weather report gives sea level instead, higher by about 0.12 hPa for every metre of height - the panel beside it. The absolute figure is good to half a hectopascal; what this sensor is for is the trend, on the right.",
       "datasource": {
         "type": "postgres",
         "uid": "boathub"
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
         "y": 48
       },
@@ -813,6 +813,73 @@
     },
     {
       "type": "timeseries",
+      "title": "Sea-level pressure",
+      "description": "Station pressure reduced to sea level with the boat's height from the boats table - the figure a weather report or a synoptic chart gives, and the one to calibrate the board's offset against (A-010 section 11). The height is applied as the panel draws, so correcting it redraws the whole history and changes nothing stored. Empty until the boat's height is set; server/README.md has the statement.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pressurehpa",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "min"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 18
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "min"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT t.received_at AS time, t.pressure_hpa / b.f AS mean, t.pressure_hpa_min / b.f AS min, t.pressure_hpa_max / b.f AS max FROM telemetry t JOIN (SELECT boat_id, power(1 - 0.0065 * height_m / 288.15, 5.255) AS f FROM boats) b USING (boat_id) WHERE $__timeFilter(t.received_at) AND t.pressure_hpa IS NOT NULL ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
       "title": "Pressure tendency, 3 h",
       "description": "Each window's pressure minus the one three hours before it, by the board's own clock - so a backlog uploaded after a passage shows the trend as it happened, not all at once on arrival. A fall of 3 hPa or more in three hours, the dashed line, is the classic warning sign. Neither the height nor the board's offset matters here: both cancel in a difference. Empty until three hours of readings exist.",
       "datasource": {
@@ -821,8 +888,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 16,
         "y": 48
       },
       "fieldConfig": {

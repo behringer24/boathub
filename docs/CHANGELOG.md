@@ -199,6 +199,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   line, and the battery bay's temperature and humidity. The tendency is computed in the panel's
   query by the board's own timestamps, so a backlog uploaded after a passage shows the trend as it
   happened rather than all at once on arrival.
+- Sea-level pressure on the sensor dashboard, between station pressure and the tendency. Each
+  boat's barometer height lives in a `boats` table on the server, set by hand with the statement in
+  `server/README.md`, and the panel reduces the stored station pressure with it in its query: a
+  corrected height redraws the whole history and changes nothing stored. A boat without a height
+  shows none rather than an unreduced figure. Migration `005-boat-height.sql` adds the table.
 - Heel, pitch and motion in the telemetry: `heel_deg` and `pitch_deg` with min, max and their
   standard deviation within the window, `motion_g` with min and max, and `knocks`, counted straight
   through the hold-off. The spread is there because the extremes are set by a single wake and say
