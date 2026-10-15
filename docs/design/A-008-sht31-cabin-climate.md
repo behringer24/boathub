@@ -16,8 +16,9 @@ aggregate as `cabin_temp_c` and `cabin_rh`.
 
 ## 2. Starting point
 
-The sensor shares the I2C bus on GPIO8/9 with the ADS1115 converters and the IMU - **that sharing drives most of the
-decisions below.** Anything this sensor does to the bus, it does to the analog side too.
+The sensor shares the I2C bus on GPIO8/9 with the ADS1115 converters, the IMU and the BME680 -
+**that sharing drives most of the decisions below.** Anything this sensor does to the bus, it does
+to the analog side too.
 
 Humidity is the reason this sensor exists. Temperature it measures as well, and the cabin figure is
 worth having, but the condensation and mould warning is what the SHT31 is for and what the DS18B20

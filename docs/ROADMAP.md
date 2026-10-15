@@ -19,13 +19,14 @@ to the self-hosted server.
 |---------|-------|
 | Three DS18B20 on dedicated GPIOs | pin the ROM addresses explicitly rather than letting the library auto-detect; verify the CRC on every read and reject bad frames |
 | SHT31-D on I2C | bus at 100 kHz, address 0x44 |
+| BME680 on I2C, address 0x76 | station pressure for the weather trend, plus the battery bay's air temperature and humidity. Register-level driver in forced mode, no Bosch BSEC; the gas heater stays off unless switched on in NVS, and the pressure offset against a nearby station lives there too, see [design/A-010-bme680-barometer-and-battery-bay.md](design/A-010-bme680-barometer-and-battery-bay.md) |
 | ADS1115 converters on I2C | fix the PGA once and never change it, or an existing calibration silently becomes wrong |
 | LSM6DSOX IMU on I2C, interrupt on GPIO2 | heel, pitch and motion in the aggregate, an event when something hits the boat. The filter's time constant, the axis mapping, the zero reference and the knock threshold live in NVS, see [design/A-009-imu-heel-and-motion.md](design/A-009-imu-heel-and-motion.md) |
 | SoftAP `BOOT-NETZ` plus a local configuration web UI | |
 | Station mode, credentials in NVS/Preferences | **no Wi-Fi or server passwords in source** |
 | Battery state machine with debouncing | thresholds and windows configurable in NVS, see [design/B-001-power-supply.md](design/B-001-power-supply.md) |
 | Shore-power-loss alarm | gated on at least 6 h of prior charging so it stays quiet underway |
-| Alarm and threshold logic | frost, fridge too warm, humidity; a list or trim that keeps changing while the boat lies unattended, and a knock once its threshold has been set from recorded counts - both from [design/A-009-imu-heel-and-motion.md](design/A-009-imu-heel-and-motion.md) |
+| Alarm and threshold logic | frost, fridge too warm, humidity; a barometer falling 3 hPa or more in three hours; a list or trim that keeps changing while the boat lies unattended, and a knock once its threshold has been set from recorded counts - both from [design/A-009-imu-heel-and-motion.md](design/A-009-imu-heel-and-motion.md) |
 | Fault handling and watchdog | a sensor failure must not take the network path down |
 
 Two constraints that bite late if ignored:
@@ -42,6 +43,7 @@ Two constraints that bite late if ignored:
 |---------|-------|
 | MQTT broker over TLS | the certificate has to be in place before the board's first uplink |
 | Telemetry ingest and storage | |
+| Pressure tendency and sea-level pressure | the three-hour tendency from the stored station pressure, and sea-level pressure for display from a per-boat height setting. The board sends station pressure only |
 | Heartbeat and last-will handling | board reported offline once the keepalive expires |
 | Alarm notification | |
 
@@ -61,6 +63,9 @@ boathub/<boat-id>/events
   "battery_v": 12.73, "battery_v_min": 12.41, "battery_v_max": 12.79,
   "cabin_temp_c": 8.4, "cabin_temp_c_min": 8.1, "cabin_temp_c_max": 8.6,
   "cabin_rh": 72.1,
+  "pressure_hpa": 1013.4, "pressure_hpa_min": 1013.1, "pressure_hpa_max": 1013.6,
+  "bay_temp_c": 11.2, "bay_temp_c_min": 10.8, "bay_temp_c_max": 12.9,
+  "bay_rh": 81.0,
   "engine_temp_c": 7.9,
   "bilge_temp_c": 6.1,
   "fridge_temp_c": 5.2, "fridge_temp_c_min": 3.8, "fridge_temp_c_max": 6.9,
@@ -77,6 +82,11 @@ Heel and pitch carry a fourth figure, the standard deviation within the window: 
 set by a single wake, the spread by the whole five minutes. `knocks` is a count, so 0 is a quiet
 window and an absent key is a board without an IMU. See
 [design/A-009-imu-heel-and-motion.md](design/A-009-imu-heel-and-motion.md) section 6.
+
+`pressure_hpa` is **station pressure**, at the height of the sensor. Sea level is a matter of
+display on the server, and the three-hour tendency needs neither height nor offset. `bay_` is the
+battery bay, where the BME680 sits; the cabin's climate stays `cabin_`. See
+[design/A-010-bme680-barometer-and-battery-bay.md](design/A-010-bme680-barometer-and-battery-bay.md).
 
 **A message is an aggregate, not a reading.** The board measures every **10 s** and publishes every
 **5 min**: the bare field is the mean over the window, `_min`/`_max` are the extremes. A mean alone
@@ -97,6 +107,8 @@ Three rates that have nothing to do with each other:
 
 - Each DS18B20 is identified individually and reports plausible values
 - SHT31 reports temperature and relative humidity
+- BME680 reports station pressure and the battery bay's temperature and humidity, with its gas
+  heater off; the server shows the three-hour tendency
 - Every ADS1115 present answers at its address - 0x48 and 0x49 on the main board, all three of
   the pack on the breadboard
 - Battery voltage matches the multimeter after calibration

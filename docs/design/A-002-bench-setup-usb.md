@@ -88,6 +88,9 @@ All four modules - the SHT31 and the three ADS1115 - carry 10 kΩ pull-ups to th
 which puts roughly **2.5 kΩ on the bus**. That is already a strong pull-up, so:
 
 - **Do not add external pull-ups.**
+- The BME680 breakout usually brings a pair of its own, the IMU board none. Leave the BME680's
+  fitted: with them the bus still stays above the 1.1 kΩ at which the 3 mA every device here can
+  sink runs out.
 - Run the bus at **100 kHz**. Nothing on it benefits from 400 kHz, and every figure below doubles
   in difficulty if you do.
 - Set the ADS1115 addresses one module at a time and confirm with an I2C scanner:
@@ -100,44 +103,91 @@ which puts roughly **2.5 kΩ on the bus**. That is already a strong pull-up, so:
   For 0x45, tie `AD` to 3.3 V - a hard tie wins against the pull-down.
 - The datasheet wants the address pin at a defined level, so on a board **without** that pull-down
   it must be tied by hand. A floating address pin gives a sensor that answers sometimes.
+- The BME680 answers at **0x76** with `SDO` tied to ground. Its `CS` is tied hard to 3.3 V as well:
+  one low edge on it switches the chip to SPI until its power is removed. Both links are made on
+  the module - [A-010](A-010-bme680-barometer-and-battery-bay.md).
 
 **Power the SHT31 from 3.3 V, never 5 V.** Its pull-ups go to the supply pin, and typical breakouts
 carry neither a regulator nor a level shifter, so a 5 V feed puts 5 V onto ESP32 pins rated 3.6 V
 absolute maximum.
 
-#### How long the cable run to the SHT31 may be
+#### How long the cable runs may be
 
 The SHT31 measures cabin climate, so it cannot live inside the sealed enclosure: the box runs
 10-12 °C above ambient, and because relative humidity depends on temperature, a few degrees of
-error become several %RH of error. It has to sit outside, which means I2C over a cable.
+error become several %RH of error. It has to sit outside, which means I2C over a cable. The BME680
+in the battery bay sits outside for the same reason, on a run of about 15 cm
+([A-010](A-010-bme680-barometer-and-battery-bay.md)).
+
+**What counts is the total of every cable on the bus** - the SHT31's run, the BME680's and the IMU
+cable inside the box. Capacitance adds up whichever terminal a cable hangs off.
 
 Against the 100 kHz limit of 1000 ns rise time, with ~50 pF of module and trace capacitance plus
 ~100 pF per metre of cable:
 
-| Cable length | Bus capacitance | Rise time | Verdict |
-|--------------|-----------------|-----------|---------|
+| Total cable length | Bus capacitance | Rise time | Verdict |
+|--------------------|-----------------|-----------|---------|
 | 2 m | ~250 pF | ~530 ns | comfortable |
 | 3 m | ~350 pF | ~740 ns | fine |
 | 5 m | ~550 pF | ~1165 ns | over the limit |
 
-**Up to about 3 m needs nothing but care.** To reach 5-6 m, add one **3.3 kΩ pull-up pair** on SDA
-and SCL inside the box: that takes the bus to ~1.4 kΩ, cuts the rise time at 5 m to ~660 ns, and
-still asks only 2.3 mA of the drivers - inside the 3 mA every device here is specified for. Beyond
-that the correct answer is a P82B715 bus extender pair, not a stiffer resistor.
+**Up to about 3 m in total needs nothing but care.** To reach 5-6 m, add one **3.3 kΩ pull-up
+pair** on SDA and SCL inside the box: that takes the bus to ~1.4 kΩ, cuts the rise time at 5 m to
+~660 ns, and still asks only 2.3 mA of the drivers - inside the 3 mA every device here is specified
+for. Beyond that the correct answer is a P82B715 bus extender pair, not a stiffer resistor.
 
-Wiring rules for the run:
+Wiring rules for the runs:
 
-- **Four conductors:** 3.3 V, GND, SDA, SCL. The sensor is powered over the same cable; its 1.5 mA
-  makes the voltage drop irrelevant.
+- **One cable per sensor**, each into J2 on the main board: 3.3 V, GND, SDA, SCL. The sensor is
+  powered over its own cable; at a milliamp or two the voltage drop is irrelevant.
 - Twist **SDA with a ground wire and SCL with a ground wire** - not SDA against SCL, which couples
   the two signals into each other.
-- A shield, if used, goes to GND **at the box end only**, so it cannot become a ground loop.
-- **100 nF between 3.3 V and GND at the sensor end**, for local decoupling at the far end of a cable.
-- Route clear of the tiller pilot's motor cables.
+- A shield, if the cable has one, goes to GND **at the box end only**, so it cannot become a ground
+  loop.
+- **100 nF between 3.3 V and GND at the far end of the SHT31's run**, for local decoupling at the
+  end of a long cable. The BME680's 15 cm need nothing beyond the module's own.
+- Route clear of the tiller pilot's motor cables, and the BME680's clear of the 230 V shore-power
+  terminals in the battery bay.
 
-#### Wire colours
+#### The cable
 
-There is no standard, but Qwiic and STEMMA QT agree, and ready-made I2C cables are wired that way:
+Both runs are **Cat 5e or Cat 6 patch cable**: four twisted pairs of stranded copper, round, and
+in most drawers already. Each run is wired the same way:
+
+| Pair | Core | Signal | J2 pole |
+|------|------|--------|---------|
+| brown | brown | 3.3 V | 1 |
+| | white | GND | 2 |
+| orange | orange | SCL | 3 |
+| | white | GND | 2 |
+| blue | blue | SDA | 4 |
+| | white | GND | 2 |
+| green | both | **cut off at both ends** | |
+
+In these cables the white partner of each pair is plain white, so the three cannot be told apart -
+and they need not be: **all three are ground.** That gives the supply and each signal a ground of
+its own in its twisted pair, which is exactly the rule above. The green pair is cut off flush with
+the jacket at both ends.
+
+- **One ferrule per core per cable at J2:** 0.25 mm² on brown, orange and blue, and one 0.5 mm²
+  over the three whites twisted together. With both runs fitted each pole of J2 holds two
+  ferrules, one from each cable. **Pull-test every ferrule** after tightening - a shared pole can
+  hold one firmly and the other barely.
+- **Stranded, copper and round.** Solid installation cable breaks at a joint under vibration, `CCA`
+  takes solder badly, and a flat patch cable does not seal in a cable gland. The outer diameter has
+  to sit within the gland's 3.5-7 mm.
+- Each run leaves the box through **its own gland**. A gland seals around one cable, not two.
+
+The IMU's cable inside the box is the same patch cable with its own pair assignment, in
+[A-009](A-009-imu-heel-and-motion.md).
+
+Write the scheme on the inside of the enclosure lid. Somebody will be looking at these wires years
+from now, in a dark locker, with a torch.
+
+#### Wire colours on the bench
+
+On the breadboard the sensors hang on jumpers or ready-made I2C cables. There is no standard, but
+Qwiic and STEMMA QT agree, and ready-made I2C cables are wired that way:
 
 | Conductor | Colour |
 |-----------|--------|
@@ -150,20 +200,6 @@ There is no standard, but Qwiic and STEMMA QT agree, and ready-made I2C cables a
 two different things depending on where the cable came from. Meter any ready-made cable before
 trusting it, the same discipline the probe wiring needs in
 [A-003](A-003-ds18b20-temperature-sensors.md).
-
-With only four conductors the twisting rule above decides the pairing:
-
-```
-blue   SDA  --twisted with--  black  GND
-yellow SCL  --twisted with--  red    3.3 V
-```
-
-Red works as a return because the 100 nF at the sensor end ties the supply to ground at signal
-frequencies. That capacitor is in the parts list for this as much as for decoupling. A five- or
-six-core cable is cleaner still: then each signal gets a ground of its own.
-
-Write the scheme on the inside of the enclosure lid. Somebody will be looking at these wires years
-from now, in a dark locker, with a torch.
 
 ## 4. Testing the ADS1115 without 12 V
 

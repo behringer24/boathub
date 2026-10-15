@@ -81,6 +81,7 @@ spacing or a pin order that is out by one is a scrapped run.
 |---------------|---------------|
 | 2 A fuse | inline, **close to the supply** - it protects the cable, not the load |
 | SHT31 | outside the enclosure entirely, on its own cable ([A-008](A-008-sht31-cabin-climate.md)) |
+| BME680 | outside the enclosure in the battery bay, about 15 cm away, on its own cable into the same terminal as the SHT31 ([A-010](A-010-bme680-barometer-and-battery-bay.md)) |
 | IMU | inside the enclosure, bolted down, on five cores of a patch cable ([A-009](A-009-imu-heel-and-motion.md)) |
 | Conditioning for any future analogue sender | on a small adapter plugged into J1, designed when that sender is known |
 
@@ -167,7 +168,7 @@ codes.
 | J16 | 4 | probe `MOTOR-T`, one pole spare | **screw terminal** |
 | J15 | 4 | probe `BILGE-T`, one pole spare | **screw terminal** |
 | J14 | 4 | probe `FRIDGE-T`, one pole spare | **screw terminal** |
-| J2 | 4 | SHT31: 3.3 V, GND, SCL, SDA | **screw terminal** |
+| J2 | 4 | SHT31 and BME680, one cable each: 3.3 V, GND, SCL, SDA | **screw terminal** - two ferrules per pole |
 | J4 | 6 | IMU: 3.3 V, GND, SDA, SCL, INT, one pole spare | **screw terminal** - it is on the I2C bus |
 | J12 | 2 | bilge level sender: the loop return and +12 V | **screw terminal** |
 | J17 | 4 | SeaTalk: `ST_GND`, `ST_DATA`, the bus 12 V parked, one spare | **screw terminal** |
@@ -183,7 +184,7 @@ A connector is chosen by **what a bad contact costs**, not by which side of the 
 sits on.
 
 - **Anything cabled onto the I2C bus gets a screw terminal.** A contact that degrades there does
-  not merely lose its own sensor: SDA held low takes the SHT31 and both converters with it. That is
+  not merely lose its own sensor: SDA held low takes every other device on the bus with it. That is
   out of all proportion to the one device at fault, and it is why the IMU *inside* the box is
   terminated the same way as the probes outside it.
 - **A single analogue channel, or a spare, gets a socket.** A bad contact costs exactly the one
@@ -191,8 +192,8 @@ sits on.
 - A socket onto which a board plugs directly is not a cabled connection and has nothing to work
   loose.
 
-Nothing that has to come off for service is soldered down - the probe cables, the SHT31 run, the
-IMU cable and the SeaTalk cable all do.
+Nothing that has to come off for service is soldered down - the probe cables, the SHT31 and BME680
+runs, the IMU cable and the SeaTalk cable all do.
 
 **The terminal footprints are Metz Connect, the parts are CamdenBoss.** `CTB0509` at 5.08 mm has
 the same single row of pads, and the Metz footprint was the geometric match available in the
@@ -296,6 +297,11 @@ J1 continues: pin 6 is A2 of J10, pin 7 is A3 of J10, pin 8 is GND.
 
 The three probe connectors share one pin order, deliberately. Three identical connectors wired
 three different ways is a fault waiting for the first service visit.
+
+**J2 takes two cables**, the SHT31's and the BME680's, wired identically, so each pole holds one
+ferrule from each. Both are patch cable with the pair assignment in
+[A-002](A-002-bench-setup-usb.md) section 3, and every ferrule is pull-tested on its own: a pole
+can hold one of its two firmly and the other barely.
 
 **J12 is two poles, not four**, because a loop-powered sender has two wires and the 2-pole of this
 series is stocked - the spare pole on the probe terminals exists only because the 3-pole is not.
@@ -480,15 +486,19 @@ One second-order effect worth knowing, because it is the sort that surprises lat
 pull-ups sit on the modules, not on this board. With the SHT31 and both converters fitted the bus
 sees about 3.3 kΩ; with J10 empty, 5 kΩ. Both are comfortable at 100 kHz - 5 kΩ against a few
 hundred picofarads is an edge of about 2 µs against a 10 µs half-period. The IMU board carries pads
-for pull-ups and no resistors, so it does not enter the sum either way.
+for pull-ups and no resistors, so it does not enter the sum either way. The BME680 breakout usually
+does carry a pair, and they stay fitted: a 10 kΩ pair takes the two figures to 2.5 kΩ and 3.3 kΩ,
+a 4.7 kΩ pair to about 2.0 kΩ and 2.4 kΩ - all of them well above the 1.1 kΩ at which the 3 mA
+every device here can sink runs out. Measure the module's own before it goes in
+([A-010](A-010-bme680-barometer-and-battery-bay.md)).
 
 ### The I2C bus is a bus, not a star
 
 `SDA` and `SCL` reach five places. Routed as a star from the socket, each branch is a stub, and
 stubs add capacitance where the rise time is already set by a few kilohms of pull-up on the
 breakouts - the figure from the previous section. Route it as a chain instead - socket, J6, J10, the
-IMU terminal, and the SHT31 terminal last, since that one leaves the box and is the longest branch
-by far.
+IMU terminal, and J2 last, since both its cables leave the box and the SHT31's is the longest
+branch by far.
 
 ## 7. Orientation and polarity
 

@@ -31,9 +31,10 @@ way, when something browns out later, the converter is the suspect and not the f
 | 7 | Server uplink: MQTT, telemetry, heartbeat, last will | [A-005](A-005-server-uplink.md) |
 | 8 | Store the telemetry and put it on a dashboard | [A-006](A-006-telemetry-storage.md) |
 | 9 | IMU: heel and pitch under sail, motion and impact at the berth | [A-009](A-009-imu-heel-and-motion.md) |
-| 10 | Buffer measurements in flash and drain them when a connection exists | [A-007](A-007-store-and-forward.md) |
-| 11 | Alarm and threshold logic for the sensors that exist by then | planned |
-| 12 | Fault handling and watchdog: a dead sensor must not take the network path with it | planned |
+| 10 | BME680 on I2C 0x76: barometric pressure for the weather trend, and the battery bay's air | [A-010](A-010-bme680-barometer-and-battery-bay.md) |
+| 11 | Buffer measurements in flash and drain them when a connection exists | [A-007](A-007-store-and-forward.md) |
+| 12 | Alarm and threshold logic for the sensors that exist by then | planned |
+| 13 | Fault handling and watchdog: a dead sensor must not take the network path with it | planned |
 
 The milestone is a monitor that runs off any USB charger and reports to the server. Not the final
 system - no battery measurement, no 12 V robustness - but a real, testable one.
@@ -53,7 +54,7 @@ system - no battery measurement, no 12 V robustness - but a real, testable one.
 
 | # | Step |
 |---|------|
-| 1 | Enclosure, cable labelling, and a pressure-equalisation vent membrane fitted pointing down. The cable entries are seven M12 glands of one diameter - [MATERIAL.md](../MATERIAL.md) names the parts and the two requirements they put on any enclosure. A parametric model of a printed alternative is in [`hardware/case/`](../../hardware/case/README.md) |
+| 1 | Enclosure, cable labelling, and a pressure-equalisation vent membrane fitted pointing down. The cable entries are eight M12 glands of one diameter - [MATERIAL.md](../MATERIAL.md) names the parts and the two requirements they put on any enclosure. A parametric model of a printed alternative is in [`hardware/case/`](../../hardware/case/README.md) |
 | 2 | RSSI at the real mounting point; rework the antenna jumper only if it falls short |
 | 3 | Marina Wi-Fi credentials, server reachable from home |
 
@@ -95,6 +96,7 @@ In reading order.
 | then | [A-005](A-005-server-uplink.md) | Server uplink |
 | then | [A-006](A-006-telemetry-storage.md) | Telemetry storage and dashboard |
 | then | [A-009](A-009-imu-heel-and-motion.md) | IMU: heel, pitch and motion |
+| then | [A-010](A-010-bme680-barometer-and-battery-bay.md) | BME680 barometer and battery bay |
 | then | [A-007](A-007-store-and-forward.md) | Store and forward |
 | last, on the bench | [B-001](B-001-power-supply.md) | Power supply and battery measurement |
 | with it | [B-002](B-002-main-board.md) | Main board: nets and build |

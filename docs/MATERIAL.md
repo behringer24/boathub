@@ -6,10 +6,10 @@ documents in [design/](design/) carry the reasoning behind each choice.
 **One supplier where possible.** Everything Reichelt stocks is sourced from
 [Reichelt](https://www.reichelt.de), so nearly the whole list goes into a single order. The source
 column gives the Reichelt article number in `code` form, linked to the product page - the article
-number is also what the Reichelt search box takes. The base modules - the DevKit set, the ADS1115
-and SHT31 breakouts and the temperature probes - stay with the Amazon listings the design was built
-and tested with. Beyond those, Amazon is the fallback only where Reichelt has no part that meets
-the requirement, and the row says why.
+number is also what the Reichelt search box takes. The base modules - the DevKit set, the ADS1115,
+SHT31 and BME680 breakouts and the temperature probes - stay with the Amazon listings the design
+was built and tested with. Beyond those, Amazon is the fallback only where Reichelt has no part
+that meets the requirement, and the row says why.
 
 **The Reichelt order as a file.** [`reichelt.csv`](reichelt.csv) holds every Reichelt part the main
 board and its installation need, SeaTalk stages included, with its quantity: article number and
@@ -44,8 +44,9 @@ where the money goes; check the shop when ordering. What matters is the technica
 | DS18B20-compatible 1-Wire probes, 5 m, 3-pack | 1 pack | A | engine bay, bilge, fridge; potted. Clones - verify family code 0x28 and CRC ([A-003](design/A-003-ds18b20-temperature-sensors.md)) | ~15 | [Amazon](https://www.amazon.de/gp/product/B0D8VMY5ZM) |
 | **Arduino Modulino Movement** (LSM6DSOXTR) | 1 | A | heel and pitch under sail, motion and impact at the berth. 0x6A, no clash. Chosen because its second 1x10 header carries **INT1**, which the impact detection depends on, while CS and the address pin are already tied for I2C. No pull-ups fitted, which suits a bus that already has three sets. **Mounted rigidly**, unlike the SHT31: an IMU on a flying lead measures the lead ([A-009](design/A-009-imu-heel-and-motion.md)) | ~15 | [Reichelt `ARD MOD MOVE`](https://www.reichelt.de/de/de/shop/produkt/arduino_modulino_node_-_movement_6-achsen-bewegungssensor-402982) |
 | Cat 5e or Cat 6 patch cable, ~0.5 m | 1 | A | the IMU cable: five of its eight cores, in twisted pairs, soldered straight into the module's pads. **Stranded, not solid** installation cable, which breaks at the joint under vibration, and **copper, not `CCA`**, which takes solder badly. Pair assignment in [A-009](design/A-009-imu-heel-and-motion.md) | ~0-3 | any - an offcut on hand will do |
-| Ferrule kit with crimping pliers, 0.25-2.5 mm² | 1 | A | every stranded core that goes into a screw terminal, from the bench carrier onwards. Without one a screw flattens thin strands and the contact loosens; tinned strands creep under the screw. The IMU's patch-cable cores take **0.25 mm²** | ~15-25 | [Amazon search](https://www.amazon.de/s?k=Aderendh%C3%BClsen+Set+Crimpzange+0%2C25) |
+| Ferrule kit with crimping pliers, 0.25-2.5 mm² | 1 | A | every stranded core that goes into a screw terminal, from the bench carrier onwards. Without one a screw flattens thin strands and the contact loosens; tinned strands creep under the screw. The IMU's patch-cable cores take **0.25 mm²**, and so do the sensor runs' - except their three white ground cores, which go twisted together into one **0.5 mm²** | ~15-25 | [Amazon search](https://www.amazon.de/s?k=Aderendh%C3%BClsen+Set+Crimpzange+0%2C25) |
 | SHT3x-D breakout, ADR 0x44/0x45 | **3** | A | cabin temperature and relative humidity; mounted outside box and cabinet. Only one is fitted; the bus supports two (0x44/0x45), the third is a spare. **Confirm it is an SHT31** - SHT30/31/35 are pin- and protocol-compatible but differ in RH accuracy (±3 / ±2 / ±1.5 %) | ~10 each | [Amazon search](https://www.amazon.de/s?k=SHT31-D+I2C+0x44+0x45) |
+| BME680 breakout, CJMCU-680 (Binghe, pack of 2) | 1 pack | A | barometric pressure for the weather trend, plus air temperature and humidity in the battery bay. One fitted, one spare. Six pins: `VCC`, `GND`, `SCL`, `SDA`, `SDO`, `CS`. **`CS` tied hard to `VCC` and `SDO` to `GND` at the module**, which gives 0x76: one low edge on `CS` switches the chip to SPI until its power is removed, and a floating `SDO` leaves the address undefined. **3.3 V only.** Boards are sold under the wrong name - `i2cscan` reads the chip ID, 0x61 for a BME680. The gas heater stays off ([A-010](design/A-010-bme680-barometer-and-battery-bay.md)) | ~20 | [Amazon search](https://www.amazon.de/s?k=Binghe+BME680+CJMCU-680) |
 
 ### Resistors from a 1 % assortment
 
@@ -62,7 +63,7 @@ Values drawn from it:
 | Value | Qty | Phase | Purpose |
 |-------|-----|-------|---------|
 | **2.0-2.2 kΩ** | 3 | A | **1-Wire pull-ups, the value to fit** - either works, take what the assortment holds. 4.7 kΩ is the textbook value but marginal over 5 m ([A-003](design/A-003-ds18b20-temperature-sensors.md)) |
-| 3.3 kΩ | 3 | A | 1-Wire pull-up fallback; also the extra I2C pull-up pair if the SHT31 run exceeds ~3 m. Ordered as single parts |
+| 3.3 kΩ | 3 | A | 1-Wire pull-up fallback; also the extra I2C pull-up pair if the cables on the bus total more than ~3 m. Ordered as single parts |
 | 4.7 kΩ | 3 | A | 1-Wire fallback, the original guide's value. Keep a few, do not fit them first |
 | 100 Ω | 3 | A | series protection in each DS18B20 DATA line |
 | 10 kΩ | 2 | A | bench reference divider from the 3.3 V rail, to prove the ADS1115 without a 12 V supply ([A-002](design/A-002-bench-setup-usb.md) section 4) |
@@ -104,29 +105,33 @@ Not found in a standard assortment; order separately. Tolerance only matters her
 | Screw terminals 5.08 mm, **4-pole** | 4 | B | the three probe cables and the SeaTalk cable, three wires each. **Four poles for three wires on purpose**: the 3-pole of this series is not stocked, and one spare pole costs 5 mm of board edge against a wait of months | under 1 each | [Reichelt `CTB0509-4`](https://www.reichelt.de/de/de/shop/produkt/loetbare_schraubklemme_-_4-pol_rm_5_08_mm_90_-292703) |
 | Screw terminal 5.08 mm, **6-pole** | 1 | A | the IMU cable, five wires. A screw terminal although it stays inside the box, because it is on the I2C bus and a poor contact there takes every sensor with it ([B-002](design/B-002-main-board.md)). Six poles because the series has no 5-pole | ~1 | [Reichelt `CTB0509-6`](https://www.reichelt.de/de/de/shop/produkt/loetbare_schraubklemme_-_6-pol_rm_5_08_mm_90_-292704) |
 | Screw terminal 5.08 mm, 2-pole | 2 | B | 12 V entry, and the bilge level sender - a loop-powered 4-20 mA probe is two wires. The bilge terminal is fitted whether or not that probe is bought; a few cents keep the channel usable without another board revision | under 1 each | [Reichelt `CTB0509-2`](https://www.reichelt.de/de/de/shop/produkt/loetbare_schraubklemme_-_2-pol_rm_5_08_mm_90_-292701) |
-| Screw terminal 5.08 mm, 4-pole | 1 | B | the SHT31 cable. One pitch across the whole board, so there is nothing to confuse when ordering or when soldering | under 1 | [Reichelt `CTB0509-4`](https://www.reichelt.de/de/de/shop/produkt/loetbare_schraubklemme_-_4-pol_rm_5_08_mm_90_-292703) |
+| Screw terminal 5.08 mm, 4-pole | 1 | B | J2, the SHT31 and BME680 cables together - each pole takes one ferrule from each cable. One pitch across the whole board, so there is nothing to confuse when ordering or when soldering | under 1 | [Reichelt `CTB0509-4`](https://www.reichelt.de/de/de/shop/produkt/loetbare_schraubklemme_-_4-pol_rm_5_08_mm_90_-292703) |
 | Socket strip 2.54 mm, 1x40 | 3 | B | cut to 1x22 for the DevKit sockets J7 and J11, 1x10 for the ADS1115 breakouts J6 and J10, and 1x08 for the spare analogue channels J1 - 72 positions in all. Three strips rather than two, because cutting a socket strip costs the position it is cut at. Sockets throughout, never pin headers: the DevKit has to come out, and bare pins standing on the board short against a lid. J10 is fitted and left empty until its channels are specified - an empty socket costs nothing and loads nothing. J1 is a socket for the same reason it is not a terminal: the conditioning an unspecified sender needs belongs on a small adapter, not on the board that is hardest to change | ~3 each | [Reichelt `BKL 10120978`](https://www.reichelt.de/de/de/shop/produkt/buchsenleiste_2_54mm_1x40_gerade-266702) |
 | ABS enclosure IP65, 200 x 120 x 75 mm | 1 | C | electronics box. **Internal floor at least 151 x 108 mm** - the board is 134.62 x 91.44 and each gland nut stands about 5 mm proud of the wall it passes through. Internal height at least 35 mm: 6 mm under the board for trimmed leads, and the DevKit standing in its sockets needs roughly 14 of the rest. This one (BOXEXPERT Elbe) gives 191 x 111 x 68 mm inside and has mounting bosses in the floor. Measure the wall where the glands go - see the thread length below | ~25 | [Reichelt `ELBE 20012075 SW`](https://www.reichelt.de/de/de/shop/produkt/industriegehaeuse_elbe_200_x_120_x_75_mm-285710) |
-| Pressure-equalisation vent, M12 x 1.5, with SW 17 nut | 1 | C | stops condensation inside the sealed box; fitted pointing down. The same thread as the cable glands, so it takes the same hole - an eighth one. Its thread is 10 mm long, so it reaches through any wall the glands do | ~8 | [Reichelt `HGR 595.15.AS`](https://www.reichelt.de/de/de/shop/produkt/druckausgleichselement_m12x1_5-285020) |
+| Pressure-equalisation vent, M12 x 1.5, with SW 17 nut | 1 | C | stops condensation inside the sealed box; fitted pointing down. The same thread as the cable glands, so it takes the same hole - a ninth one. Its thread is 10 mm long, so it reaches through any wall the glands do | ~8 | [Reichelt `HGR 595.15.AS`](https://www.reichelt.de/de/de/shop/produkt/druckausgleichselement_m12x1_5-285020) |
 | Tinned copper stranded wire 0.5-0.75 mm² | as needed | B, C | 12 V / 5 V and sensor wiring, marine grade. **Amazon because Reichelt has no tinned-strand single wire** | ~15-25 | [Amazon search](https://www.amazon.de/s?k=verzinnte+Kupferlitze+Boot+0.75mm2) |
-| 4-core twisted or shielded cable, max 3 m | 1 | C | I2C run to the SHT31 outside box and cabinet: 3.3 V, GND, SDA, SCL. Twist SDA and SCL each with a ground wire, not with each other. **Amazon because Reichelt sells LiYCY only in 100 m rolls** (`LIYCY 4X0,25-100`); worth it only if the roll has other uses | ~5-10 | [Amazon search](https://www.amazon.de/s?k=Steuerleitung+geschirmt+4-adrig+LIYCY) |
+| Cat 5e or Cat 6 patch cable, round, ~4 m | 1 | C | the two sensor runs into J2: the SHT31's, up to ~3 m, and the BME680's, ~0.3 m. Per cable brown is 3.3 V, orange SCL, blue SDA, the three white cores all ground, and the green pair is cut off ([A-002](design/A-002-bench-setup-usb.md), [A-010](design/A-010-bme680-barometer-and-battery-bay.md)). **Round, with an outer diameter within the gland's 3.5-7 mm** - flat patch cable does not seal in a gland, and thick shielded Cat 6A may not fit it. Stranded and copper, as for the IMU cable | ~3-5 | any - the same cable as the IMU's |
 | Clamp-on ferrites for 5 mm cable | 3 | C | optional, conducted noise on the probe cables at the box entry ([A-003](design/A-003-ds18b20-temperature-sensors.md)) | ~2 each | [Reichelt `FR 0431173951`](https://www.reichelt.de/de/de/shop/produkt/klappferrit_fuer_5_mm_180_ohm_100_mhz-434770) |
 
 ### Cable entries
 
-Seven cables leave the box, and every one of them uses the same hole. The gland
+Eight cables leave the box, and every one of them uses the same hole. The gland
 decides what cable fits, not the enclosure, so one diameter serves the 3-4 mm
-probe cables, the 12 V feed and the SeaTalk run alike.
+probe cables, the patch-cable sensor runs, the 12 V feed and the SeaTalk run
+alike.
 
 | Part | Qty | Phase | Purpose / requirement | Price | Source |
 |------|-----|-------|-----------------------|-------|--------|
-| Cable gland M12 x 1.5, clamping range 3.5-7 mm, IP69K | 7 | C | one per cable leaving the box, fitted pointing down or sideways with a drip loop | under 1 each | [Reichelt `LAPP 53111000`](https://www.reichelt.de/de/de/shop/produkt/kabelverschraubung_m_12_x_1_5_3_5_-_7_mm_silbergrau_ip69k-158605) |
-| Lock nut M12 x 1.5, SW 17, glass-filled PA | 7 | C | holds each gland in the wall. Ordered separately because it is not always in the bag | under 1 each | [Reichelt `LAPP 53119000`](https://www.reichelt.de/de/de/shop/produkt/gegenmutter_sechskant_m_12_x_1_5_mm_sw_17_mm_silbergrau-158699) |
+| Cable gland M12 x 1.5, clamping range 3.5-7 mm, IP69K | 8 | C | one per cable leaving the box, fitted pointing down or sideways with a drip loop | under 1 each | [Reichelt `LAPP 53111000`](https://www.reichelt.de/de/de/shop/produkt/kabelverschraubung_m_12_x_1_5_3_5_-_7_mm_silbergrau_ip69k-158605) |
+| Lock nut M12 x 1.5, SW 17, glass-filled PA | 8 | C | holds each gland in the wall. Ordered separately because it is not always in the bag | under 1 each | [Reichelt `LAPP 53119000`](https://www.reichelt.de/de/de/shop/produkt/gegenmutter_sechskant_m_12_x_1_5_mm_sw_17_mm_silbergrau-158699) |
 
-**Which seven.** The three temperature probes on J14, J15 and J16, the SHT31 on
-J2, 12 V in on J9, SeaTalk on J17, and the bilge level sender on J12. The IMU
-gets none: it is terminated on J4 like the probes, but it lives inside the box
-and its cable never leaves.
+**Which eight.** The three temperature probes on J14, J15 and J16, the SHT31
+and the BME680 on J2, 12 V in on J9, SeaTalk on J17, and the bilge level sender
+on J12. The two sensor runs share a terminal but not a gland: a gland seals
+around one round cable, not two. They go side by side on the wall opposite J2,
+at least 20 mm apart centre to centre, or the SW 17 nuts meet at their corners.
+The IMU gets none: it is terminated on J4 like the probes, but it lives inside
+the box and its cable never leaves.
 
 **Plastic, not brass.** Both are stocked and the brass ones are better made. A
 boat in salt air already has more dissimilar metals in contact than anyone
@@ -166,12 +171,12 @@ source on the bench.
 
 ### Cost frame
 
-Roughly **250-350 EUR** for stage 1 complete, depending on the bilge probe, the board run and
+Roughly **270-370 EUR** for stage 1 complete, depending on the bilge probe, the board run and
 installation material. Spread across the phases:
 
 | Phase | Spend |
 |-------|-------|
-| A | ~115-155 EUR - the two DevKit sets, the ADS1115 pack, the probes, the IMU, the SHT31 breakouts, the resistor assortment and the ferrule kit, plus a breadboard if not already on hand |
+| A | ~135-175 EUR - the two DevKit sets, the ADS1115 pack, the probes, the IMU, the SHT31 and BME680 breakouts, the resistor assortment and the ferrule kit, plus a breadboard if not already on hand |
 | B | ~60-100 EUR, most of it the board run, plus ~30-45 EUR if the bilge probe is fitted |
 | C | ~60-80 EUR - enclosure, glands, vent, wire |
 
