@@ -214,3 +214,19 @@ CREATE TABLE events (
 );
 
 CREATE INDEX events_boat_time_idx ON events (boat_id, received_at DESC);
+
+-- What the server knows about each boat that the boat itself does not send.
+-- Set by hand: server/README.md has the statement.
+--
+-- height_m is the barometer's height above sea level in metres. The Sea-level
+-- pressure panel reduces the stored station pressure with it as it draws, and
+-- nothing stored depends on it, so correcting it redraws the whole history.
+-- There is no default on purpose: a boat without a row shows no sea-level
+-- pressure, rather than one reduced from a height of zero that nobody stated.
+--
+-- The range covers any water a boat can float on and keeps the reduction
+-- defined, which it stops being at some 44 km.
+CREATE TABLE boats (
+    boat_id  text PRIMARY KEY,
+    height_m real NOT NULL CHECK (height_m BETWEEN -500 AND 5000)
+);

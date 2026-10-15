@@ -133,6 +133,7 @@ sensor is not fitted" and "the bilge is dry" is the whole point of the system.
 | `telemetry_seen` | one row per `(boat_id, boot_id, seq)` ever accepted, so a redelivery is not a second row. About 105 000 rows a year, a few megabytes |
 | `boat_status` | online/offline transitions from the retained `status` topic |
 | `events` | alarms and state changes, for the version that raises them |
+| `boats` | one row per boat, set by hand, for what the boat does not send: the barometer's height above sea level, which the dashboard reduces station pressure with |
 
 `boat_status` is not decoration. The shore-power-loss alarm is about the boat going quiet, so a
 history of when it was reachable is evidence, and it costs a handful of rows a week.
@@ -211,12 +212,15 @@ and the spread by the whole five minutes ([A-009](A-009-imu-heel-and-motion.md) 
 it, **Motion and knocks** draws the knock count as bars on its own axis - the record the knock
 threshold is set against.
 
-The barometer's row puts station pressure beside **Pressure tendency, 3 h**: each window's
-pressure minus the one three hours before it, with the 3 hPa warning line drawn in
-([A-010](A-010-bme680-barometer-and-battery-bay.md) section 7). It is computed in the panel's
-query, and by `ts` rather than `received_at` - a backlog uploaded after a passage arrives within
-seconds, and by arrival time its tendency would be nonsense. Below them, the battery bay's
-temperature and humidity.
+The barometer's row has three panels, all computed from the stored station pressure in their
+queries ([A-010](A-010-bme680-barometer-and-battery-bay.md) section 7). The first is that pressure
+as the board sent it. **Sea-level pressure** reduces it with the boat's height from `boats`, the
+figure a weather report gives; the height is applied as the panel draws, so correcting it redraws
+the whole history without touching a stored row, and a boat without one has no sea-level pressure
+rather than an unreduced one. **Pressure tendency, 3 h** is each window's pressure minus the one
+three hours before it, with the 3 hPa warning line drawn in. It goes by `ts` rather than
+`received_at` - a backlog uploaded after a passage arrives within seconds, and by arrival time its
+tendency would be nonsense. Below them, the battery bay's temperature and humidity.
 
 `allowUiUpdates` is on, so panels can be tried out in the browser. Note what that means: edits live
 in the Grafana volume and are **not** written back to the JSON files, so a provisioning reload
@@ -280,6 +284,8 @@ medium, and a restore that has actually been tried once.
 - [ ] A deliberately malformed payload is logged and does not stop ingest
 - [ ] Powering the board down writes an `offline` row to `boat_status`
 - [ ] Grafana shows the heartbeat without any manual data source setup
+- [ ] Setting a boat's height in `boats` fills its Sea-level pressure panel, and changing it moves
+      the whole history while `pressure_hpa` stays as stored
 - [ ] `pg_dump` produces a file that restores into an empty database
 
 ## 8. References

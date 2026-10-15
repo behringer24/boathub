@@ -83,8 +83,11 @@ per metre. On the coast `h` is a metre or two and the reduction is a quarter of 
 below the sensor's own absolute accuracy. On an inland lake it is not: at 400 m it is some 47 hPa.
 
 Storing the station pressure keeps the record true whatever the height setting turns out to be.
-The height is a property of where the boat lies, not of the sensor; the server keeps it per boat,
-and correcting it later corrects every displayed value without touching a stored one.
+The height is a property of where the boat lies, not of the sensor; the server keeps it per boat in
+its `boats` table and applies it as the dashboard draws, so correcting it later corrects every
+displayed value without touching a stored one. It is one figure per boat, which suits a boat that
+keeps to one water: one trailered between the coast and a lake shows her whole history at whichever
+height is set.
 
 **The tendency needs neither the height nor the offset.** Both cancel in a difference, which is
 the other reason the tendency is the reliable quantity.
@@ -371,8 +374,10 @@ height:
 - **The three-hour tendency:** the latest window's `pressure_hpa` minus the one three hours
   earlier, by the board's own timestamps rather than by arrival - a backlog arrives all at once.
   A fall of 3 hPa or more is the warning; the rule belongs to the alarm logic.
-- **Sea-level pressure for display**, from the stored station pressure and the boat's height
-  setting - section 3.
+- **Sea-level pressure for display**, from the stored station pressure and the boat's height in
+  the `boats` table, reduced in the panel's query - section 3. A boat without a height shows no
+  sea-level pressure rather than an unreduced one; [server/README.md](../../server/README.md)
+  has the statement that sets it.
 
 Underway the records wait in the board's buffer and the tendency is computed when they arrive.
 Showing it on the on-board Wi-Fi at sea would need the board to keep three hours of window means
@@ -389,7 +394,7 @@ under **Barometer**. Saving restarts the board, like every other setting.
 | `bme_p_off` | offset added to every pressure reading, in Pa, signed | 0 |
 
 The oversampling, the filter and the address are constants. The height of the berth is not a board
-setting: it belongs to the server, which is where sea-level pressure is computed.
+setting: it belongs to the server's `boats` table, beside where sea-level pressure is computed.
 
 The portal refuses an offset beyond 2000 Pa either way. The sensor's own error is under a
 hectopascal and drifts by about one a year; twenty is not a sensor error but a station's sea-level
@@ -462,10 +467,12 @@ the one-metre lift below reads directly; `g` switches the gas heater on for the 
 - [ ] Over a day, `pressure_hpa` follows a nearby station's trend within a few tenths of a hPa
 
 **Calibration** - against a nearby official weather station, within a few tens of kilometres, on a
-settled day with little wind, so that the pressure field between the two is flat. Reduce the
-board's reading to sea level with the same height the server uses, compare it with the station's
-sea-level pressure over several hours, and average the differences. The result, station minus
-board, goes into `bme_p_off` in Pa. Repeat once a year.
+settled day with little wind, so that the pressure field between the two is flat. With the boat's
+height set on the server, read the board's figure off the **Sea-level pressure** panel, which
+reduces it with that same height; compare it with the station's sea-level pressure over several
+hours, and average the differences. The result, station minus board, is added to `bme_p_off` in Pa,
+a hundred to the hectopascal - on the first calibration, with the offset still 0, that makes it the
+offset. Repeat once a year.
 
 ## 12. References
 

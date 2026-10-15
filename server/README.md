@@ -131,6 +131,24 @@ SELECT received_at, n, window_s FROM telemetry
 SELECT * FROM boat_status ORDER BY received_at DESC LIMIT 10;
 ```
 
+**Sea-level pressure needs the barometer's height**, which the boat does not send. Set it once per
+boat, in metres above sea level, and again whenever it turns out to be wrong. The dashboard applies
+it as it draws, so a correction reaches every reading already stored:
+
+```sql
+-- The boats the database has heard from, and the height each one has.
+SELECT DISTINCT t.boat_id, b.height_m FROM telemetry t LEFT JOIN boats b USING (boat_id);
+
+-- Set or correct a boat's height.
+INSERT INTO boats (boat_id, height_m) VALUES ('<boat-id>', 1.5)
+  ON CONFLICT (boat_id) DO UPDATE SET height_m = EXCLUDED.height_m;
+```
+
+The height is the sensor's: the level of the water the boat lies in, plus how far the battery bay
+sits above the waterline. On the coast that is a metre or two and worth a quarter of a hectopascal;
+on a lake it is the lake's height, and at a few hundred metres the difference is tens of
+hectopascals. Until a boat has a row, its **Sea-level pressure** panel stays empty.
+
 Watching the raw MQTT traffic:
 
 ```
