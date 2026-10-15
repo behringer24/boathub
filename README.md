@@ -132,6 +132,7 @@ docs/
 ├── ROADMAP.md          planned software functionality, board and server
 ├── CHANGELOG.md        software change log
 ├── MATERIAL.md         bill of materials and tools
+├── operating-card.html two printable pages for on board: LED, buttons, settings, cable colours
 ├── design/             build guide and one document per feature (+ TEMPLATE.md)
 │   ├── A-NNN-*.md      phase A: the bench build on USB power
 │   ├── B-NNN-*.md      phase B: 12 V supply, protection, the main board
@@ -150,3 +151,7 @@ the board and its carrier, then build along
 whole sensor and network stack has run 24 hours on USB without intervention, so that a brownout
 later can be blamed on the converter rather than on the firmware. The full build order is in
 [docs/design/README.md](docs/design/README.md).
+
+Once it is installed, print [docs/operating-card.html](docs/operating-card.html) from a browser and
+keep it with the box: what the LED and the two buttons mean, what every setting on the
+configuration page does, and the cable colours.

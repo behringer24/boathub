@@ -136,7 +136,7 @@ query with the AP's own address so that a phone offers the page by itself. Brows
 | `GET /` | the form, pre-filled with everything except passwords |
 | `POST /save` | validate, store in NVS, restart |
 | `POST /level` | the IMU's **Level now**: records the zero reference, restarts nothing - see [A-009](A-009-imu-heel-and-motion.md) |
-| `GET /status` | JSON: state, station address, RSSI, broker connection, IMU state, uptime |
+| `GET /status` | JSON: state, station address, RSSI, broker connection, IMU and barometer state, uptime |
 
 The IMU's settings share the `boathub` namespace and the form; they are listed in
 [A-009](A-009-imu-heel-and-motion.md) section 8. So do the BME680's, in
@@ -194,7 +194,9 @@ proves `loop()` is still running.** If the firmware hangs, the pattern freezes, 
 from across the cabin. A static indicator could not tell "healthy" from "crashed with the light
 left on".
 
-Write the table on the inside of the enclosure lid, next to the wire colours.
+Write the table on the inside of the enclosure lid, next to the wire colours. The
+[operating card](../operating-card.html) carries it too, with the buttons, the settings and the
+cable colours, on two pages to print and keep with the box.
 
 ### The BOOT button
 

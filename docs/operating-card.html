@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BoatHub operating card</title>
+<!--
+  The BoatHub on board, on two printed A4 pages: the status LED, the two
+  buttons on the DevKit, the configuration page, the cable colours and what to
+  do when something looks wrong. Print it from a browser at 100 % scale, without
+  headers and footers, and keep it with the box.
+
+  The design behind each point is in docs/design/: A-004 (Wi-Fi, portal, BOOT
+  button), A-007 (buffer), A-009 (IMU), A-010 (barometer).
+-->
+<style>
+  :root {
+    --ink: #1a1a19;
+    --muted: #5c5c57;
+    --line: #d4d4ce;
+    --soft: #f3f3ef;
+    --accent: #1f5f8b;
+  }
+  @page { size: A4; margin: 11mm 12mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0 auto;
+    max-width: 186mm;
+    padding: 16px;
+    background: #fff;
+    color: var(--ink);
+    font: 9pt/1.32 system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media print { body { padding: 0; } }
+  h1 { font-size: 16pt; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 1px 0 8px; }
+  h2 {
+    font-size: 10.5pt;
+    margin: 9px 0 3px;
+    padding-bottom: 2px;
+    border-bottom: 1.5px solid var(--ink);
+  }
+  h3 { font-size: 9.4pt; margin: 6px 0 2px; }
+  p { margin: 3px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 2px 0 4px; }
+  th, td { text-align: left; vertical-align: top; padding: 2px 5px; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; color: var(--muted); font-size: 8.4pt; }
+  td:first-child { white-space: nowrap; }
+  code, .k { font-family: Consolas, "Cascadia Mono", Menlo, monospace; font-size: 8.6pt; }
+  .k { background: var(--soft); border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; }
+  .dot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    margin-right: 5px; vertical-align: -1px; border: 1px solid rgba(0,0,0,.25);
+  }
+  .note { color: var(--muted); }
+  .box {
+    border: 1.5px solid var(--ink); border-radius: 5px;
+    padding: 5px 8px; margin: 6px 0;
+  }
+  .box b:first-child { color: var(--accent); }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .fill { display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; margin-top: 6px; }
+  .fill span:nth-child(even) { border-bottom: 1px solid var(--ink); min-height: 15px; }
+  .page2 { break-before: page; }
+  .wire {
+    display: inline-block; width: 22px; height: 7px; border-radius: 2px;
+    vertical-align: 0; margin-right: 4px; border: 1px solid rgba(0,0,0,.3);
+  }
+  ul { margin: 2px 0; padding-left: 15px; }
+  li { margin: 1px 0; }
+</style>
+</head>
+<body>
+
+<h1>BoatHub - on board</h1>
+<p class="sub">Operating card. The terminals on the board are labelled; everything else is here.</p>
+
+<h2>The status LED</h2>
+<p>The RGB LED on the DevKit says what the board is doing. Watch it for a few seconds - the rhythm
+matters as much as the colour.</p>
+<table>
+  <tr><th>LED</th><th>Meaning</th><th>What to do</th></tr>
+  <tr><td><span class="dot" style="background:#2fae48"></span>green, breathing slowly</td><td>everything works: marina Wi-Fi, server, measurements going out</td><td>nothing</td></tr>
+  <tr><td><span class="dot" style="background:#e3b30f"></span>yellow, one blink a second</td><td>looking for the marina Wi-Fi</td><td>wait; if it stays, check network name and password on the configuration page</td></tr>
+  <tr><td><span class="dot" style="background:#e3b30f"></span>yellow, double blink</td><td>Wi-Fi is up, the server does not answer</td><td>nothing urgent - measurements are stored and sent later</td></tr>
+  <tr><td><span class="dot" style="background:#2a62d8"></span>blue, slow blink</td><td>no marina Wi-Fi set up yet; only <b>BOOT-NETZ</b> is there</td><td>open the configuration page</td></tr>
+  <tr><td><span class="dot" style="background:#d62a2a"></span>red, fast blink</td><td>an alarm</td><td>short press on <b>BOOT</b> acknowledges it</td></tr>
+  <tr><td><span class="dot" style="background:#c23ad1"></span>magenta, fast</td><td>BOOT is being held - something is about to happen</td><td>let go to cancel</td></tr>
+  <tr><td><span class="dot" style="background:#fff"></span>white, steady</td><td>the access point password has just been reset</td><td>the board restarts by itself</td></tr>
+  <tr><td><span class="dot" style="background:#222"></span>dark</td><td>no power - or the board is waiting for new firmware</td><td>check the supply; press <b>RST</b> once</td></tr>
+</table>
+<p><b>The board measures and stores whatever the LED shows.</b> Without Wi-Fi or server, every
+five-minute record goes to its own flash - about 57 days of them - and is sent, oldest first,
+once the connection is back. A current reading always goes first.</p>
+
+<h2>The two buttons on the DevKit</h2>
+<table>
+  <tr><th>Button</th><th>Press</th><th>Effect</th></tr>
+  <tr><td rowspan="3"><b>BOOT</b></td><td>short, under 1 s</td><td>sends a reading to the server <b>now</b> - only while the LED breathes green. While the LED flashes red, it acknowledges the alarm instead</td></tr>
+  <tr><td>1 to 8 s, then let go</td><td>nothing. The LED blinks magenta from 1 s on, so you can see it building</td></tr>
+  <tr><td>held 8 s</td><td>resets the <b>BOOT-NETZ password</b> to its default, LED white, restart. Nothing else changes</td></tr>
+  <tr><td><b>RST</b></td><td>short</td><td>restarts the board - the same as a power cycle for the ESP32</td></tr>
+</table>
+
+<div class="box">
+<b>Can the buttons reset the board?</b> Only partly, on purpose.
+<ul>
+  <li><b>RST</b> restarts. Settings, the heel/pitch zero and all stored measurements survive; only
+    the five-minute window being filled at that moment is lost. The sensors keep their power - a
+    sensor that has hung itself needs the supply taken away (USB or 12 V), not RST.</li>
+  <li><b>BOOT 8 s</b> resets the access point password and nothing else. Marina Wi-Fi, server
+    settings and data stay.</li>
+  <li><b>There is no factory reset on a button</b>, so nothing can be wiped by leaning on the box
+    in a locker. A complete wipe - every setting and every unsent measurement - needs a laptop on
+    USB: <code>pio run -d board -e boathub -t erase</code>, then flash the firmware again.</li>
+  <li><b>BOOT held while pressing RST</b> starts the chip's firmware download mode: LED dark, no
+    Wi-Fi. Press RST alone to leave it.</li>
+</ul>
+</div>
+
+<h2>Cable colours</h2>
+<p>Every patch cable in the box - SHT31 and BME680 runs on <b>J2</b>, the IMU on <b>J4</b> - uses the
+same colours. Connect by the labels on the board, not by pole numbers: J2 and J4 order SDA and SCL
+differently.</p>
+<table>
+  <tr><th>Core</th><th>Signal</th><th>Board label</th></tr>
+  <tr><td><span class="wire" style="background:#7a4a24"></span>brown</td><td>3.3 V supply</td><td>VIN</td></tr>
+  <tr><td><span class="wire" style="background:#f4f4f4"></span>white (all three, twisted together)</td><td>ground - <b>a white core is only ever ground</b></td><td>GND</td></tr>
+  <tr><td><span class="wire" style="background:#ee7d1c"></span>orange</td><td>clock</td><td>SCL</td></tr>
+  <tr><td><span class="wire" style="background:#2a62d8"></span>blue</td><td>data</td><td>SDA</td></tr>
+  <tr><td><span class="wire" style="background:#2fae48"></span>green</td><td>IMU interrupt on J4; cut off on the sensor runs, with its white partner</td><td>INT</td></tr>
+</table>
+
+<section class="page2">
+<h2>The configuration page</h2>
+<ol style="margin:2px 0;padding-left:16px">
+  <li>Join the Wi-Fi <b>BOOT-NETZ</b> with phone or tablet. The page usually opens by itself;
+    otherwise go to <code>http://192.168.4.1</code>. The phone may say "no internet" - that is
+    normal, the board does not route to the internet.</li>
+  <li>Change what is needed and press <b>Save and restart</b>. The board restarts within a few
+    seconds and BOOT-NETZ drops briefly. An empty password field keeps the stored password.</li>
+</ol>
+<p class="note">The page answers only on BOOT-NETZ, never from the marina network. Its first line
+shows the Wi-Fi state, the board's address in the marina network and whether the server is
+connected. <code>http://192.168.4.1/status</code> gives the same as text.</p>
+
+<table>
+  <tr><th>Section and field</th><th>Default</th><th>What it does</th></tr>
+  <tr><td colspan="3"><b>Identity</b></td></tr>
+  <tr><td>Boat id</td><td><code>boat-</code>+MAC</td><td>the boat's name on the server. Keep it once data exists: a new id starts a new series</td></tr>
+  <tr><td colspan="3"><b>Wi-Fi to join</b></td></tr>
+  <tr><td>Network name, password</td><td>empty</td><td>the marina Wi-Fi. Empty name = BOOT-NETZ only, LED blue</td></tr>
+  <tr><td colspan="3"><b>MQTT broker</b> - the server</td></tr>
+  <tr><td>Host, port</td><td>-, 1883</td><td>server address. Over the internet: port <b>8883</b> with TLS ticked</td></tr>
+  <tr><td>TLS</td><td>off</td><td>encrypts the connection; needed whenever the server is reached over the internet</td></tr>
+  <tr><td>User, password</td><td>empty</td><td>the server's login</td></tr>
+  <tr><td>Measure every ... s</td><td>10</td><td>how often each sensor is read</td></tr>
+  <tr><td>Publish every ... s</td><td>300</td><td>one record per window: mean, minimum and maximum of every sensor</td></tr>
+  <tr><td colspan="3"><b>Motion sensor</b> - the IMU, see "Level now" below</td></tr>
+  <tr><td>Axis forward, axis up</td><td>+X, +Z</td><td>which arrow printed on the module points to the bow, and which up. Two different axes</td></tr>
+  <tr><td>Filter time constant</td><td>3.0 s</td><td>larger: calmer heel and pitch, slower to follow. 0.5-60 s</td></tr>
+  <tr><td>Knock threshold</td><td>0.5 g</td><td>how hard a jolt counts as a knock, in steps of 0.125 g</td></tr>
+  <tr><td>Hold-off after a knock</td><td>60 s</td><td>one report per knock, not forty; knocks in between are still counted</td></tr>
+  <tr><td colspan="3"><b>Barometer</b> - the BME680 in the battery bay</td></tr>
+  <tr><td>Pressure offset, Pa</td><td>0</td><td>correction against a nearby weather station, station minus board, both reduced to sea level. Under &plusmn;100 Pa normally; more than &plusmn;2000 is refused</td></tr>
+  <tr><td>Gas heater</td><td><b>off</b></td><td><b>leave it off in the battery bay</b> - it heats a plate to 320 &deg;C where a failing charger can vent hydrogen</td></tr>
+  <tr><td colspan="3"><b>This access point</b></td></tr>
+  <tr><td>BOOT-NETZ password</td><td><code>boathub-</code>+MAC</td><td>at least 8 characters. Forgotten: hold BOOT for 8 s</td></tr>
+</table>
+
+<div class="box">
+<b>Level now</b> - its own button at the bottom of the page. Records the boat's present attitude as
+zero for heel and pitch. Only with the boat <b>at rest and loaded as usual</b>, and again whenever
+the box has been remounted. Refused for the first half minute after a start, while the motion
+sensor settles. Heel and pitch are not reported at all until this has been done once.
+</div>
+
+<div class="cols">
+<div>
+<h2>When something looks wrong</h2>
+<ul>
+  <li><b>BOOT-NETZ password unknown</b> - hold BOOT 8 s; it is the default again.</li>
+  <li><b>BOOT-NETZ drops for a moment</b> - the marina access point changed channel, and the board
+    follows it. Rejoin; nothing is lost.</li>
+  <li><b>One sensor missing on the dashboard</b> - its cable or terminal. It comes back by itself
+    once it answers again, without a restart. If it does not, take the power away for a few
+    seconds.</li>
+  <li><b>No heel and pitch</b> - not levelled yet: press Level now.</li>
+  <li><b>Battery bay at 100 % humidity for hours</b> - the sensor is wet. Check that its opening
+    faces sideways or down, out of drips.</li>
+  <li><b>Records arrive late, in a batch</b> - normal after an outage; they carry their own time.</li>
+</ul>
+</div>
+<div>
+<h2>For this boat</h2>
+<div class="fill">
+  <span>BOOT-NETZ password</span><span></span>
+  <span>Boat id</span><span></span>
+  <span>Marina Wi-Fi</span><span></span>
+  <span>Server, port</span><span></span>
+  <span>Pressure offset</span><span></span>
+  <span>Levelled on</span><span></span>
+</div>
+<p class="note" style="margin-top:8px">The default BOOT-NETZ password is <code>boathub-</code> and
+six characters from the board's MAC address. The board prints it on its USB serial port at every
+start.</p>
+</div>
+</div>
+</section>
+
+</body>
+</html>
