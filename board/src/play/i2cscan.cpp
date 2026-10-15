@@ -51,8 +51,6 @@ static const Known KNOWN[] = {
   {0x68, "DS3231 real-time clock"},
   {0x6A, "LSM6DSOX IMU (SA0 low)"},
   {0x6B, "LSM6DSOX IMU (SA0 high)"},
-  {0x76, "BME280 / BMP280 - not part of this project"},
-  {0x77, "BME280 / BMP280 - not part of this project"},
 };
 
 static const char *describe(uint8_t addr) {
@@ -60,6 +58,57 @@ static const char *describe(uint8_t addr) {
     if (k.addr == addr) return k.what;
   }
   return "unknown device";
+}
+
+// 0x76 and 0x77 belong to Bosch's whole family of pressure sensors, so the
+// address alone cannot say which chip answered. Each keeps a chip ID in
+// register 0xD0, and that is what tells the project's BME680 from the BMP280
+// that is often sold on a board printed "BME280" - the one without humidity.
+// A BME688 reports the same ID as the BME680.
+static const uint8_t BOSCH_REG_CHIP_ID = 0xD0;
+
+struct Chip {
+  uint8_t id;
+  const char *what;
+};
+
+static const Chip BOSCH_CHIPS[] = {
+  {0x55, "BMP180 - pressure only, no humidity"},
+  {0x58, "BMP280 - pressure only, no humidity"},
+  {0x60, "BME280 - pressure and humidity, no gas sensor"},
+  {0x61, "BME680"},
+};
+
+// Register pointer write and read in one transaction, with a repeated start.
+static bool readRegister(uint8_t addr, uint8_t reg, uint8_t &value) {
+  Wire.beginTransmission(addr);
+  Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) return false;
+  if (Wire.requestFrom((int)addr, 1) != 1) return false;
+  value = Wire.read();
+  return true;
+}
+
+static void printDevice(uint8_t addr) {
+  if (addr != 0x76 && addr != 0x77) {
+    Serial.printf("  0x%02X  %s\n", addr, describe(addr));
+    return;
+  }
+
+  const char *sdo = addr == 0x76 ? "SDO to GND" : "SDO to VDD";
+  uint8_t id;
+  if (!readRegister(addr, BOSCH_REG_CHIP_ID, id)) {
+    Serial.printf("  0x%02X  Bosch pressure sensor (%s) - chip ID unreadable\n", addr, sdo);
+    return;
+  }
+  for (const Chip &c : BOSCH_CHIPS) {
+    if (c.id == id) {
+      Serial.printf("  0x%02X  %s (%s), chip ID 0x%02X\n", addr, c.what, sdo, id);
+      return;
+    }
+  }
+  Serial.printf("  0x%02X  unknown device, chip ID 0x%02X - not a Bosch pressure sensor\n", addr,
+                id);
 }
 
 // --- question 1 and 2: is there a bus before we talk to it? -----------------
@@ -209,7 +258,7 @@ void loop() {
     Serial.println("  nothing answered - re-run the bus check above before suspecting a sensor");
   }
   for (uint8_t i = 0; i < count && i < sizeof(found); i++) {
-    Serial.printf("  0x%02X  %s\n", found[i], describe(found[i]));
+    printDevice(found[i]);
   }
 
   lastCount = count;
