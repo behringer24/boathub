@@ -66,19 +66,20 @@ elsewhere in the middle of a LittleFS write.
 
 ### Segments, not one file
 
-Records go into **append-only segment files** of 1024 records, `/tel/000123.sg2`, numbered
+Records go into **append-only segment files** of 1024 records, `/tel/000123.sg3`, numbered
 monotonically.
 
 The alternative - one large ring file - means deleting from the front, which on a filesystem
 requires rewriting everything behind it. **Deleting a whole segment is one `remove()`**, and
 LittleFS reclaims the blocks. This is the ordinary log-structured answer and it is why the segment
-size matters more than elegance: 1024 telemetry records, 96 kB, are about three and a half days,
+size matters more than elegance: 1024 telemetry records, 128 kB, are about three and a half days,
 so a fully drained segment is released promptly without the file count ever getting silly.
 
 ### Fixed-size records
 
-96 bytes, fixed, little-endian. Fixed size means record *n* is at offset `n * 96` - no scanning, no
-index, and a torn write at the tail is detectable and discardable rather than corrupting the file.
+128 bytes, fixed, little-endian. Fixed size means record *n* is at offset `n * 128` - no scanning,
+no index, and a torn write at the tail is detectable and discardable rather than corrupting the
+file.
 
 | Field | Bytes | Note |
 |-------|-------|------|
@@ -91,20 +92,25 @@ index, and a torn write at the tail is detectable and discardable rather than co
 | `flags` | 1 | time source (2 bits, section 5), spot reading, sensor-fault bits |
 | `rssi` | 1 | dBm, signed |
 | `heap_kb` | 2 | |
-| 10 channels x mean/min/max | 60 | scaled integers, see below |
+| 14 channels x mean/min/max | 84 | scaled integers, see below |
 | spread of heel and pitch | 4 | standard deviation within the window, [A-009](A-009-imu-heel-and-motion.md) |
 | `knocks` | 2 | count in the window |
-| reserved | 8 | |
-| version | 1 | the record format, 2 |
+| reserved | 16 | |
+| version | 1 | the record format, 3 |
+
+The channels, in record order: battery, cabin temperature and humidity, engine bay, bilge water,
+fridge, bilge level, heel, pitch, motion, then station pressure, battery bay temperature and
+humidity, and the battery bay's gas resistance ([A-010](A-010-bme680-barometer-and-battery-bay.md)).
 
 Scaling keeps everything in 16 bits: temperatures in 0.01 °C (`int16`, ±327 °C), battery in mV
 (`uint16`), humidity in 0.1 % (`uint16`), bilge level in mm (`uint16`), heel, pitch and their spread
-in 0.01° (`int16`), motion in mg (`int16`). A channel with no sensor stores a sentinel that the
-encoder turns back into an **absent JSON key**, never a zero - the same rule the database follows.
-The knock count has its own: no IMU and a quiet window must not both read 0.
+in 0.01° (`int16`), motion in mg (`int16`), pressure in 0.1 hPa (`int16`, up to 3276 hPa), gas
+resistance in 0.1 kΩ (`int16`, saturating at 3276.7 kΩ). A channel with no sensor stores a sentinel
+that the encoder turns back into an **absent JSON key**, never a zero - the same rule the database
+follows. The knock count has its own: no IMU and a quiet window must not both read 0.
 
-**JSON is not stored.** The same record as JSON is about 600 bytes; binary is 96. Storing what goes
-on the wire would cost a factor of six of the one resource that is actually scarce.
+**JSON is not stored.** The same record as JSON is about a kilobyte; binary is 128 bytes. Storing
+what goes on the wire would cost a factor of eight of the one resource that is actually scarce.
 
 ### When the record changes
 
@@ -113,10 +119,15 @@ passage that was waiting for a connection when the board was updated. That backl
 not be misread at the new record size or thrown away.
 
 So the format is marked twice: by a **version byte** at the end of every record, and by the
-**segment file's extension** - `.seg` for the first, 64-byte format, `.sg2` for the current one.
-At start the firmware notes the highest old-format segment it finds. Those it keeps reading at their
-own record size until they have drained; it never appends to them, and new records start a fresh
-segment in the current format. Nothing on flash is rewritten.
+**segment file's extension** - `.seg` for the first, 64-byte format, `.sg2` for the second, 96-byte
+one, `.sg3` for the current one. At start the firmware notes the highest segment of each old format
+it finds. Those it keeps reading at their own record size until they have drained; it never appends
+to them, and new records start a fresh segment in the current format. Nothing on flash is
+rewritten.
+
+Each format keeps the header and the channels of the one before it where they were, and adds its
+channels after them. What follows the channels - the spreads and the knock count - moves back to
+make room.
 
 Fields a record of the old format did not carry come out absent, as they would from a board without
 that sensor.
@@ -125,9 +136,9 @@ that sensor.
 
 | | per record | per day | 6 MB alone |
 |---|---|---|---|
-| Telemetry, 5 min aggregates | 96 B | 27 kB | ~220 days |
+| Telemetry, 5 min aggregates | 128 B | 36 kB | ~170 days |
 | Track points at 25 m (stage 2.5) | 32 B | ~160 kB | ~37 days |
-| **Both, under way** | | ~187 kB | **~32 days** |
+| **Both, under way** | | ~196 kB | **~31 days** |
 
 ### Telemetry gets a reserved share
 
@@ -135,7 +146,7 @@ Tracks and telemetry share the partition, and tracks outweigh telemetry nine to 
 quota, **one hard day of tacking evicts weeks of temperature history** - the record that is cheap
 to keep gets thrown away to make room for the one that is expensive.
 
-So telemetry gets a guaranteed **1.5 MB** - sixteen segments, some 55 days - that track segments
+So telemetry gets a guaranteed **2 MB** - sixteen segments, some 57 days - that track segments
 may not take. Tracks get the rest and evict among themselves.
 
 ## 5. Time
@@ -251,7 +262,7 @@ one shape, and the ingest needs one code path rather than two.
 Within a quota, the oldest segment is deleted - acknowledged ones first, and only then
 unacknowledged ones.
 
-Thinning old records instead is tempting, and deliberately left out of v2. At 34 days of combined
+Thinning old records instead is tempting, and deliberately left out of v2. At 31 days of combined
 recording the case barely arises, and decimation is real code with real edge cases.
 
 What is **not** optional is admitting it: a counter of dropped records goes into the payload and to

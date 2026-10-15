@@ -126,6 +126,28 @@ CREATE TABLE telemetry (
     -- Knocks detected in the window. Zero is a quiet window; null is no IMU.
     knocks             integer,
 
+    -- The BME680 in the battery bay. STATION pressure, at the sensor's own
+    -- height: sea level is a matter of display, and the three-hour tendency
+    -- needs neither the height nor the board's offset. bay_ is the battery
+    -- bay's air - the cabin's stays cabin_.
+    pressure_hpa       real,
+    pressure_hpa_min   real,
+    pressure_hpa_max   real,
+
+    bay_temp_c         real,
+    bay_temp_c_min     real,
+    bay_temp_c_max     real,
+
+    bay_rh             real,
+    bay_rh_min         real,
+    bay_rh_max         real,
+
+    -- Only with the sensor's gas heater switched on, which in the battery bay
+    -- it is not.
+    bay_gas_kohm       real,
+    bay_gas_kohm_min   real,
+    bay_gas_kohm_max   real,
+
     -- Boolean: nothing to aggregate, taken at window close.
     seatalk_online     boolean
 );

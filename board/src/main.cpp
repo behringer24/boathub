@@ -9,6 +9,7 @@
 
 #include <Arduino.h>
 
+#include "barometer.h"
 #include "buffer.h"
 #include "button.h"
 #include "config.h"
@@ -86,6 +87,7 @@ void setup() {
   sht31::begin();
   ds18b20::begin();
   imu::begin();
+  barometer::begin();
   telemetry::begin();
   portal::begin();
   uplink::begin();
@@ -101,6 +103,7 @@ void loop() {
   sht31::loop();
   ds18b20::loop();
   imu::loop();
+  barometer::loop();
   telemetry::loop();
   portal::loop();
   uplink::loop();
@@ -143,10 +146,16 @@ void loop() {
       snprintf(motion, sizeof(motion), "imu %.2fg", att.motionG);
     }
 
-    Serial.printf("[status] wifi %s %s | broker %s | %s (%s) | %s | %s (%s) | heap %lu\n",
+    const barometer::Reading baro = barometer::latest();
+    char bay[48] = "bay --";
+    if (baro.valid) {
+      snprintf(bay, sizeof(bay), "%.1fhPa bay %.1fC %.0f%%", baro.pressureHpa, baro.tempC, baro.rh);
+    }
+
+    Serial.printf("[status] wifi %s %s | broker %s | %s (%s) | %s | %s (%s) | %s (%s) | heap %lu\n",
                   net::stateName(), net::stationIp().c_str(), uplink::statusText(), cabin,
-                  sht31::statusText(), probes, motion, imu::statusText(),
-                  (unsigned long)ESP.getFreeHeap());
+                  sht31::statusText(), probes, motion, imu::statusText(), bay,
+                  barometer::statusText(), (unsigned long)ESP.getFreeHeap());
   }
 
   delay(1);  // hand the core back to FreeRTOS

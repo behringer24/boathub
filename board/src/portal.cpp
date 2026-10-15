@@ -4,6 +4,7 @@
 #include <WebServer.h>
 #include <WiFi.h>
 
+#include "barometer.h"
 #include "config.h"
 #include "imu.h"
 #include "net.h"
@@ -117,6 +118,21 @@ String imuSummary() {
   return h;
 }
 
+// The same for the barometer: what it reads now, at a glance.
+String barometerSummary() {
+  String h = "<p class=s>";
+  h += barometer::statusText();
+  const barometer::Reading r = barometer::latest();
+  if (r.valid) {
+    char buf[96];
+    snprintf(buf, sizeof(buf), " &middot; %.1f hPa &middot; bay %.1f&deg;C %.0f%%", r.pressureHpa,
+             r.tempC, r.rh);
+    h += buf;
+  }
+  h += "</p>";
+  return h;
+}
+
 void handleRoot() {
   if (!allowed()) return;
   const Config &c = config::get();
@@ -170,6 +186,14 @@ void handleRoot() {
   h += field("imu_knock", "Knock: a jump of ... g between samples (steps of 0.125)",
              String(c.imuKnockMg / 1000.0f, 3), "number", "", "step=0.125");
   h += field("imu_hold", "Hold-off after a knock, seconds", String(c.imuHoldoffSecs), "number");
+  h += F("</fieldset><fieldset><legend>Barometer</legend>");
+  h += barometerSummary();
+  h += field("bme_p_off", "Pressure offset, Pa (station minus board, both at sea level)",
+             String(c.bmePressureOffsetPa), "number", "", "step=1");
+  h += F("<label><input type=checkbox name=bme_gas value=1");
+  if (c.bmeGas) h += F(" checked");
+  h += F("> Gas heater and gas measurement. Leave it off in the battery bay: it heats a plate "
+         "to 320&nbsp;&deg;C where a failing charger can vent hydrogen.</label>");
   h += F("</fieldset><fieldset><legend>This access point</legend>");
   h += field("ap_pass", "BOOT-NETZ password", "", "password", "unchanged, min. 8 characters");
   h += F("</fieldset><button>Save and restart</button></form>");
@@ -202,6 +226,9 @@ void handleSave() {
   if (server.hasArg("imu_tau")) in.imuTauDs = lroundf(server.arg("imu_tau").toFloat() * 10.0f);
   if (server.hasArg("imu_knock")) in.imuKnockMg = lroundf(server.arg("imu_knock").toFloat() * 1000.0f);
   if (server.hasArg("imu_hold")) in.imuHoldoffSecs = server.arg("imu_hold").toInt();
+  in.bmeGas = server.hasArg("bme_gas");
+  long pressureOffset = in.bmePressureOffsetPa;
+  if (server.hasArg("bme_p_off")) pressureOffset = server.arg("bme_p_off").toInt();
 
   in.wifiPass = server.arg("wifi_pass");
   in.mqttPass = server.arg("mqtt_pass");
@@ -223,6 +250,18 @@ void handleSave() {
                   "axes of the module. <a href=/>Back</a>"));
     return;
   }
+  // The offset corrects the sensor, whose absolute error is under a
+  // hectopascal and drifts by one a year. Twenty is not a sensor error: it is
+  // a station's sea-level figure compared with the board's station pressure,
+  // which differ by 0.12 hPa for every metre of height - see A-010 section 11.
+  if (pressureOffset < -2000 || pressureOffset > 2000) {
+    server.send(400, "text/html",
+                F("<!doctype html><meta charset=utf-8><p>A pressure offset beyond 2000 Pa (20 hPa) "
+                  "is not a sensor error. Reduce the board's reading to sea level before comparing "
+                  "it with the station's. <a href=/>Back</a>"));
+    return;
+  }
+  in.bmePressureOffsetPa = (int16_t)pressureOffset;
   if (in.mqttPort == 0) in.mqttPort = in.mqttTls ? 8883 : 1883;
   if (in.sampleSecs == 0) in.sampleSecs = 10;
   if (in.pubSecs == 0) in.pubSecs = 300;
@@ -285,6 +324,8 @@ void handleStatus() {
   j += uplink::statusText();
   j += "\",\"imu\":\"";
   j += imu::statusText();
+  j += "\",\"barometer\":\"";
+  j += barometer::statusText();
   j += "\",\"uptime_s\":";
   j += millis() / 1000;
   j += "}";

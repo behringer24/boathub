@@ -227,6 +227,11 @@ void putRecord(JsonArray &arr, const buffer::Record &r, uint32_t offsetIfUndated
   putSpread(o, "pitch_deg_sd", r.pitchSd, 100.0f);
   putChannel(o, "motion_g", r.ch[buffer::MotionG], 1000.0f);
   if (r.knocks != buffer::Record::KNOCKS_ABSENT) o["knocks"] = r.knocks;
+
+  putChannel(o, "pressure_hpa", r.ch[buffer::PressureHpa], 10.0f);
+  putChannel(o, "bay_temp_c", r.ch[buffer::BayTempC], 100.0f);
+  putChannel(o, "bay_rh", r.ch[buffer::BayRh], 10.0f);
+  putChannel(o, "bay_gas_kohm", r.ch[buffer::BayGasKohm], 10.0f);
 }
 
 // The offset that dates records written before the clock was known, or 0.

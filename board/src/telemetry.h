@@ -55,6 +55,13 @@ struct Aggregate {
   uint16_t knocks = 0;
   bool knocksSeen = false;
 
+  // The BME680 in the battery bay: station pressure, and the bay's own air.
+  // Gas resistance only with its heater switched on - see A-010 section 4.
+  Channel pressure;
+  Channel bayTemp;
+  Channel bayRh;
+  Channel bayGas;
+
   // Further channels land here as the sensors arrive.
 };
 

@@ -113,6 +113,25 @@ type telemetry struct {
 	// A count, not a measurement: zero is a quiet window, absent is no IMU.
 	Knocks *int32 `json:"knocks"`
 
+	// The BME680 in the battery bay. Station pressure, not sea level: the
+	// board does not know its height, and the tendency does not need it.
+	PressureHPa    *float32 `json:"pressure_hpa"`
+	PressureHPaMin *float32 `json:"pressure_hpa_min"`
+	PressureHPaMax *float32 `json:"pressure_hpa_max"`
+
+	BayTempC    *float32 `json:"bay_temp_c"`
+	BayTempCMin *float32 `json:"bay_temp_c_min"`
+	BayTempCMax *float32 `json:"bay_temp_c_max"`
+
+	BayRH    *float32 `json:"bay_rh"`
+	BayRHMin *float32 `json:"bay_rh_min"`
+	BayRHMax *float32 `json:"bay_rh_max"`
+
+	// Only with the sensor's gas heater switched on.
+	BayGasKohm    *float32 `json:"bay_gas_kohm"`
+	BayGasKohmMin *float32 `json:"bay_gas_kohm_min"`
+	BayGasKohmMax *float32 `json:"bay_gas_kohm_max"`
+
 	SeatalkOnline *bool `json:"seatalk_online"`
 }
 
@@ -132,6 +151,10 @@ INSERT INTO telemetry (
   pitch_deg, pitch_deg_min, pitch_deg_max, pitch_deg_sd,
   motion_g, motion_g_min, motion_g_max,
   knocks,
+  pressure_hpa, pressure_hpa_min, pressure_hpa_max,
+  bay_temp_c, bay_temp_c_min, bay_temp_c_max,
+  bay_rh, bay_rh_min, bay_rh_max,
+  bay_gas_kohm, bay_gas_kohm_min, bay_gas_kohm_max,
   seatalk_online
 ) VALUES (
   $1,$2,$3,$4,$5,$6,
@@ -148,7 +171,11 @@ INSERT INTO telemetry (
   $38,$39,$40,$41,
   $42,$43,$44,
   $45,
-  $46)`
+  $46,$47,$48,
+  $49,$50,$51,
+  $52,$53,$54,
+  $55,$56,$57,
+  $58)`
 
 // Claims an identity before the row is written. Returns no rows when the pair
 // has been seen, which is the whole mechanism: QoS 1 redelivers, and a second
@@ -235,6 +262,10 @@ var required = []string{
 	"pitch_deg", "pitch_deg_min", "pitch_deg_max", "pitch_deg_sd",
 	"motion_g", "motion_g_min", "motion_g_max",
 	"knocks",
+	"pressure_hpa", "pressure_hpa_min", "pressure_hpa_max",
+	"bay_temp_c", "bay_temp_c_min", "bay_temp_c_max",
+	"bay_rh", "bay_rh_min", "bay_rh_max",
+	"bay_gas_kohm", "bay_gas_kohm_min", "bay_gas_kohm_max",
 	"seatalk_online",
 }
 
@@ -511,6 +542,10 @@ func storeOne(ctx context.Context, tx pgx.Tx, id string, t telemetry) (bool, err
 		t.PitchDeg, t.PitchDegMin, t.PitchDegMax, t.PitchDegSD,
 		t.MotionG, t.MotionGMin, t.MotionGMax,
 		t.Knocks,
+		t.PressureHPa, t.PressureHPaMin, t.PressureHPaMax,
+		t.BayTempC, t.BayTempCMin, t.BayTempCMax,
+		t.BayRH, t.BayRHMin, t.BayRHMax,
+		t.BayGasKohm, t.BayGasKohmMin, t.BayGasKohmMax,
 		t.SeatalkOnline); err != nil {
 		return false, err
 	}
