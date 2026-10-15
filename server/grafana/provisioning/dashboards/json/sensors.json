@@ -743,6 +743,257 @@
           "rawSql": "SELECT received_at AS time, motion_g AS mean, motion_g_max AS max, knocks FROM telemetry WHERE $__timeFilter(received_at) AND motion_g IS NOT NULL ORDER BY 1"
         }
       ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Barometer",
+      "description": "Station pressure at the sensor's own height: the mean over each window, with its range. A weather report gives sea level, which is higher by about 0.12 hPa for every metre of height. The absolute figure is good to half a hectopascal; what this sensor is for is the trend, in the panel beside it.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pressurehpa",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "min"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 18
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "min"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, pressure_hpa AS mean, pressure_hpa_min AS min, pressure_hpa_max AS max FROM telemetry WHERE $__timeFilter(received_at) AND pressure_hpa IS NOT NULL ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Pressure tendency, 3 h",
+      "description": "Each window's pressure minus the one three hours before it, by the board's own clock - so a backlog uploaded after a passage shows the trend as it happened, not all at once on arrival. A fall of 3 hPa or more in three hours, the dashed line, is the classic warning sign. Neither the height nor the board's offset matters here: both cancel in a difference. Empty until three hours of readings exist.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pressurehpa",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": -3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, tendency AS \"3 h tendency\" FROM (SELECT ts AS time, pressure_hpa - first_value(pressure_hpa) OVER w AS tendency, ts - first_value(ts) OVER w AS span FROM telemetry WHERE pressure_hpa IS NOT NULL AND ts IS NOT NULL AND ts >= $__timeFrom()::timestamptz - INTERVAL '3 hours' AND ts <= $__timeTo()::timestamptz WINDOW w AS (PARTITION BY boat_id ORDER BY ts RANGE BETWEEN INTERVAL '3 hours' PRECEDING AND CURRENT ROW)) t WHERE $__timeFilter(time) AND span >= INTERVAL '2 hours 50 minutes' ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Battery bay temperature",
+      "description": "The air around the batteries, which the chargers warm. Not the batteries themselves: a battery charging hard warms from the inside and lags the air both ways. The sensor reads a little above ambient by its own datasheet.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 56
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "min"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 18
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "min"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, bay_temp_c AS mean, bay_temp_c_min AS min, bay_temp_c_max AS max FROM telemetry WHERE $__timeFilter(received_at) AND bay_temp_c IS NOT NULL ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Battery bay humidity",
+      "description": "Driven by the bilge below. A reading pinned at 100 % for hours means the sensor itself is wet - it has no heater to dry it - and is a reason to look at its placement (A-010 section 5), not a value to trust until it comes down.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 56
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "humidity",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "min"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 18
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "min"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT received_at AS time, bay_rh AS mean, bay_rh_min AS min, bay_rh_max AS max FROM telemetry WHERE $__timeFilter(received_at) AND bay_rh IS NOT NULL ORDER BY 1"
+        }
+      ]
     }
   ]
 }

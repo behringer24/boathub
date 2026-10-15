@@ -50,6 +50,14 @@ struct Config {
   uint16_t imuKnockMg = 500;   // knock threshold: a jump of this many mg between samples
   uint16_t imuHoldoffSecs = 60;  // one knock reported, not forty
 
+  // BME680. The gas heater is off unless switched on here: a hotplate at
+  // 320 C serves no purpose in a battery bay, where a failing charger can vent
+  // hydrogen - see A-010 section 4. The offset corrects the sensor against a
+  // nearby station, in Pa, station minus board; the height above sea level is
+  // the server's business, not this one's.
+  bool bmeGas = false;
+  int16_t bmePressureOffsetPa = 0;
+
   bool hasStation() const { return wifiSsid.length() > 0; }
   bool hasBroker() const { return mqttHost.length() > 0; }
 };

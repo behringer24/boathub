@@ -5,14 +5,15 @@
 // an evening when the server is switched off. Without this a window that
 // closes while the uplink is down is simply overwritten by the next one.
 //
-// Records are fixed at 96 bytes, so record n sits at offset n * 96: no index,
-// no scanning, and a torn write at the tail is detectable rather than
+// Records are fixed at 128 bytes, so record n sits at offset n * 128: no
+// index, no scanning, and a torn write at the tail is detectable rather than
 // corrupting what is behind it. They live in segment files of 1024 records,
 // because releasing storage then costs one remove() instead of rewriting a
 // file from the front.
 //
-// Segments written in the earlier 64-byte format are still read. Firmware that
-// changes the format must not strand a backlog that was waiting to be sent.
+// Segments written in the earlier 64- and 96-byte formats are still read.
+// Firmware that changes the format must not strand a backlog that was waiting
+// to be sent.
 //
 // See docs/design/A-007-store-and-forward.md.
 
@@ -22,14 +23,14 @@
 
 namespace buffer {
 
-// 96 bytes on flash, little-endian. Changing this layout is changing the file
+// 128 bytes on flash, little-endian. Changing this layout is changing the file
 // format: bump RECORD_VERSION, give its segments their own extension, and keep
-// reading the previous one - see buffer.cpp.
-const size_t RECORD_BYTES = 96;
-const uint8_t RECORD_VERSION = 2;
+// reading the previous ones - see buffer.cpp.
+const size_t RECORD_BYTES = 128;
+const uint8_t RECORD_VERSION = 3;
 
-const size_t RECORDS_PER_SEGMENT = 1024;  // 96 kB
-const size_t MAX_SEGMENTS = 16;           // 1.5 MB, some 55 days of aggregates
+const size_t RECORDS_PER_SEGMENT = 1024;  // 128 kB
+const size_t MAX_SEGMENTS = 16;           // 2 MB, some 57 days of aggregates
 
 // Which clock dated a record. Two bits of `flags`, and the reason the server
 // can tell a synced timestamp from a lower bound.
@@ -67,7 +68,11 @@ enum Channel : uint8_t {
   HeelDeg,        // 0.01 degree, positive to starboard
   PitchDeg,       // 0.01 degree, positive bow-up
   MotionG,        // mg
-  ChannelCount,   // 10
+  PressureHpa,    // 0.1 hPa, station pressure
+  BayTempC,       // 0.01 C
+  BayRh,          // 0.1 %
+  BayGasKohm,     // 0.1 kOhm, saturating at 3276.7
+  ChannelCount,   // 14
 };
 
 struct Record {

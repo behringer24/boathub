@@ -5,6 +5,7 @@
 #include <sys/time.h>
 #include <time.h>
 
+#include "barometer.h"
 #include "buffer.h"
 #include "config.h"
 #include "net.h"
@@ -86,6 +87,15 @@ int16_t spread(const telemetry::Channel &c, float scale) {
   return c.hasRange() ? scaled(c.sd(), scale) : buffer::StoredChannel::ABSENT;
 }
 
+// One BME680 reading. The gas channel only fills when the heater is on and the
+// plate reached its set-point, so it can count fewer than the other three.
+void addBay(telemetry::Aggregate &agg, const barometer::Reading &r) {
+  agg.pressure.add(r.pressureHpa);
+  agg.bayTemp.add(r.tempC);
+  agg.bayRh.add(r.rh);
+  if (r.gasValid) agg.bayGas.add(r.gasKohm);
+}
+
 // Collect whatever the sensors have produced since the last pass.
 //
 // There is deliberately no clock here. Each sensor measures on its own
@@ -121,6 +131,9 @@ void collectInto(telemetry::Aggregate &agg) {
     agg.knocks = knocks > 0xFFFE ? 0xFFFE : (uint16_t)knocks;
     agg.knocksSeen = true;
   }
+
+  barometer::Reading bay;
+  if (barometer::takeFresh(bay)) addBay(agg, bay);
 }
 
 // The current state rather than a new measurement: a spot message must not
@@ -149,6 +162,9 @@ void snapshotInto(telemetry::Aggregate &agg) {
       agg.pitch.add(att.pitchDeg);
     }
   }
+
+  const barometer::Reading bay = barometer::latest();
+  if (bay.valid) addBay(agg, bay);
 }
 
 // How many samples to claim for the window as a whole.
@@ -163,9 +179,10 @@ uint16_t countFor(const telemetry::Aggregate &agg) {
   uint16_t lowest = 0;
   bool any = false;
 
-  const telemetry::Channel *channels[] = {&agg.cabinTemp,  &agg.cabinRh, &agg.engineTemp,
-                                         &agg.bilgeTemp,  &agg.fridgeTemp, &agg.heel,
-                                         &agg.pitch,      &agg.motion};
+  const telemetry::Channel *channels[] = {&agg.cabinTemp, &agg.cabinRh,  &agg.engineTemp,
+                                         &agg.bilgeTemp, &agg.fridgeTemp, &agg.heel,
+                                         &agg.pitch,     &agg.motion,     &agg.pressure,
+                                         &agg.bayTemp,   &agg.bayRh,      &agg.bayGas};
   for (const telemetry::Channel *c : channels) {
     if (!c->has()) continue;
     if (!any || c->n < lowest) lowest = c->n;
@@ -295,6 +312,11 @@ void toRecord(const Aggregate &agg, buffer::Record &out) {
   out.heelSd = spread(agg.heel, 100.0f);
   out.pitchSd = spread(agg.pitch, 100.0f);
   if (agg.knocksSeen) out.knocks = agg.knocks;  // absent otherwise, from Record{}
+
+  store(out.ch[buffer::PressureHpa], agg.pressure, 10.0f);
+  store(out.ch[buffer::BayTempC], agg.bayTemp, 100.0f);
+  store(out.ch[buffer::BayRh], agg.bayRh, 10.0f);
+  store(out.ch[buffer::BayGasKohm], agg.bayGas, 10.0f);
 }
 
 uint16_t bootId() { return bootNumber; }

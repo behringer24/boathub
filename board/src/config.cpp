@@ -22,6 +22,10 @@ uint16_t u16(const char *key, uint16_t fallback) {
   return prefs.isKey(key) ? prefs.getUShort(key) : fallback;
 }
 
+int16_t i16(const char *key, int16_t fallback) {
+  return prefs.isKey(key) ? prefs.getShort(key) : fallback;
+}
+
 bool flag(const char *key, bool fallback) {
   return prefs.isKey(key) ? prefs.getBool(key) : fallback;
 }
@@ -70,6 +74,9 @@ void begin() {
   cfg.imuKnockMg = u16("imu_knock", 500);
   cfg.imuHoldoffSecs = u16("imu_hold", 60);
 
+  cfg.bmeGas = flag("bme_gas", false);
+  cfg.bmePressureOffsetPa = i16("bme_p_off", 0);
+
   prefs.end();
 }
 
@@ -104,6 +111,8 @@ void save(const Config &incoming) {
   cfg.imuTauDs = incoming.imuTauDs;
   cfg.imuKnockMg = incoming.imuKnockMg;
   cfg.imuHoldoffSecs = incoming.imuHoldoffSecs;
+  cfg.bmeGas = incoming.bmeGas;
+  cfg.bmePressureOffsetPa = incoming.bmePressureOffsetPa;
 
   // An empty password field means "leave it alone". Without this the form
   // would have to send the stored passwords to the browser just to save an
@@ -134,6 +143,8 @@ void save(const Config &incoming) {
   prefs.putUShort("imu_tau", cfg.imuTauDs);
   prefs.putUShort("imu_knock", cfg.imuKnockMg);
   prefs.putUShort("imu_hold", cfg.imuHoldoffSecs);
+  prefs.putBool("bme_gas", cfg.bmeGas);
+  prefs.putShort("bme_p_off", cfg.bmePressureOffsetPa);
   prefs.end();
 }
 

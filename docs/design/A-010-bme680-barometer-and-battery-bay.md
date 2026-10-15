@@ -283,18 +283,26 @@ That is also the datasheet's own quick-start configuration. A measurement takes 
 
 Each interval:
 
-1. Write `ctrl_hum` (0x72), then `ctrl_meas` (0x74) with the oversampling and forced mode, and
-   `ctrl_gas_0` and `ctrl_gas_1` with the heater off. Return to the loop.
+1. Write the configuration in one transaction: `config` (0x75) with the filter off, `ctrl_gas_0`
+   (0x70) and `ctrl_gas_1` (0x71) with the heater off, `ctrl_hum` (0x72), and last `ctrl_meas`
+   (0x74) with the oversampling and forced mode. Return to the loop.
 2. On a pass at least 50 ms later, read ten bytes from 0x1D: `meas_status_0`, then pressure,
    temperature and humidity.
 3. If `new_data_0` (bit 7 of 0x1D) is set, compensate - temperature first, because its
-   intermediate value feeds the pressure and humidity formulas. If not, look again on the next pass.
+   intermediate value feeds the pressure and humidity formulas. If not, look again 10 ms later. A
+   measurement still not finished 200 ms after it was due is given up; the next interval starts a
+   new one.
 
 **The configuration is written with every measurement**, not once at start. The BME680 has no
 status bit that reports a reset, unlike the SHT31. After a brown-out it comes back in sleep mode
 with every measurement switched to "skipped". Writing the full configuration each time means a
-reset costs at most one sample, for a handful of bytes on the bus. The order matters: the
-datasheet asks for `ctrl_hum` before `ctrl_meas`.
+reset costs at most one sample, for a handful of bytes on the bus.
+
+**The order matters.** Writing forced mode into `ctrl_meas` is what starts the measurement, so
+everything else goes before it - the gas registers included, or the heater setting would apply
+only from the next measurement on. And the datasheet asks for `ctrl_hum` before `ctrl_meas`: a
+humidity setting takes effect with the next write to `ctrl_meas`. A write to this chip is pairs of
+register and value, so the whole configuration is one transaction in exactly that order.
 
 **The chip does not stretch the clock**, so the bus is free for the converters and the IMU while
 it measures - the same reason the SHT31 is read without clock stretching in
@@ -321,6 +329,13 @@ centimetres of cable make that unlikely, and the checks below catch the gross ca
 A rejected sample is not counted into the window, exactly as for the SHT31. `n` drops, and the
 aggregate stays correct for the samples that remain.
 
+**Consecutive means the previous reading, kept or not.** The rate check compares a reading with
+the one before it that passed the range checks, whether or not that one went into the window, and
+only when the two are no more than two intervals apart. Compared with the last value kept instead,
+one real step beyond the limit - the sensor unplugged for an hour while a front came through -
+would be rejected, and so would every reading after it, for good. This way a single spike costs two
+samples, a real step one, and nothing can lock the sensor out.
+
 ## 7. What reaches the aggregate
 
 | Field | Meaning |
@@ -337,11 +352,11 @@ engine bay's probe is `engine_temp_c` - and the prefix keeps these apart from th
 If every sample in a window was rejected, or the sensor is not fitted, the fields are **absent**,
 never zero.
 
-**The stored record grows.** Three channels of mean, min and max in 16 bits each are 18 bytes,
-more than the 8 the record keeps in reserve, so they arrive with a new record format; section 4 of
-[A-007](A-007-store-and-forward.md) covers how a backlog in the old one drains. Temperature and
-humidity scale as the SHT31's, pressure in 0.1 hPa. The gas channel, if it is ever switched on,
-needs three words of its own.
+**The stored record carries all four.** Four channels of mean, min and max in 16 bits each are 24
+bytes, part of the 128-byte record format 3 in section 4 of [A-007](A-007-store-and-forward.md),
+which also covers how a backlog in an older format drains. Temperature and humidity scale as the
+SHT31's, pressure in 0.1 hPa, gas resistance in 0.1 kΩ. The gas channel has its place whether or
+not the heater is ever switched on; with it off, the channel stays absent.
 
 ### On the server
 
@@ -350,7 +365,8 @@ Two values are derived there rather than on the board, because the server has th
 height:
 
 - **The three-hour tendency:** the latest window's `pressure_hpa` minus the one three hours
-  earlier. A fall of 3 hPa or more is the warning; the rule belongs to the alarm logic.
+  earlier, by the board's own timestamps rather than by arrival - a backlog arrives all at once.
+  A fall of 3 hPa or more is the warning; the rule belongs to the alarm logic.
 - **Sea-level pressure for display**, from the stored station pressure and the boat's height
   setting - section 3.
 
@@ -371,12 +387,17 @@ under **Barometer**. Saving restarts the board, like every other setting.
 The oversampling, the filter and the address are constants. The height of the berth is not a board
 setting: it belongs to the server, which is where sea-level pressure is computed.
 
+The portal refuses an offset beyond 2000 Pa either way. The sensor's own error is under a
+hectopascal and drifts by about one a year; twenty is not a sensor error but a station's sea-level
+figure compared with the board's station pressure - the reduction in section 11 left out.
+
 ## 9. Failure modes
 
 | Case | Detection | Reaction |
 |------|-----------|----------|
 | Sensor does not answer | I2C NACK at 0x76 | fields absent, event once, retried each interval; the other devices on the bus carry on |
 | A different chip at 0x76 | chip ID is not 0x61 | not read, logged once. `i2cscan` names what it is |
+| A BME688 at 0x76 | chip ID 0x61, variant ID 0x01 | pressure, temperature and humidity read as from a BME680. Its gas readout differs and is not implemented, so its heater stays off whatever `bme_gas` says |
 | Sensor reset itself | raw values read as skipped | sample discarded; the next measurement writes the configuration again |
 | Value implausible | range and rate checks | sample discarded, counted |
 | Answered once, then never again after a disturbance | NACK, and a power cycle brings it back | `CS` caught a low edge. The link from `CS` to `VCC` is what prevents it |
@@ -400,6 +421,16 @@ A fault in this sensor costs its own three fields and nothing else.
 ## 11. Verification
 
 **On the bench**
+
+The readings come from the bench reader, built from the firmware's own driver:
+
+```
+pio run -d board -e bmeread -t upload -t monitor
+```
+
+It prints pressure, temperature and humidity once a second, with the raw `meas_status_0` and both
+gas control registers read back from the chip. `z` takes the current pressure as a reference, so
+the one-metre lift below reads directly; `g` switches the gas heater on for the desk.
 
 - [ ] `CS` measures 0 Ω to `VCC` and `SDO` 0 Ω to `GND` on the module, before power is applied
 - [ ] The module's pull-ups measured on the unpowered module and written down

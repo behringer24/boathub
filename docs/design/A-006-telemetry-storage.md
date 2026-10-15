@@ -211,6 +211,13 @@ and the spread by the whole five minutes ([A-009](A-009-imu-heel-and-motion.md) 
 it, **Motion and knocks** draws the knock count as bars on its own axis - the record the knock
 threshold is set against.
 
+The barometer's row puts station pressure beside **Pressure tendency, 3 h**: each window's
+pressure minus the one three hours before it, with the 3 hPa warning line drawn in
+([A-010](A-010-bme680-barometer-and-battery-bay.md) section 7). It is computed in the panel's
+query, and by `ts` rather than `received_at` - a backlog uploaded after a passage arrives within
+seconds, and by arrival time its tendency would be nonsense. Below them, the battery bay's
+temperature and humidity.
+
 `allowUiUpdates` is on, so panels can be tried out in the browser. Note what that means: edits live
 in the Grafana volume and are **not** written back to the JSON files, so a provisioning reload
 discards them. Anything worth keeping has to be exported back into

@@ -18,6 +18,13 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ### Changed
 
+- **Telemetry records are 128 bytes, format 3**, to carry the BME680: four more channels, for
+  pressure in 0.1 hPa, the battery bay's temperature and humidity, and gas resistance in 0.1 kΩ.
+  Segments of the 64- and 96-byte formats still drain at their own size - `.seg`, `.sg2`, and now
+  `.sg3` - because the firmware notes the highest segment of each old format at start and appends
+  only in the new one. Sixteen segments now hold 2 MB, some 57 days. `bufcheck` covers the new
+  channels and keeps its read-back array off the stack.
+
 - `i2cscan` reads the chip ID of a device at 0x76 or 0x77 and names it: BME680, BME280, BMP280 or
   BMP180. The whole Bosch pressure family shares those two addresses, so the address alone could
   only guess - and a board printed "BME280" often carries a BMP280, which has no humidity sensor.
@@ -156,6 +163,32 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   dead patch in it. A bus scan proves an address answers; it cannot prove the converter converts.
   Wanted again in phase B, to watch the battery divider against a multimeter before trusting a
   calibration factor.
+- The BME680 in the battery bay: station pressure as `pressure_hpa`, and the bay's air as
+  `bay_temp_c` and `bay_rh`, each with min and max. A register-level driver in forced mode -
+  humidity x1, temperature x2, pressure x16, IIR off - with Bosch's integer compensation from the
+  BME68x API and no BSEC. The whole configuration is written in one transaction with every
+  measurement, `ctrl_meas` last because writing forced mode is what starts it, so a sensor that
+  reset itself costs at most one sample. Nothing waits: the measurement is started and collected on
+  a later pass 50 ms on. A reading is rejected for a skipped value, for being out of range, or for a
+  jump of more than 2 hPa, 10 °C or 30 %RH - measured against the previous reading rather than the
+  last one kept, so a real step cannot lock the sensor out for good. A sensor that stops answering
+  is looked for every interval, and on its return it is reset and its calibration read afresh: it
+  may be the spare.
+- The gas heater is off unless `bme_gas` in NVS switches it on. Then each measurement heats the
+  plate to 320 °C for 150 ms and the gas resistance reaches the telemetry as `bay_gas_kohm`; on a
+  BME688, whose gas readout differs, the heater stays off regardless. `bme_p_off` adds a signed
+  offset in Pa to every pressure reading. Both are on the portal under **Barometer**, which refuses
+  an offset beyond 20 hPa - that is a sea-level figure compared with station pressure, not a sensor
+  error.
+- `bmeread` build environment: pressure, temperature and humidity once a second from the
+  firmware's own driver, with the raw `meas_status_0` and both gas control registers read back from
+  the chip, so the heater can be seen to be off. A key takes the current pressure as a reference,
+  which makes the one-metre lift test readable directly.
+- Ingest stores the BME680's fields, migration `004-barometer.sql` adds their columns, and the
+  sensor dashboard gains station pressure, the three-hour pressure tendency with the 3 hPa warning
+  line, and the battery bay's temperature and humidity. The tendency is computed in the panel's
+  query by the board's own timestamps, so a backlog uploaded after a passage shows the trend as it
+  happened rather than all at once on arrival.
 - Heel, pitch and motion in the telemetry: `heel_deg` and `pitch_deg` with min, max and their
   standard deviation within the window, `motion_g` with min and max, and `knocks`, counted straight
   through the hold-off. The spread is there because the extremes are set by a single wake and say

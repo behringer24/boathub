@@ -59,6 +59,12 @@ buffer::Record make(uint32_t seq) {
   set(r.ch[buffer::MotionG], 31, 2, 1870);
   r.heelSd = (int16_t)(375 + seq);
   r.knocks = (uint16_t)(seq % 3);
+
+  // The BME680's: the last channels of the record, so a layout that loses its
+  // tail shows here first. Gas stays absent, as it is with the heater off.
+  set(r.ch[buffer::PressureHpa], (int16_t)(10132 - seq), 10118, 10141);
+  set(r.ch[buffer::BayTempC], (int16_t)(1840 + seq), -120, 2210);
+  r.ch[buffer::BayRh].mean = (int16_t)(812 + seq);
   return r;
 }
 
@@ -109,7 +115,9 @@ void setup() {
   ok("pending() counts them", buffer::pending() == COUNT);
 
   Serial.println("\nreading them back");
-  buffer::Record back[COUNT];
+  // Static: forty records are over four kilobytes, half of the stack setup()
+  // runs on, and LittleFS needs its share of the rest.
+  static buffer::Record back[COUNT];
   const size_t got = buffer::peek(back, COUNT);
   ok("peek() returns the whole batch", got == COUNT);
 
@@ -123,6 +131,8 @@ void setup() {
   ok("the spot flag survives", back[0].spot && !back[1].spot);
   ok("an absent spread stays absent", back[0].pitchSd == buffer::StoredChannel::ABSENT);
   ok("a knock count of zero stays zero", back[0].knocks == 0);
+  ok("the pressure keeps its value", back[5].ch[buffer::PressureHpa].mean == 10127);
+  ok("the gas channel stays absent", !back[0].ch[buffer::BayGasKohm].has());
 
   Serial.println("\npeek() does not consume");
   buffer::Record again[4];
