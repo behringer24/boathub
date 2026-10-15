@@ -52,6 +52,19 @@ sht31::Reading last;
 uint32_t lastAt = 0;
 bool unread = false;  // a measurement nothing has consumed yet
 
+// The previous reading that passed the CRC and range checks, accepted or not.
+//
+// The rate check compares against this, not against the last accepted value.
+// Against the last accepted value, one real step larger than the limit - a
+// wet sensor dried by the heater, or one unplugged while the cabin warmed up -
+// would be rejected, and so would every reading after it, forever. Against
+// the previous reading a spike costs two samples, a real step one, and nothing
+// can lock the sensor out.
+bool havePrev = false;
+uint32_t prevAt = 0;
+float prevTempC = 0.0f;
+float prevRh = 0.0f;
+
 bool seen = false;
 const char *state = "not started";
 
@@ -136,8 +149,17 @@ void collect(uint32_t now) {
     return;
   }
 
-  // A jump this large in ten seconds is not air moving, it is a bad read.
-  if (last.valid && (fabsf(tempC - last.tempC) > 10.0f || fabsf(rh - last.rh) > 30.0f)) {
+  // A jump this large in one interval is not air moving, it is a bad read.
+  // Only between consecutive readings: after a gap there is nothing to
+  // compare with.
+  const bool consecutive = havePrev && (now - prevAt) <= 2 * sampleMs();
+  const bool jumped =
+      consecutive && (fabsf(tempC - prevTempC) > 10.0f || fabsf(rh - prevRh) > 30.0f);
+  havePrev = true;
+  prevAt = now;
+  prevTempC = tempC;
+  prevRh = rh;
+  if (jumped) {
     state = "jumped";
     return;
   }
@@ -222,6 +244,9 @@ void loop() {
         setPhase(Phase::Idle, now);
         nextSample = now;
         state = "ok";
+        // The reading before the heater is not the one before this. A sensor
+        // the heater dried can read far below it, and rightly so.
+        havePrev = false;
       }
       return;
 
