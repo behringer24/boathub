@@ -18,6 +18,10 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ### Changed
 
+- `i2cscan` reads the chip ID of a device at 0x76 or 0x77 and names it: BME680, BME280, BMP280 or
+  BMP180. The whole Bosch pressure family shares those two addresses, so the address alone could
+  only guess - and a board printed "BME280" often carries a BMP280, which has no humidity sensor.
+
 - **Telemetry records are 96 bytes, format 2**, to carry the IMU. Segments of the 64-byte format
   stay readable: the extension tells them apart (`.seg`, `.sg2`), the firmware notes the highest old
   one at start, drains those at their own size and appends only in the new format. A backlog that
