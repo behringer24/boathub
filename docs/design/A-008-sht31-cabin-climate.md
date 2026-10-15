@@ -114,6 +114,16 @@ A rejected sample is simply not counted into the window: `n` drops, and the aggr
 correct for the samples that remain. Rejecting is always better than averaging in a value that is
 known to be wrong.
 
+**Consecutive means the previous reading, kept or not.** The rate check compares a reading with
+the one before it that passed the CRC and range checks, whether or not that one went into the
+window, and only when the two are no more than two intervals apart. The first reading after a
+heater cycle is not compared at all: the heat and cool windows lie between it and the one before,
+and a sensor the heater has just dried can rightly read far below it. Compared with the last value
+kept instead, one real step beyond the limit - a wet sensor at 100 %RH dried off in a cabin at
+60 %, or the sensor unplugged while the cabin warmed up - would be rejected, and so would every
+reading after it, for good. This way a single spike costs two samples, a real step one, and nothing
+can lock the sensor out.
+
 ## 6. Feeding the aggregate
 
 Temperature and humidity each contribute mean, min and max over the 5 min window, exactly like

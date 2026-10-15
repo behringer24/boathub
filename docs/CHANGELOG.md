@@ -337,3 +337,13 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   shaded bands on a single axis read as mush. Panels stay empty until their sensor is wired.
 - `bringup` build environment: the board verification firmware moved out of the way now that
   `boathub` carries the real application.
+
+### Fixed
+
+- The SHT31 can no longer lock itself out with its rate-of-change check. A reading was compared
+  with the last *accepted* one, so after one real step beyond 10 °C or 30 %RH - a wet sensor dried
+  by the heater in a cabin below about 65 %RH, or the sensor unplugged while the cabin warmed up -
+  every later reading was rejected as a jump until the board restarted. It is now compared with the
+  previous reading that passed the CRC and range checks, kept or not, and only when that one is no
+  more than two intervals old; the first reading after a heater cycle is not compared at all. A
+  spike costs two samples, a real step one. The BME680 already works this way.
