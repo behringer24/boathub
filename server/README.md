@@ -107,7 +107,8 @@ firewall allows inbound TCP 1883 for Docker.
 ## Looking at the data
 
 Dashboard at **http://localhost:3000**, user `admin` with the password from `.env`. The data source
-and the heartbeat dashboard are provisioned - there is nothing to set up by hand.
+and the dashboards - heartbeat, sensors, events - are provisioned; there is nothing to set up by
+hand.
 
 Straight into the database:
 
@@ -129,7 +130,13 @@ SELECT received_at, n, window_s FROM telemetry
   WHERE n IS NOT NULL AND n < 30 ORDER BY received_at DESC LIMIT 20;
 
 SELECT * FROM boat_status ORDER BY received_at DESC LIMIT 10;
+
+-- Events, newest first: boots, lost sensors, knocks, alarms. payload is the whole event.
+SELECT coalesce(ts, received_at) AS at, kind, subject, state, severity, payload
+  FROM events ORDER BY received_at DESC LIMIT 20;
 ```
+
+The **BoatHub - events** dashboard shows the same, with the alarms that are active now above it.
 
 **Sea-level pressure needs the barometer's height**, which the boat does not send. Set it once per
 boat, in metres above sea level, and again whenever it turns out to be wrong. The dashboard applies
@@ -160,7 +167,7 @@ docker exec -it boathub-mqtt mosquitto_sub -h localhost -p 1883 -u boathub -P '<
 ```
 boathub/<boat-id>/telemetry     one aggregate every 5 min by default
 boathub/<boat-id>/status        "online" / "offline", retained
-boathub/<boat-id>/events        alarms and state changes
+boathub/<boat-id>/events        boots, lost sensors, knocks, alarms - the moment they happen
 ```
 
 The board is the only publisher, and ingest only ever subscribes. No control path from the server
@@ -333,7 +340,5 @@ here.
 
 ## Not yet, but planned
 
-
-Device-side buffering (**A-007**): the board stores every aggregate in flash and drains the buffer
-when it finds a connection, so a passage without marina Wi-Fi is recorded rather than lost. The
-server side is already prepared for it - that is what the delivery guarantees above are for.
+Alarm notification: which events reach a phone, and how. The events are stored and shown first;
+what deserves to wake somebody is decided once there is a record of what they look like.

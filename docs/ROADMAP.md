@@ -26,7 +26,9 @@ to the self-hosted server.
 | Station mode, credentials in NVS/Preferences | **no Wi-Fi or server passwords in source** |
 | Battery state machine with debouncing | thresholds and windows configurable in NVS, see [design/B-001-power-supply.md](design/B-001-power-supply.md) |
 | Shore-power-loss alarm | gated on at least 6 h of prior charging so it stays quiet underway |
-| Alarm and threshold logic | frost, fridge too warm, humidity; a barometer falling 3 hPa or more in three hours; a list or trim that keeps changing while the boat lies unattended, and a knock once its threshold has been set from recorded counts - both from [design/A-009-imu-heel-and-motion.md](design/A-009-imu-heel-and-motion.md) |
+| Events on `boathub/<boat-id>/events` | the moment something happens: the boot with its reset reason, build and sensors, a sensor lost and back, a knock. Written to a queue on flash first and sent ahead of the telemetry backlog, so an event raised offline arrives late rather than not at all, see [design/A-011-events.md](design/A-011-events.md) |
+| Alarm and threshold logic | judged on the board: frost at the coldest of cabin, engine, bilge and battery bay; a fridge too warm, armed only once it has been cold; cabin humidity as a warning. Each holds for its time before it raises and clears at its own threshold; the LED shows an alarm until the BOOT button acknowledges it. Thresholds and holds live in NVS, see [design/A-012-alarm-and-threshold-logic.md](design/A-012-alarm-and-threshold-logic.md) |
+| Alarms from the server's history | a barometer falling 3 hPa or more in three hours; a list or trim that keeps changing while the boat lies unattended, and a knock once its threshold has been set from recorded counts - both from [design/A-009-imu-heel-and-motion.md](design/A-009-imu-heel-and-motion.md). They come with notification |
 | Fault handling and watchdog | a sensor failure must not take the network path down |
 
 Two constraints that bite late if ignored:
@@ -45,7 +47,8 @@ Two constraints that bite late if ignored:
 | Telemetry ingest and storage | |
 | Pressure tendency and sea-level pressure | the three-hour tendency from the stored station pressure, and sea-level pressure for display from a per-boat height setting. The board sends station pressure only |
 | Heartbeat and last-will handling | board reported offline once the keepalive expires |
-| Alarm notification | |
+| Event ingest and display | events stored with their identity, so a redelivery is turned away; an Events dashboard with the alarms active now, and markers for alarms, knocks and boots in the sensor panels, see [design/A-011-events.md](design/A-011-events.md) |
+| Alarm notification | which events reach a phone, and how - decided once the record of them exists |
 
 ### Interface
 
@@ -103,6 +106,24 @@ Three rates that have nothing to do with each other:
 | Storing and publishing | 5 min | nothing here changes faster, and the board has to buffer these at sea |
 | Alarms | immediate | a rising bilge level waits for no interval |
 
+**An event is not an aggregate.** It goes out on `events` the moment it happens, with the same
+envelope and a `kind` that says what the rest means - here a frost alarm, raised because the
+engine bay read 2.8 °C against a threshold of 3 °C:
+
+```json
+[
+  {
+    "ts": "2026-10-16T04:00:00Z", "time_valid": true, "time_source": "ntp",
+    "boot_id": 23, "seq": 3, "uptime_s": 3603,
+    "kind": "alarm", "alarm": "frost", "state": "raised", "severity": "alarm",
+    "sensor": "engine", "value": 2.8, "limit": 3.0
+  }
+]
+```
+
+The kinds are `boot`, `sensor_lost`, `sensor_back`, `knock`, `alarm` and `ack`; their fields are in
+[design/A-011-events.md](design/A-011-events.md) section 3.
+
 ### Done when
 
 - Each DS18B20 is identified individually and reports plausible values
@@ -115,6 +136,10 @@ Three rates that have nothing to do with each other:
 - `BOOT-NETZ` appears and a phone reaches the local web UI
 - Marina Wi-Fi connects, and reconnects after an outage
 - The server shows heartbeat and measurements from outside the marina
+- A boot, a sensor pulled and plugged back in, and a knock each appear on the Events dashboard
+  within a second, and events raised without a connection arrive once it returns
+- A probe in iced water raises the frost alarm after its hold, the LED shows it, BOOT
+  acknowledges it, and it clears only above its clear threshold
 - Pulling shore power after a long float period raises the alarm; restoring it clears it
 - An engine run followed by shutdown enters `ON_BATTERY` and raises **no** alarm
 - A two-second dip from the bilge pump or the fridge produces **no** false alarm

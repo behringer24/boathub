@@ -11,6 +11,58 @@
     "from": "now-7d",
     "to": "now"
   },
+  "annotations": {
+    "list": [
+      {
+        "name": "Alarms",
+        "enable": true,
+        "iconColor": "red",
+        "datasource": {
+          "type": "postgres",
+          "uid": "boathub"
+        },
+        "target": {
+          "refId": "Anno",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coalesce(ts, received_at) AS time, subject || ' ' || state || coalesce(' - ' || (payload->>'sensor') || ' ' || (payload->>'value'), '') AS text, kind AS tags FROM events WHERE $__timeFilter(coalesce(ts, received_at)) AND kind = 'alarm' ORDER BY 1"
+        }
+      },
+      {
+        "name": "Knocks",
+        "enable": true,
+        "iconColor": "orange",
+        "datasource": {
+          "type": "postgres",
+          "uid": "boathub"
+        },
+        "target": {
+          "refId": "Anno",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coalesce(ts, received_at) AS time, 'knock, ' || coalesce((SELECT string_agg(a, ' and ') FROM jsonb_array_elements_text(payload->'axes') a), '?') || ', ' || (payload->>'g') || ' g' || CASE WHEN (payload->>'held')::int > 0 THEN ', ' || (payload->>'held') || ' more held back' ELSE '' END AS text, kind AS tags FROM events WHERE $__timeFilter(coalesce(ts, received_at)) AND kind = 'knock' ORDER BY 1"
+        }
+      },
+      {
+        "name": "Board",
+        "enable": true,
+        "iconColor": "blue",
+        "datasource": {
+          "type": "postgres",
+          "uid": "boathub"
+        },
+        "target": {
+          "refId": "Anno",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coalesce(ts, received_at) AS time, CASE kind WHEN 'boot' THEN 'boot, ' || (payload->>'reset_reason') WHEN 'sensor_lost' THEN subject || ' lost' WHEN 'sensor_back' THEN subject || ' back' ELSE 'alarms acknowledged at the box' END AS text, kind AS tags FROM events WHERE $__timeFilter(coalesce(ts, received_at)) AND kind IN ('boot', 'sensor_lost', 'sensor_back', 'ack') ORDER BY 1"
+        }
+      }
+    ]
+  },
   "panels": [
     {
       "type": "timeseries",

@@ -77,6 +77,19 @@ void begin() {
   cfg.bmeGas = flag("bme_gas", false);
   cfg.bmePressureOffsetPa = i16("bme_p_off", 0);
 
+  cfg.alarmFrost = flag("al_frost", true);
+  cfg.frostC10 = i16("frost_c10", 30);
+  cfg.frostMins = u16("frost_min", 10);
+  cfg.alarmFridge = flag("al_fridge", true);
+  cfg.fridgeArmC10 = i16("fr_arm_c10", 60);
+  cfg.fridgeArmMins = u16("fr_arm_min", 60);
+  cfg.fridgeWarmC10 = i16("fr_warm_c10", 100);
+  cfg.fridgeWarmMins = u16("fr_warm_min", 30);
+  cfg.alarmHumidity = flag("al_rh", true);
+  cfg.rhWarn = u16("rh_warn", 85);
+  cfg.rhHours = u16("rh_hours", 6);
+  cfg.rhClear = u16("rh_clear", 80);
+
   prefs.end();
 }
 
@@ -113,6 +126,18 @@ void save(const Config &incoming) {
   cfg.imuHoldoffSecs = incoming.imuHoldoffSecs;
   cfg.bmeGas = incoming.bmeGas;
   cfg.bmePressureOffsetPa = incoming.bmePressureOffsetPa;
+  cfg.alarmFrost = incoming.alarmFrost;
+  cfg.frostC10 = incoming.frostC10;
+  cfg.frostMins = incoming.frostMins;
+  cfg.alarmFridge = incoming.alarmFridge;
+  cfg.fridgeArmC10 = incoming.fridgeArmC10;
+  cfg.fridgeArmMins = incoming.fridgeArmMins;
+  cfg.fridgeWarmC10 = incoming.fridgeWarmC10;
+  cfg.fridgeWarmMins = incoming.fridgeWarmMins;
+  cfg.alarmHumidity = incoming.alarmHumidity;
+  cfg.rhWarn = incoming.rhWarn;
+  cfg.rhHours = incoming.rhHours;
+  cfg.rhClear = incoming.rhClear;
 
   // An empty password field means "leave it alone". Without this the form
   // would have to send the stored passwords to the browser just to save an
@@ -145,6 +170,18 @@ void save(const Config &incoming) {
   prefs.putUShort("imu_hold", cfg.imuHoldoffSecs);
   prefs.putBool("bme_gas", cfg.bmeGas);
   prefs.putShort("bme_p_off", cfg.bmePressureOffsetPa);
+  prefs.putBool("al_frost", cfg.alarmFrost);
+  prefs.putShort("frost_c10", cfg.frostC10);
+  prefs.putUShort("frost_min", cfg.frostMins);
+  prefs.putBool("al_fridge", cfg.alarmFridge);
+  prefs.putShort("fr_arm_c10", cfg.fridgeArmC10);
+  prefs.putUShort("fr_arm_min", cfg.fridgeArmMins);
+  prefs.putShort("fr_warm_c10", cfg.fridgeWarmC10);
+  prefs.putUShort("fr_warm_min", cfg.fridgeWarmMins);
+  prefs.putBool("al_rh", cfg.alarmHumidity);
+  prefs.putUShort("rh_warn", cfg.rhWarn);
+  prefs.putUShort("rh_hours", cfg.rhHours);
+  prefs.putUShort("rh_clear", cfg.rhClear);
   prefs.end();
 }
 

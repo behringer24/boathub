@@ -41,6 +41,10 @@ bool takeFresh(Reading &out);
 // and currently unhappy" in the status line.
 bool present();
 
+// True while the heater runs and while the sensor cools afterwards: no
+// readings by design, which is not a lost sensor.
+bool heating();
+
 // Short human-readable state for the configuration page and the serial log.
 const char *statusText();
 

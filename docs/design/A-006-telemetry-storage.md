@@ -132,7 +132,7 @@ sensor is not fitted" and "the bilge is dry" is the whole point of the system.
 | `telemetry` | one row per received message, hypertable on `received_at` |
 | `telemetry_seen` | one row per `(boat_id, boot_id, seq)` ever accepted, so a redelivery is not a second row. About 105 000 rows a year, a few megabytes |
 | `boat_status` | online/offline transitions from the retained `status` topic |
-| `events` | alarms and state changes, for the version that raises them |
+| `events` | one row per event: boots, lost sensors, knocks, alarms. An ordinary table, so its identity is a unique index rather than a claim table - [A-011](A-011-events.md) section 6 |
 | `boats` | one row per boat, set by hand, for what the boat does not send: the barometer's height above sea level, which the dashboard reduces station pressure with |
 
 `boat_status` is not decoration. The shore-power-loss alarm is about the boat going quiet, so a
@@ -140,8 +140,9 @@ history of when it was reachable is evidence, and it costs a handful of rows a w
 
 ## 4. Ingest
 
-A small service of our own, not a metrics collector. It subscribes to `boathub/+/telemetry` and
-`boathub/+/status` and writes rows.
+A small service of our own, not a metrics collector. It subscribes to `boathub/+/telemetry`,
+`boathub/+/status` and `boathub/+/events` and writes rows, with the same guarantees for events as
+for telemetry.
 
 A configuration-driven collector would cover today's payload with no code at all. It would not
 cover what comes next: the track logger needs acknowledged, resumable uploads with duplicate
@@ -194,7 +195,7 @@ ingest being down at that moment.
 Grafana, reading the database directly - Postgres is a first-class data source, so nothing sits in
 between.
 
-Two dashboards, provisioned from files:
+Three dashboards, provisioned from files:
 
 **`BoatHub - heartbeat`** shows what exists: uptime, free heap, signal strength, messages per hour,
 and **samples per window**. That last one is the panel the aggregation makes necessary - `n` below
@@ -221,6 +222,14 @@ rather than an unreduced one. **Pressure tendency, 3 h** is each window's pressu
 three hours before it, with the 3 hPa warning line drawn in. It goes by `ts` rather than
 `received_at` - a backlog uploaded after a passage arrives within seconds, and by arrival time its
 tendency would be nonsense. Below them, the battery bay's temperature and humidity.
+
+Every panel of the sensors dashboard carries the **events as markers** on its time axis, in three
+groups that can be switched off at the top: alarms in red, knocks in orange, and the board's own -
+boots, lost and returning sensors, acknowledgements - in blue. A dip in a curve and the event that
+explains it are then seen together.
+
+**`BoatHub - events`** lists them: the alarms active now, and every event in the selected range,
+newest first, with the whole message as it arrived ([A-011](A-011-events.md) section 6).
 
 `allowUiUpdates` is on, so panels can be tried out in the browser. Note what that means: edits live
 in the Grafana volume and are **not** written back to the JSON files, so a provisioning reload
@@ -283,6 +292,8 @@ medium, and a restore that has actually been tried once.
       like one that has nothing to say
 - [ ] A deliberately malformed payload is logged and does not stop ingest
 - [ ] Powering the board down writes an `offline` row to `boat_status`
+- [ ] An event published twice is stored once, and the Events dashboard and the sensor panels' markers
+      show it at the board's time
 - [ ] Grafana shows the heartbeat without any manual data source setup
 - [ ] Setting a boat's height in `boats` fills its Sea-level pressure panel, and changing it moves
       the whole history while `pressure_hpa` stays as stored

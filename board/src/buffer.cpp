@@ -430,6 +430,8 @@ uint32_t pending() {
   return total;
 }
 
+bool ready() { return mounted; }
+
 uint32_t dropped() { return droppedRecords; }
 
 uint32_t restoredFloor() { return floorWall; }

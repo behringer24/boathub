@@ -4,6 +4,7 @@
 
 #include "attitude.h"
 #include "config.h"
+#include "events.h"
 #include "i2cbus.h"
 #include "lsm6dsox.h"
 
@@ -112,6 +113,13 @@ const char *boatAxisOf(uint8_t moduleAxis) {
   if (component(fwd, moduleAxis) != 0.0f) return "fore-and-aft";
   if (component(port, moduleAxis) != 0.0f) return "athwartships";
   return "vertical";
+}
+
+// The same, as the bit the knock event carries.
+uint8_t boatAxisBit(uint8_t moduleAxis) {
+  if (component(fwd, moduleAxis) != 0.0f) return events::AXIS_FORE_AND_AFT;
+  if (component(port, moduleAxis) != 0.0f) return events::AXIS_ATHWARTSHIPS;
+  return events::AXIS_VERTICAL;
 }
 
 // The zero reference is kept in the module's own axes, so that correcting the
@@ -227,14 +235,18 @@ void onKnock(uint8_t axes, uint32_t now) {
   // Bits from the chip: x = 4, y = 2, z = 1.
   Serial.print("[imu] knock,");
   bool first = true;
+  uint8_t boatAxes = 0;
   for (uint8_t i = 0; i < 3; i++) {
     if (!(axes & (4 >> i))) continue;
     Serial.printf("%s %s", first ? "" : " and", boatAxisOf(i));
+    boatAxes |= boatAxisBit(i);
     first = false;
   }
   Serial.printf(", %.2f g", size);
   if (knocksHeld) Serial.printf(" - %lu more during the hold-off before it", (unsigned long)knocksHeld);
   Serial.println();
+
+  events::knock(boatAxes, size, knocksHeld > 0xFFFF ? 0xFFFF : (uint16_t)knocksHeld);
   knocksHeld = 0;
 }
 

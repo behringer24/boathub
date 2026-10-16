@@ -9,11 +9,13 @@
 
 #include <Arduino.h>
 
+#include "alarms.h"
 #include "barometer.h"
 #include "buffer.h"
 #include "button.h"
 #include "config.h"
 #include "ds18b20.h"
+#include "events.h"
 #include "imu.h"
 #include "net.h"
 #include "portal.h"
@@ -21,6 +23,7 @@
 #include "telemetry.h"
 #include "status.h"
 #include "uplink.h"
+#include "watch.h"
 
 namespace {
 
@@ -89,6 +92,12 @@ void setup() {
   imu::begin();
   barometer::begin();
   telemetry::begin();
+  // After the buffer, which mounts the filesystem, and after telemetry, which
+  // numbers the boot that every event carries. The boot event goes out once
+  // every sensor has had its chance to answer.
+  events::begin();
+  watch::begin();
+  alarms::begin();
   portal::begin();
   uplink::begin();
   status::begin();
@@ -105,6 +114,8 @@ void loop() {
   imu::loop();
   barometer::loop();
   telemetry::loop();
+  watch::loop();
+  alarms::loop();
   portal::loop();
   uplink::loop();
   status::loop();
@@ -152,10 +163,12 @@ void loop() {
       snprintf(bay, sizeof(bay), "%.1fhPa bay %.1fC %.0f%%", baro.pressureHpa, baro.tempC, baro.rh);
     }
 
-    Serial.printf("[status] wifi %s %s | broker %s | %s (%s) | %s | %s (%s) | %s (%s) | heap %lu\n",
+    Serial.printf("[status] wifi %s %s | broker %s | %s (%s) | %s | %s (%s) | %s (%s) | alarms %s | "
+                  "heap %lu\n",
                   net::stateName(), net::stationIp().c_str(), uplink::statusText(), cabin,
                   sht31::statusText(), probes, motion, imu::statusText(), bay,
-                  barometer::statusText(), (unsigned long)ESP.getFreeHeap());
+                  barometer::statusText(), alarms::raised().c_str(),
+                  (unsigned long)ESP.getFreeHeap());
   }
 
   delay(1);  // hand the core back to FreeRTOS

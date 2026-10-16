@@ -187,6 +187,41 @@ ON CONFLICT DO NOTHING`
 
 const insertStatus = `INSERT INTO boat_status (boat_id, online) VALUES ($1, $2)`
 
+// The fields of an event this service files by. Everything else the board
+// sent goes into `payload` untouched, so a field newer firmware adds is kept
+// without anything here knowing about it.
+type event struct {
+	TS         *time.Time `json:"ts"`
+	TimeValid  *bool      `json:"time_valid"`
+	TimeSource *string    `json:"time_source"`
+	BootID     *int32     `json:"boot_id"`
+	Seq        *int64     `json:"seq"`
+
+	Kind     *string `json:"kind"`
+	Alarm    *string `json:"alarm"`
+	Sensor   *string `json:"sensor"`
+	State    *string `json:"state"`
+	Severity *string `json:"severity"`
+}
+
+// subject is what the event is about: the alarm for an alarm, otherwise the
+// sensor, where there is one.
+func (e event) subject() *string {
+	if e.Alarm != nil {
+		return e.Alarm
+	}
+	return e.Sensor
+}
+
+// events is an ordinary table, so the identity is a unique index on it and a
+// redelivery is turned away right here - no claim table, unlike telemetry.
+const insertEvent = `
+INSERT INTO events (
+  boat_id, ts, time_valid, time_source, boot_id, seq,
+  kind, subject, state, severity, payload
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+ON CONFLICT (boat_id, boot_id, seq) DO NOTHING`
+
 func env(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -269,6 +304,12 @@ var required = []string{
 	"seatalk_online",
 }
 
+// The same for the event insert.
+var requiredEvents = []string{
+	"boat_id", "ts", "time_valid", "time_source", "boot_id", "seq",
+	"kind", "subject", "state", "severity", "payload",
+}
+
 // db/init only runs when the data directory is created, so a database that
 // predates a schema change keeps the old columns and every insert fails with
 // the same error, forever. Said once at startup it is a diagnosis; discovered
@@ -277,12 +318,12 @@ var required = []string{
 // This does not exit. A service that dies on a bad environment is a service
 // somebody has to watch, and nobody watches a boat server - so it says what is
 // wrong as loudly as it can and carries on.
-func checkSchema(ctx context.Context, pool *pgxpool.Pool) {
-	const q = `SELECT column_name FROM information_schema.columns WHERE table_name = 'telemetry'`
+func checkSchema(ctx context.Context, pool *pgxpool.Pool, table string, required []string) {
+	const q = `SELECT column_name FROM information_schema.columns WHERE table_name = $1`
 
-	rows, err := pool.Query(ctx, q)
+	rows, err := pool.Query(ctx, q, table)
 	if err != nil {
-		log.Printf("could not inspect the telemetry table: %v", err)
+		log.Printf("could not inspect the %s table: %v", table, err)
 		return
 	}
 	defer rows.Close()
@@ -296,7 +337,7 @@ func checkSchema(ctx context.Context, pool *pgxpool.Pool) {
 	}
 
 	if len(have) == 0 {
-		log.Println("!!! there is no telemetry table - did db/init run?")
+		log.Printf("!!! there is no %s table - did db/init run?", table)
 		return
 	}
 
@@ -307,13 +348,13 @@ func checkSchema(ctx context.Context, pool *pgxpool.Pool) {
 		}
 	}
 	if len(missing) == 0 {
-		log.Printf("schema ok, %d columns", len(have))
+		log.Printf("%s schema ok, %d columns", table, len(have))
 		return
 	}
 
-	log.Printf("!!! the telemetry table is missing %d column(s): %s",
-		len(missing), strings.Join(missing, ", "))
-	log.Println("!!! this database predates the current schema and every insert will fail")
+	log.Printf("!!! the %s table is missing %d column(s): %s",
+		table, len(missing), strings.Join(missing, ", "))
+	log.Printf("!!! this database predates the current schema and every %s insert will fail", table)
 	log.Println("!!! see \"Changing the schema\" in server/README.md")
 }
 
@@ -326,7 +367,8 @@ func main() {
 	pool := connectDB(ctx, env("DATABASE_URL", ""))
 	defer pool.Close()
 
-	checkSchema(ctx, pool)
+	checkSchema(ctx, pool, "telemetry", required)
+	checkSchema(ctx, pool, "events", requiredEvents)
 
 	broker := fmt.Sprintf("tcp://%s:%s", env("MQTT_HOST", "mosquitto"), env("MQTT_PORT", "1883"))
 
@@ -354,6 +396,7 @@ func main() {
 		for topic, handler := range map[string]mqtt.MessageHandler{
 			"boathub/+/telemetry": func(_ mqtt.Client, m mqtt.Message) { onTelemetry(ctx, pool, m) },
 			"boathub/+/status":    func(_ mqtt.Client, m mqtt.Message) { onStatus(ctx, pool, m) },
+			"boathub/+/events":    func(_ mqtt.Client, m mqtt.Message) { onEvents(ctx, pool, m) },
 		} {
 			// QoS 1: at-least-once. The board deletes buffered measurements once
 			// they are acknowledged, so fire-and-forget would lose them silently.
@@ -588,4 +631,117 @@ func onStatus(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {
 	}
 	m.Ack()
 	log.Printf("%s is %s", id, payload)
+}
+
+// Events, with the same guarantees as telemetry: acknowledged only once the
+// rows are committed, and a payload that will never parse acknowledged and
+// logged rather than redelivered forever. Design: docs/design/A-011-events.md.
+func onEvents(ctx context.Context, pool *pgxpool.Pool, m mqtt.Message) {
+	id, ok := boatID(m.Topic())
+	if !ok {
+		log.Printf("ignoring unexpected topic %q", m.Topic())
+		m.Ack()
+		return
+	}
+
+	raws, err := decodeEvents(m.Payload())
+	if err != nil {
+		log.Printf("bad payload on %s: %v: %s", m.Topic(), err, m.Payload())
+		m.Ack()
+		return
+	}
+	if len(raws) == 0 {
+		m.Ack()
+		return
+	}
+
+	stored, skipped, err := storeEventsWithRetry(ctx, pool, id, raws)
+	if err != nil {
+		log.Printf("insert events for %s failed, leaving unacknowledged: %v", id, err)
+		return
+	}
+	if seen := len(raws) - stored - skipped; seen > 0 {
+		log.Printf("%s: %d of %d events already stored", id, seen, len(raws))
+	}
+	m.Ack()
+}
+
+// An events message is an array, like telemetry. Each element is kept as it
+// arrived, because the whole of it goes into `payload`.
+func decodeEvents(payload []byte) ([]json.RawMessage, error) {
+	trimmed := bytes.TrimLeft(payload, " \t\r\n")
+	if len(trimmed) == 0 {
+		return nil, nil
+	}
+	if !json.Valid(trimmed) {
+		return nil, fmt.Errorf("not valid JSON")
+	}
+	if trimmed[0] != '[' {
+		return []json.RawMessage{json.RawMessage(trimmed)}, nil
+	}
+	var raws []json.RawMessage
+	if err := json.Unmarshal(trimmed, &raws); err != nil {
+		return nil, err
+	}
+	return raws, nil
+}
+
+// The whole message in one transaction, so a redelivery finds every event
+// already stored or none of them. Returns how many were stored and how many
+// were skipped as unreadable; the rest were already there.
+func storeEvents(ctx context.Context, pool *pgxpool.Pool, id string, raws []json.RawMessage) (int, int, error) {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // no-op once committed
+
+	stored, skipped := 0, 0
+	for _, raw := range raws {
+		var e event
+		if err := json.Unmarshal(raw, &e); err != nil || e.Kind == nil {
+			// One unreadable event is not a reason to refuse the others.
+			log.Printf("%s: skipping an event without a kind: %s", id, raw)
+			skipped++
+			continue
+		}
+		tag, err := tx.Exec(ctx, insertEvent,
+			id, e.TS, e.TimeValid, e.TimeSource, e.BootID, e.Seq,
+			*e.Kind, e.subject(), e.State, e.Severity, string(raw))
+		if err != nil {
+			return 0, 0, err
+		}
+		if tag.RowsAffected() > 0 {
+			stored++
+			log.Printf("%s: event %s", id, describeEvent(e))
+		}
+	}
+
+	return stored, skipped, tx.Commit(ctx)
+}
+
+func describeEvent(e event) string {
+	parts := []string{*e.Kind}
+	for _, p := range []*string{e.subject(), e.State} {
+		if p != nil {
+			parts = append(parts, *p)
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
+func storeEventsWithRetry(ctx context.Context, pool *pgxpool.Pool, id string, raws []json.RawMessage) (int, int, error) {
+	var err error
+	delay := 200 * time.Millisecond
+	for attempt := 1; attempt <= 3; attempt++ {
+		var stored, skipped int
+		if stored, skipped, err = storeEvents(ctx, pool, id, raws); err == nil {
+			return stored, skipped, nil
+		}
+		if attempt < 3 {
+			time.Sleep(delay)
+			delay *= 2
+		}
+	}
+	return 0, 0, err
 }

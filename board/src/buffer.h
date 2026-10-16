@@ -127,6 +127,9 @@ void commit(size_t count, uint32_t wallNow);
 // Records waiting to be sent.
 uint32_t pending();
 
+// Whether the filesystem is mounted. The event queue lives on it too.
+bool ready();
+
 // Records lost to the quota since boot. Not silent: this belongs in the
 // payload, because a buffer that overflows quietly would reintroduce exactly
 // the loss this module exists to prevent.

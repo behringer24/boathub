@@ -7,8 +7,10 @@
 #include <time.h>
 
 #include "buffer.h"
+#include "build_info.h"
 #include "ca_isrg.h"
 #include "config.h"
+#include "events.h"
 #include "net.h"
 #include "telemetry.h"
 
@@ -58,12 +60,19 @@ const size_t BATCH_RECORDS = 20;
 uint16_t batchPacket = 0;
 size_t batchCount = 0;
 
+// Events per message. A few a day is the normal case; ten is for the queue a
+// week without a network leaves behind. The same rule as telemetry: one batch
+// in flight, released only by its PUBACK.
+const size_t EVENT_BATCH = 10;
+uint16_t eventPacket = 0;
+size_t eventSlots = 0;
+
 uint32_t retryDelay = RETRY_MIN_MS;
 uint32_t nextAttempt = 0;
 bool publishRequested = false;
 const char *status = "not connected";
 
-String topicTelemetry, topicStatus;
+String topicTelemetry, topicStatus, topicEvents;
 
 // The client stores the pointers it is given rather than copying the strings,
 // so these have to outlive every connection attempt. config::get() returns a
@@ -112,20 +121,7 @@ void pendingClear() {
   for (Pending &p : pending) p = Pending{};
 }
 
-const char *resetReason() {
-  switch (esp_reset_reason()) {
-    case ESP_RST_POWERON: return "POWERON";
-    case ESP_RST_EXT: return "EXTERNAL";
-    case ESP_RST_SW: return "SOFTWARE";
-    case ESP_RST_PANIC: return "PANIC";
-    case ESP_RST_INT_WDT: return "INT_WDT";
-    case ESP_RST_TASK_WDT: return "TASK_WDT";
-    case ESP_RST_WDT: return "WDT";
-    case ESP_RST_BROWNOUT: return "BROWNOUT";
-    case ESP_RST_DEEPSLEEP: return "DEEPSLEEP";
-    default: return "UNKNOWN";
-  }
-}
+const char *resetReason() { return events::resetReasonName((uint8_t)esp_reset_reason()); }
 
 bool timeValid() { return time(nullptr) > TIME_SANE_AFTER; }
 
@@ -133,6 +129,7 @@ void buildTopics() {
   const String base = "boathub/" + config::get().boatId + "/";
   topicTelemetry = base + "telemetry";
   topicStatus = base + "status";
+  topicEvents = base + "events";
 }
 
 // One channel becomes one, or three, fields.
@@ -178,6 +175,25 @@ String isoOf(uint32_t unixSeconds) {
   return String(buf);
 }
 
+// The time a record or an event carries, the same way for both.
+//
+// One written before the clock was known carries no wall time. If the clock
+// has since been set, the offset recovered for this boot dates it - as a lower
+// bound, and labelled as one. Nothing on flash is rewritten; this happens as
+// it is encoded.
+void putTime(JsonObject &o, uint32_t tWall, buffer::TimeSource src, uint16_t bootId,
+             uint32_t tMonoS, uint32_t offsetIfUndated) {
+  uint32_t wall = tWall;
+  if (wall == 0 && offsetIfUndated > 0 && bootId == telemetry::bootId()) {
+    wall = offsetIfUndated + tMonoS;
+    src = buffer::TimeSource::Restored;
+  }
+
+  if (wall > 0) o["ts"] = isoOf(wall);
+  o["time_valid"] = (src == buffer::TimeSource::Ntp || src == buffer::TimeSource::Gps);
+  o["time_source"] = sourceName(src);
+}
+
 // One stored record as one JSON object.
 //
 // This is the only encoder. A live reading goes through it as a batch of one,
@@ -185,22 +201,7 @@ String isoOf(uint32_t unixSeconds) {
 // flash a week later are byte for byte the same shape on the wire.
 void putRecord(JsonArray &arr, const buffer::Record &r, uint32_t offsetIfUndated) {
   JsonObject o = arr.add<JsonObject>();
-
-  uint32_t wall = r.tWall;
-  buffer::TimeSource src = r.timeSource;
-
-  // A record written before the clock was known carries no wall time. If the
-  // clock has since been set, the offset recovered for this boot dates it -
-  // as a lower bound, and labelled as one. Records on flash are never
-  // rewritten; this happens as they are encoded.
-  if (wall == 0 && offsetIfUndated > 0 && r.bootId == telemetry::bootId()) {
-    wall = offsetIfUndated + r.tMonoS;
-    src = buffer::TimeSource::Restored;
-  }
-
-  if (wall > 0) o["ts"] = isoOf(wall);
-  o["time_valid"] = (src == buffer::TimeSource::Ntp || src == buffer::TimeSource::Gps);
-  o["time_source"] = sourceName(src);
+  putTime(o, r.tWall, r.timeSource, r.bootId, r.tMonoS, offsetIfUndated);
 
   o["n"] = r.n;
   if (r.windowS > 0) o["window_s"] = r.windowS;
@@ -242,15 +243,70 @@ uint32_t undatedOffset() {
   return nowWall > nowMono ? nowWall - nowMono : 0;
 }
 
-// Publishes a batch of records as one array. Returns the packet id, or 0.
-uint16_t publishRecords(const buffer::Record *recs, size_t count) {
-  if (count == 0) return 0;
+float rounded(float v, float scale) { return roundf(v * scale) / scale; }
 
-  JsonDocument doc;
-  JsonArray arr = doc.to<JsonArray>();
-  const uint32_t offset = undatedOffset();
-  for (size_t i = 0; i < count; i++) putRecord(arr, recs[i], offset);
+// One event as one JSON object: the envelope every record carries, then what
+// its kind says. See A-011 section 3.
+void putEvent(JsonArray &arr, const events::Event &e, uint32_t offsetIfUndated) {
+  using events::Kind;
+  using events::Sensor;
 
+  JsonObject o = arr.add<JsonObject>();
+  putTime(o, e.tWall, e.timeSource, e.bootId, e.tMonoS, offsetIfUndated);
+  o["boot_id"] = e.bootId;
+  o["seq"] = e.seq;
+  o["uptime_s"] = e.tMonoS;
+  if (events::dropped() > 0) o["dropped"] = events::dropped();
+
+  switch (e.kind) {
+    case Kind::Boot: {
+      o["kind"] = "boot";
+      o["reset_reason"] = events::resetReasonName(e.subject);
+      // The build is this firmware's. A boot event still waiting from before
+      // an update would name the wrong one, so it names none.
+      if (e.bootId == telemetry::bootId()) o["build"] = build_info::stamp();
+      JsonArray sensors = o["sensors"].to<JsonArray>();
+      for (uint8_t i = 0; i < (uint8_t)Sensor::Count; i++) {
+        if (e.count & (1u << i)) sensors.add(events::sensorName((Sensor)i));
+      }
+      break;
+    }
+    case Kind::SensorLost:
+      o["kind"] = "sensor_lost";
+      o["sensor"] = events::sensorName((Sensor)e.subject);
+      break;
+    case Kind::SensorBack:
+      o["kind"] = "sensor_back";
+      o["sensor"] = events::sensorName((Sensor)e.subject);
+      break;
+    case Kind::Knock: {
+      o["kind"] = "knock";
+      JsonArray axes = o["axes"].to<JsonArray>();
+      if (e.detail & events::AXIS_FORE_AND_AFT) axes.add("fore-and-aft");
+      if (e.detail & events::AXIS_ATHWARTSHIPS) axes.add("athwartships");
+      if (e.detail & events::AXIS_VERTICAL) axes.add("vertical");
+      o["g"] = rounded(e.value, 100.0f);
+      o["held"] = e.count;
+      break;
+    }
+    case Kind::Alarm:
+      o["kind"] = "alarm";
+      o["alarm"] = events::alarmName((events::Alarm)e.subject);
+      o["state"] = e.raised ? "raised" : "cleared";
+      o["severity"] = e.severity == events::Severity::Warning ? "warning" : "alarm";
+      if ((Sensor)e.detail != Sensor::None) o["sensor"] = events::sensorName((Sensor)e.detail);
+      o["value"] = rounded(e.value, 10.0f);
+      o["limit"] = rounded(e.limit, 10.0f);
+      break;
+    case Kind::Ack:
+      o["kind"] = "ack";
+      break;
+  }
+}
+
+// Serialises a document and publishes it at QoS 1. Returns the packet id, or
+// 0 if it did not go out.
+uint16_t publishJson(const String &topic, JsonDocument &doc, size_t count) {
   const size_t need = measureJson(doc) + 1;
   // measureJson is the length the document *wants*. Serialising into something
   // shorter truncates silently and publishes invalid JSON, which looks like a
@@ -262,21 +318,43 @@ uint16_t publishRecords(const buffer::Record *recs, size_t count) {
   }
   const size_t n = serializeJson(doc, payload, need);
 
-  const uint16_t id = mqtt->publish(topicTelemetry.c_str(), QOS_TELEMETRY, /*retain=*/false,
+  const uint16_t id = mqtt->publish(topic.c_str(), QOS_TELEMETRY, /*retain=*/false,
                                    reinterpret_cast<const uint8_t *>(payload), n);
   if (id == 0) {
-    Serial.printf("[mqtt] publish rejected, %u records, %u bytes\n", (unsigned)count, (unsigned)n);
+    Serial.printf("[mqtt] publish rejected, %s, %u in it, %u bytes\n", topic.c_str(),
+                  (unsigned)count, (unsigned)n);
   } else {
     pendingAdd(id);
     if (count == 1) {
-      Serial.printf("[mqtt] %s %s\n", topicTelemetry.c_str(), payload);
+      Serial.printf("[mqtt] %s %s\n", topic.c_str(), payload);
     } else {
-      Serial.printf("[mqtt] %s %u records, %u bytes\n", topicTelemetry.c_str(), (unsigned)count,
+      Serial.printf("[mqtt] %s %u in one message, %u bytes\n", topic.c_str(), (unsigned)count,
                     (unsigned)n);
     }
   }
   free(payload);
   return id;
+}
+
+// Publishes a batch of records as one array. Returns the packet id, or 0.
+uint16_t publishRecords(const buffer::Record *recs, size_t count) {
+  if (count == 0) return 0;
+
+  JsonDocument doc;
+  JsonArray arr = doc.to<JsonArray>();
+  const uint32_t offset = undatedOffset();
+  for (size_t i = 0; i < count; i++) putRecord(arr, recs[i], offset);
+  return publishJson(topicTelemetry, doc, count);
+}
+
+uint16_t publishEvents(const events::Event *evs, size_t count) {
+  if (count == 0) return 0;
+
+  JsonDocument doc;
+  JsonArray arr = doc.to<JsonArray>();
+  const uint32_t offset = undatedOffset();
+  for (size_t i = 0; i < count; i++) putEvent(arr, evs[i], offset);
+  return publishJson(topicEvents, doc, count);
 }
 
 // The live reading: what the boat is doing now, as a batch of one.
@@ -304,6 +382,29 @@ void drainStep() {
 
   batchPacket = id;
   batchCount = got;
+}
+
+// The waiting events, a batch at a time - the same discipline as the backlog:
+// they leave the queue in onPublished, not here.
+void drainEvents() {
+  if (eventPacket != 0) return;
+  if (events::pending() == 0) return;
+
+  static events::Event evs[EVENT_BATCH];
+  size_t got = 0;
+  const size_t slots = events::peek(evs, EVENT_BATCH, got);
+  if (slots == 0) return;
+  if (got == 0) {
+    // Nothing in those slots decodes. Released, or they would be read forever.
+    events::commit(slots);
+    return;
+  }
+
+  const uint16_t id = publishEvents(evs, got);
+  if (id == 0) return;
+
+  eventPacket = id;
+  eventSlots = slots;
 }
 
 void onConnected(bool sessionPresent) {
@@ -346,6 +447,8 @@ void onDisconnected(espMqttClientTypes::DisconnectReason reason) {
   pendingClear();
   batchPacket = 0;
   batchCount = 0;
+  eventPacket = 0;
+  eventSlots = 0;
 
   Serial.printf("[mqtt] disconnected: %s (%s)\n", status,
                 espMqttClientTypes::disconnectReasonToString(reason));
@@ -353,6 +456,13 @@ void onDisconnected(espMqttClientTypes::DisconnectReason reason) {
 
 void onPublished(uint16_t packetId) {
   pendingAck(packetId);
+
+  if (packetId == eventPacket) {
+    events::commit(eventSlots);
+    eventPacket = 0;
+    eventSlots = 0;
+    return;
+  }
 
   if (packetId != batchPacket) return;
 
@@ -488,7 +598,11 @@ void loop() {
     publishSpot();
   }
 
-  drainStep();
+  // Events before the backlog. A frost alarm queued behind three days of
+  // stored cabin temperatures would arrive when it no longer mattered, so the
+  // stored windows wait until no event does.
+  drainEvents();
+  if (eventPacket == 0 && events::pending() == 0) drainStep();
 }
 
 bool connected() { return mqtt->connected(); }
