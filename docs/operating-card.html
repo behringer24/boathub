@@ -11,7 +11,7 @@
   headers and footers, and keep it with the box.
 
   The design behind each point is in docs/design/: A-004 (Wi-Fi, portal, BOOT
-  button), A-007 (buffer), A-009 (IMU), A-010 (barometer).
+  button), A-007 (buffer), A-009 (IMU), A-010 (barometer), A-012 (alarms).
 -->
 <style>
   :root {
@@ -85,7 +85,7 @@ matters as much as the colour.</p>
   <tr><td><span class="dot" style="background:#e3b30f"></span>yellow, one blink a second</td><td>looking for the marina Wi-Fi</td><td>wait; if it stays, check network name and password on the configuration page</td></tr>
   <tr><td><span class="dot" style="background:#e3b30f"></span>yellow, double blink</td><td>Wi-Fi is up, the server does not answer</td><td>nothing urgent - measurements are stored and sent later</td></tr>
   <tr><td><span class="dot" style="background:#2a62d8"></span>blue, slow blink</td><td>no marina Wi-Fi set up yet; only <b>BOOT-NETZ</b> is there</td><td>open the configuration page</td></tr>
-  <tr><td><span class="dot" style="background:#d62a2a"></span>red, fast blink</td><td>an alarm</td><td>short press on <b>BOOT</b> acknowledges it</td></tr>
+  <tr><td><span class="dot" style="background:#d62a2a"></span>red, fast blink</td><td>an alarm: frost, or the fridge too warm</td><td>short press on <b>BOOT</b> acknowledges it; it stays raised on the server until its cause clears</td></tr>
   <tr><td><span class="dot" style="background:#c23ad1"></span>magenta, fast</td><td>BOOT is being held - something is about to happen</td><td>let go to cancel</td></tr>
   <tr><td><span class="dot" style="background:#fff"></span>white, steady</td><td>the access point password has just been reset</td><td>the board restarts by itself</td></tr>
   <tr><td><span class="dot" style="background:#222"></span>dark</td><td>no power - or the board is waiting for new firmware</td><td>check the supply; press <b>RST</b> once</td></tr>
@@ -142,8 +142,9 @@ differently.</p>
     seconds and BOOT-NETZ drops briefly. An empty password field keeps the stored password.</li>
 </ol>
 <p class="note">The page answers only on BOOT-NETZ, never from the marina network. Its first line
-shows the Wi-Fi state, the board's address in the marina network and whether the server is
-connected. <code>http://192.168.4.1/status</code> gives the same as text.</p>
+shows the Wi-Fi state, the board's address in the marina network, whether the server is
+connected and which alarms are raised. <code>http://192.168.4.1/status</code> gives the same as
+text.</p>
 
 <table>
   <tr><th>Section and field</th><th>Default</th><th>What it does</th></tr>
@@ -165,6 +166,10 @@ connected. <code>http://192.168.4.1/status</code> gives the same as text.</p>
   <tr><td colspan="3"><b>Barometer</b> - the BME680 in the battery bay</td></tr>
   <tr><td>Pressure offset, Pa</td><td>0</td><td>correction against a nearby weather station, station minus board, both reduced to sea level. Under &plusmn;100 Pa normally; more than &plusmn;2000 is refused</td></tr>
   <tr><td>Gas heater</td><td><b>off</b></td><td><b>leave it off in the battery bay</b> - it heats a plate to 320 &deg;C where a failing charger can vent hydrogen</td></tr>
+  <tr><td colspan="3"><b>Alarms</b> - each one can be switched off</td></tr>
+  <tr><td>Frost</td><td>3.0 &deg;C</td><td>10 min at the coldest of cabin, engine, bilge and battery bay</td></tr>
+  <tr><td>Fridge too warm</td><td>10.0 &deg;C</td><td>30 min, armed by 60 min below 6.0 &deg;C - switched off, it alarms once</td></tr>
+  <tr><td>Cabin humidity</td><td>85 %</td><td>6 h - a warning, no red light</td></tr>
   <tr><td colspan="3"><b>This access point</b></td></tr>
   <tr><td>BOOT-NETZ password</td><td><code>boathub-</code>+MAC</td><td>at least 8 characters. Forgotten: hold BOOT for 8 s</td></tr>
 </table>

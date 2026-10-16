@@ -56,6 +56,8 @@ boathub/<boat-id>/status        "online" / "offline", retained, last will
 boathub/<boat-id>/events        alarms and state changes, only when something happens
 ```
 
+What goes on `events`, and how it survives having nowhere to go, is [A-011](A-011-events.md).
+
 `status` is **retained** and carries `offline` as the last will, so a client connecting later
 immediately learns whether the boat is reachable, without waiting for a heartbeat to time out.
 
@@ -145,9 +147,10 @@ values that are actually diagnostic are the other ones - `BROWNOUT`, `TASK_WDT`,
 those can be believed.
 
 `reset_reason` is a property of the boot rather than of the sample, so it is redundant in every
-message. It is here because a payload that stands on its own survives the loss of the first message
-after a restart, which is exactly when a message is most likely to be lost. It belongs in a boot
-event on the `events` topic once anything publishes there, and can leave the telemetry then.
+message. The boot event on the `events` topic carries it where it belongs
+([A-011](A-011-events.md)). It stays here as well because a payload that stands on its own survives
+the loss of the first message after a restart, which is exactly when a message is most likely to
+be lost.
 
 Sensor fields are added to the same object as they come up, matching the schema in
 [../ROADMAP.md](../ROADMAP.md). A field that has no sensor yet is **left out**, never sent as zero -

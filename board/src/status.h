@@ -17,9 +17,8 @@ namespace status {
 void begin();
 void loop();
 
-// Alarm overrides every other state. Nothing raises one yet - the threshold
-// logic is a later package - but the indicator and the acknowledgement are
-// ready for it.
+// Alarm overrides every other state. Set by alarms.cpp while a raised alarm
+// waits to be acknowledged - see A-012.
 void setAlarm(bool on);
 bool alarmActive();
 

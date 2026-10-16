@@ -4,6 +4,7 @@
 #include <WebServer.h>
 #include <WiFi.h>
 
+#include "alarms.h"
 #include "barometer.h"
 #include "config.h"
 #include "imu.h"
@@ -133,6 +134,32 @@ String barometerSummary() {
   return h;
 }
 
+String checkbox(const char *name, bool on, const __FlashStringHelper *label) {
+  String h = "<label><input type=checkbox name=";
+  h += name;
+  h += " value=1";
+  if (on) h += F(" checked");
+  h += "> ";
+  h += label;
+  h += "</label>";
+  return h;
+}
+
+// Tenths of a degree, shown and entered as degrees.
+String celsius(int16_t tenthsC) { return String(tenthsC / 10.0f, 1); }
+
+int16_t tenthsOf(const String &celsiusText) { return (int16_t)lroundf(celsiusText.toFloat() * 10.0f); }
+
+// The alarms as they stand, above their settings.
+String alarmSummary() {
+  String h = "<p class=s>raised: ";
+  h += alarms::raised();
+  h += F(" &middot; fridge ");
+  h += alarms::fridgeState();
+  h += "</p>";
+  return h;
+}
+
 void handleRoot() {
   if (!allowed()) return;
   const Config &c = config::get();
@@ -157,6 +184,8 @@ void handleRoot() {
   h += esc(net::stationIp());
   h += F(" &middot; broker ");
   h += uplink::connected() ? F("connected") : F("not connected");
+  h += F(" &middot; alarms ");
+  h += alarms::raised();
   h += F("</p><form method=post action=/save>");
 
   h += F("<fieldset><legend>Identity</legend>");
@@ -194,6 +223,27 @@ void handleRoot() {
   if (c.bmeGas) h += F(" checked");
   h += F("> Gas heater and gas measurement. Leave it off in the battery bay: it heats a plate "
          "to 320&nbsp;&deg;C where a failing charger can vent hydrogen.</label>");
+  h += F("</fieldset><fieldset><legend>Alarms</legend>");
+  h += alarmSummary();
+  h += checkbox("al_frost", c.alarmFrost,
+                F("Frost: the coldest of cabin, engine, bilge and battery bay"));
+  h += field("frost_c", "Frost below, &deg;C", celsius(c.frostC10), "number", "", "step=0.1");
+  h += field("frost_min", "... for minutes (and as long above it again to clear)",
+             String(c.frostMins), "number");
+  h += checkbox("al_fridge", c.alarmFridge,
+                F("Fridge too warm - armed only once it has been cold, so a fridge switched off "
+                  "for an empty boat raises it once at most"));
+  h += field("fr_arm_c", "Armed below, &deg;C (and cleared below it)", celsius(c.fridgeArmC10),
+             "number", "", "step=0.1");
+  h += field("fr_arm_min", "... for minutes", String(c.fridgeArmMins), "number");
+  h += field("fr_warm_c", "Raised above, &deg;C", celsius(c.fridgeWarmC10), "number", "",
+             "step=0.1");
+  h += field("fr_warm_min", "... for minutes", String(c.fridgeWarmMins), "number");
+  h += checkbox("al_rh", c.alarmHumidity,
+                F("Cabin humidity - a warning: an event, no red light"));
+  h += field("rh_warn", "Warn at or above, %RH", String(c.rhWarn), "number");
+  h += field("rh_hours", "... for hours", String(c.rhHours), "number");
+  h += field("rh_clear", "Cleared below, %RH", String(c.rhClear), "number");
   h += F("</fieldset><fieldset><legend>This access point</legend>");
   h += field("ap_pass", "BOOT-NETZ password", "", "password", "unchanged, min. 8 characters");
   h += F("</fieldset><button>Save and restart</button></form>");
@@ -230,6 +280,19 @@ void handleSave() {
   long pressureOffset = in.bmePressureOffsetPa;
   if (server.hasArg("bme_p_off")) pressureOffset = server.arg("bme_p_off").toInt();
 
+  in.alarmFrost = server.hasArg("al_frost");
+  if (server.hasArg("frost_c")) in.frostC10 = tenthsOf(server.arg("frost_c"));
+  if (server.hasArg("frost_min")) in.frostMins = server.arg("frost_min").toInt();
+  in.alarmFridge = server.hasArg("al_fridge");
+  if (server.hasArg("fr_arm_c")) in.fridgeArmC10 = tenthsOf(server.arg("fr_arm_c"));
+  if (server.hasArg("fr_arm_min")) in.fridgeArmMins = server.arg("fr_arm_min").toInt();
+  if (server.hasArg("fr_warm_c")) in.fridgeWarmC10 = tenthsOf(server.arg("fr_warm_c"));
+  if (server.hasArg("fr_warm_min")) in.fridgeWarmMins = server.arg("fr_warm_min").toInt();
+  in.alarmHumidity = server.hasArg("al_rh");
+  if (server.hasArg("rh_warn")) in.rhWarn = server.arg("rh_warn").toInt();
+  if (server.hasArg("rh_hours")) in.rhHours = server.arg("rh_hours").toInt();
+  if (server.hasArg("rh_clear")) in.rhClear = server.arg("rh_clear").toInt();
+
   in.wifiPass = server.arg("wifi_pass");
   in.mqttPass = server.arg("mqtt_pass");
   in.apPass = server.arg("ap_pass");
@@ -262,6 +325,34 @@ void handleSave() {
     return;
   }
   in.bmePressureOffsetPa = (int16_t)pressureOffset;
+
+  // Ranges are clamped, like every other number here.
+  in.frostC10 = constrain(in.frostC10, -100, 100);
+  in.fridgeArmC10 = constrain(in.fridgeArmC10, 0, 150);
+  in.fridgeWarmC10 = constrain(in.fridgeWarmC10, 10, 250);
+  in.frostMins = constrain(in.frostMins, 1, 720);
+  in.fridgeArmMins = constrain(in.fridgeArmMins, 1, 720);
+  in.fridgeWarmMins = constrain(in.fridgeWarmMins, 1, 720);
+  in.rhWarn = constrain(in.rhWarn, 50, 99);
+  in.rhClear = constrain(in.rhClear, 30, 98);
+  in.rhHours = constrain(in.rhHours, 1, 72);
+
+  // Settings that contradict each other are refused rather than corrected: a
+  // guess at which of the two was meant would be an alarm nobody set. Checked
+  // on the clamped values, which are the ones that would be stored.
+  if (in.fridgeWarmC10 <= in.fridgeArmC10) {
+    server.send(400, "text/html",
+                F("<!doctype html><meta charset=utf-8><p>The fridge alarm has to be raised above "
+                  "the temperature that arms it. <a href=/>Back</a>"));
+    return;
+  }
+  if (in.rhClear >= in.rhWarn) {
+    server.send(400, "text/html",
+                F("<!doctype html><meta charset=utf-8><p>The humidity warning has to clear below "
+                  "the level it warns at. <a href=/>Back</a>"));
+    return;
+  }
+
   if (in.mqttPort == 0) in.mqttPort = in.mqttTls ? 8883 : 1883;
   if (in.sampleSecs == 0) in.sampleSecs = 10;
   if (in.pubSecs == 0) in.pubSecs = 300;
@@ -326,6 +417,8 @@ void handleStatus() {
   j += imu::statusText();
   j += "\",\"barometer\":\"";
   j += barometer::statusText();
+  j += "\",\"alarms\":\"";
+  j += alarms::raised();
   j += "\",\"uptime_s\":";
   j += millis() / 1000;
   j += "}";

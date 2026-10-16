@@ -359,7 +359,7 @@ steps of 0.125 g, up to 7.9 g.
 
 The event carries the time, the axes that crossed - named as the boat's, fore-and-aft,
 athwartships or vertical, through the axis setting - and the acceleration read the moment the
-line rises.
+line rises. Its fields, and how it reaches the server, are in [A-011](A-011-events.md).
 
 | | Starting point | |
 |---|---|---|

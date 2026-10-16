@@ -177,7 +177,7 @@ being reachable, which is exactly the situation where you most want to know.
 | yellow | single blink, once a second | credentials known, not associated |
 | yellow | double blink | Wi-Fi up, broker not answering |
 | green | breathing, 3 s cycle | everything works, telemetry is flowing |
-| red | twice a second | alarm |
+| red | twice a second | an alarm waiting to be acknowledged - frost or a warm fridge, [A-012](A-012-alarm-and-threshold-logic.md) |
 
 Two "not finished yet" states share yellow because at a glance the distinction that matters is
 blue / yellow / green. The pattern separates them once you look properly.
@@ -205,7 +205,7 @@ means something else. What follows applies only after boot.
 
 | Press | Effect |
 |-------|--------|
-| short, under 1 s, while an alarm shows | acknowledge it |
+| short, under 1 s, while an alarm shows | acknowledge it - the LED returns to normal and an `ack` event goes out; the alarm itself stays raised until its cause clears ([A-012](A-012-alarm-and-threshold-logic.md)) |
 | short, otherwise | publish a telemetry message immediately |
 | held for 8 s | put the access point password back to its MAC-derived default and restart |
 

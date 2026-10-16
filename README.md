@@ -117,6 +117,9 @@ PSRAM). Always cross-check the silkscreen of the delivered DevKit board before s
 - The shore-power-loss alarm is gated on at least 6 hours of prior charging, so it stays quiet
   underway where running on the battery is normal. See
   [docs/design/B-001-power-supply.md](docs/design/B-001-power-supply.md).
+- **Alarms are judged on the board and acknowledged only at the box**, with the BOOT button. The
+  server stores and shows the events; nothing it sends can silence or clear an alarm. See
+  [docs/design/A-012-alarm-and-threshold-logic.md](docs/design/A-012-alarm-and-threshold-logic.md).
 
 ## Repository layout
 

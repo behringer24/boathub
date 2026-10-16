@@ -82,6 +82,12 @@ void toRecord(const Aggregate &agg, buffer::Record &out);
 // boot's clock offset, so the encoder has to be able to tell them apart.
 uint16_t bootId();
 
+// The clock as a record written now carries it: unix seconds, or 0 when the
+// clock has never been set, and which clock that is. Events are stamped with
+// the same pair, so the two can be laid side by side.
+uint32_t wallNow();
+buffer::TimeSource timeSourceNow();
+
 const char *statusText();
 
 }  // namespace telemetry

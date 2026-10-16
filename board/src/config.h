@@ -58,6 +58,25 @@ struct Config {
   bool bmeGas = false;
   int16_t bmePressureOffsetPa = 0;
 
+  // Alarms. Temperatures in tenths of a degree, so they keep their decimal
+  // in an integer key. Each alarm can be switched off: a boat with no fridge
+  // probe, or one laid up dry, should not live with an alarm it cannot use -
+  // see A-012.
+  bool alarmFrost = true;
+  int16_t frostC10 = 30;     // below 3.0 C at the coldest sensor
+  uint16_t frostMins = 10;   // for this long, and as long again to clear
+
+  bool alarmFridge = true;
+  int16_t fridgeArmC10 = 60;    // armed once below 6.0 C ...
+  uint16_t fridgeArmMins = 60;  // ... for an hour; cleared below it again
+  int16_t fridgeWarmC10 = 100;  // raised above 10.0 C ...
+  uint16_t fridgeWarmMins = 30; // ... for half an hour
+
+  bool alarmHumidity = true;
+  uint16_t rhWarn = 85;    // a warning at or above this %RH ...
+  uint16_t rhHours = 6;    // ... for this long
+  uint16_t rhClear = 80;   // cleared below this
+
   bool hasStation() const { return wifiSsid.length() > 0; }
   bool hasBroker() const { return mqttHost.length() > 0; }
 };

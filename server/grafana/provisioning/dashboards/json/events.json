@@ -1,0 +1,78 @@
+{
+  "uid": "boathub-events",
+  "title": "BoatHub - events",
+  "tags": [
+    "boathub"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "refresh": "1m",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "table",
+      "title": "Active alarms",
+      "description": "Alarms whose latest event is a raise from the board's current boot. A restart forgets every alarm, and one whose condition still holds is raised again once its hold has passed - so a raise from before the last boot is not shown here. Independent of the time range.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH latest_boot AS (SELECT boat_id, max(boot_id) AS boot_id FROM events WHERE boot_id IS NOT NULL GROUP BY boat_id), latest AS (SELECT DISTINCT ON (boat_id, subject) * FROM events WHERE kind = 'alarm' ORDER BY boat_id, subject, boot_id DESC, seq DESC) SELECT l.boat_id AS \"Boat\", l.subject AS \"Alarm\", l.severity AS \"Severity\", l.payload->>'sensor' AS \"Sensor\", (l.payload->>'value')::real AS \"Reading\", (l.payload->>'limit')::real AS \"Limit\", coalesce(l.ts, l.received_at) AS \"Since\" FROM latest l JOIN latest_boot b ON b.boat_id = l.boat_id AND b.boot_id = l.boot_id WHERE l.state = 'raised' ORDER BY \"Since\" DESC"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Events",
+      "description": "Everything the board reported in the selected range, newest first: boots, lost and returning sensors, knocks, alarms and acknowledgements. Time is the board's own; Clock says which clock that was. Event is the whole message as it arrived.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "boathub"
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coalesce(ts, received_at) AS \"Time\", boat_id AS \"Boat\", kind AS \"Kind\", subject AS \"About\", state AS \"State\", severity AS \"Severity\", time_source AS \"Clock\", payload::text AS \"Event\" FROM events WHERE $__timeFilter(coalesce(ts, received_at)) ORDER BY coalesce(ts, received_at) DESC, boot_id DESC, seq DESC LIMIT 500"
+        }
+      ]
+    }
+  ]
+}

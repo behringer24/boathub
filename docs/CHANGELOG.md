@@ -204,6 +204,29 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   `server/README.md`, and the panel reduces the stored station pressure with it in its query: a
   corrected height redraws the whole history and changes nothing stored. A boat without a height
   shows none rather than an unreduced figure. Migration `005-boat-height.sql` adds the table.
+- **Events** on `boathub/<boat-id>/events`, the moment something happens: `boot` with the reset
+  reason, the build and the sensors that answered; `sensor_lost` when a sensor that was answering
+  has had no valid reading for a minute, and `sensor_back`; `knock` with the boat's axes, its size
+  and the knocks the previous hold-off held back; `alarm` and `ack`. Every event goes to a queue of
+  32-byte records on flash first and leaves it only on the broker's PUBACK, so one raised without a
+  connection, or before a restart, is sent late rather than lost. Events go out ahead of the
+  telemetry backlog. Up to 512 wait; beyond that the oldest is dropped and counted in `dropped`.
+  The SHT31's heater cycle is not reported as a lost sensor.
+- **Alarms judged on the board**: `frost` when the coldest of cabin, engine, bilge and battery bay
+  stays below 3 °C for 10 min, cleared at 4 °C; `fridge_warm` above 10 °C for 30 min, armed only
+  after the fridge has been below 6 °C for an hour, so a fridge switched off for an empty boat
+  raises it once at most; and `humidity`, a warning, at 85 %RH for 6 h, cleared below 80 %. A
+  missing reading neither starts nor breaks a hold. An alarm turns the LED red until the BOOT
+  button acknowledges it; a warning does not. Thresholds, holds and a switch per alarm are on the
+  portal under **Alarms**, which refuses a fridge armed above where it alarms and humidity that
+  clears above where it warns. The status line, the portal and `/status` show what is raised.
+- The boot event names the firmware: `tools/build_stamp.py` writes the commit and the build time
+  into a header in the build directory on every build, and only the one file that includes it is
+  compiled again.
+- Ingest stores events with their identity - migration `006-events.sql` adds the columns and a
+  unique index, so a redelivery is turned away - and keeps each one whole in `payload`. A new
+  **BoatHub - events** dashboard shows the alarms active now and every event in the range, and the
+  sensor dashboard draws alarms, knocks and the board's own events as markers on every panel.
 - Heel, pitch and motion in the telemetry: `heel_deg` and `pitch_deg` with min, max and their
   standard deviation within the window, `motion_g` with min and max, and `knocks`, counted straight
   through the hold-off. The spread is there because the extremes are set by a single wake and say

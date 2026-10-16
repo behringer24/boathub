@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "alarms.h"
 #include "config.h"
 #include "status.h"
 #include "uplink.h"
@@ -31,7 +32,7 @@ void shortPress() {
   // it means "send now". One idea, not two: I am here and I am responding to
   // what you are showing me.
   if (status::alarmActive()) {
-    status::setAlarm(false);
+    alarms::acknowledge();
     Serial.println("[button] alarm acknowledged");
     return;
   }

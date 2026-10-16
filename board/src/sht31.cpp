@@ -292,6 +292,8 @@ bool takeFresh(Reading &out) {
 
 bool present() { return seen; }
 
+bool heating() { return phase == Phase::Heating || phase == Phase::Cooling; }
+
 const char *statusText() { return state; }
 
 }  // namespace sht31

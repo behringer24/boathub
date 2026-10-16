@@ -321,6 +321,10 @@ void toRecord(const Aggregate &agg, buffer::Record &out) {
 
 uint16_t bootId() { return bootNumber; }
 
+uint32_t wallNow() { return clockSane() ? (uint32_t)time(nullptr) : 0; }
+
+buffer::TimeSource timeSourceNow() { return timeSource(); }
+
 const char *statusText() { return state; }
 
 }  // namespace telemetry

@@ -205,15 +205,36 @@ CREATE TABLE boat_status (
 
 CREATE INDEX boat_status_boat_time_idx ON boat_status (boat_id, received_at DESC);
 
--- Alarms and state changes. Empty until a version raises them.
+-- What happens on the board, the moment it happens: boots, lost sensors,
+-- knocks, alarms. See docs/design/A-011-events.md.
+--
+-- ts, time_valid and time_source mean what they mean in telemetry. subject is
+-- the sensor or the alarm an event is about; state and severity are an
+-- alarm's. Those are the columns a dashboard filters on - everything else
+-- stays in payload, the event exactly as the board sent it, so a field newer
+-- firmware adds is kept from the first day without a migration.
+--
+-- A few rows a day, so an ordinary table rather than a hypertable - and
+-- therefore the identity can be a unique index here, where telemetry needs a
+-- claim table of its own. Null identities, from nothing this firmware sends,
+-- never conflict.
 CREATE TABLE events (
     received_at timestamptz NOT NULL DEFAULT now(),
     boat_id     text        NOT NULL,
+    ts          timestamptz,
+    time_valid  boolean,
+    time_source text,
+    boot_id     integer,
+    seq         bigint,
     kind        text        NOT NULL,
+    subject     text,
+    state       text,
+    severity    text,
     payload     jsonb
 );
 
 CREATE INDEX events_boat_time_idx ON events (boat_id, received_at DESC);
+CREATE UNIQUE INDEX events_identity_idx ON events (boat_id, boot_id, seq);
 
 -- What the server knows about each boat that the boat itself does not send.
 -- Set by hand: server/README.md has the statement.

@@ -33,8 +33,9 @@ way, when something browns out later, the converter is the suspect and not the f
 | 9 | IMU: heel and pitch under sail, motion and impact at the berth | [A-009](A-009-imu-heel-and-motion.md) |
 | 10 | BME680 on I2C 0x76: barometric pressure for the weather trend, and the battery bay's air | [A-010](A-010-bme680-barometer-and-battery-bay.md) |
 | 11 | Buffer measurements in flash and drain them when a connection exists | [A-007](A-007-store-and-forward.md) |
-| 12 | Alarm and threshold logic for the sensors that exist by then | planned |
-| 13 | Fault handling and watchdog: a dead sensor must not take the network path with it | planned |
+| 12 | Events on their own topic - boot, lost sensors, knocks - stored on flash until sent, and shown on the server | [A-011](A-011-events.md) |
+| 13 | Alarm and threshold logic: frost, a warm fridge, cabin humidity | [A-012](A-012-alarm-and-threshold-logic.md) |
+| 14 | Fault handling and watchdog: a dead sensor must not take the network path with it | planned |
 
 The milestone is a monitor that runs off any USB charger and reports to the server. Not the final
 system - no battery measurement, no 12 V robustness - but a real, testable one.
@@ -98,6 +99,8 @@ In reading order.
 | then | [A-009](A-009-imu-heel-and-motion.md) | IMU: heel, pitch and motion |
 | then | [A-010](A-010-bme680-barometer-and-battery-bay.md) | BME680 barometer and battery bay |
 | then | [A-007](A-007-store-and-forward.md) | Store and forward |
+| then | [A-011](A-011-events.md) | Events |
+| then | [A-012](A-012-alarm-and-threshold-logic.md) | Alarm and threshold logic |
 | last, on the bench | [B-001](B-001-power-supply.md) | Power supply and battery measurement |
 | with it | [B-002](B-002-main-board.md) | Main board: nets and build |
 | stage 2 | [D-001](D-001-seatalk-rx-stage.md) | SeaTalk1 RX stage |
@@ -149,7 +152,6 @@ They take the next free number in their phase when written.
 **Phase A**
 
 - ADS1115 channel allocation and value conditioning
-- Alarm and threshold logic
 - Fault handling and watchdog: decoupling sensor and network failures
 
 **Phase B**
