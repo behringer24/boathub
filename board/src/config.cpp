@@ -90,6 +90,8 @@ void begin() {
   cfg.rhHours = u16("rh_hours", 6);
   cfg.rhClear = u16("rh_clear", 80);
 
+  cfg.ledBreathe = flag("led_breathe", true);
+
   prefs.end();
 }
 
@@ -138,6 +140,7 @@ void save(const Config &incoming) {
   cfg.rhWarn = incoming.rhWarn;
   cfg.rhHours = incoming.rhHours;
   cfg.rhClear = incoming.rhClear;
+  cfg.ledBreathe = incoming.ledBreathe;
 
   // An empty password field means "leave it alone". Without this the form
   // would have to send the stored passwords to the browser just to save an
@@ -182,6 +185,7 @@ void save(const Config &incoming) {
   prefs.putUShort("rh_warn", cfg.rhWarn);
   prefs.putUShort("rh_hours", cfg.rhHours);
   prefs.putUShort("rh_clear", cfg.rhClear);
+  prefs.putBool("led_breathe", cfg.ledBreathe);
   prefs.end();
 }
 

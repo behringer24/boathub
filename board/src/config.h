@@ -77,6 +77,12 @@ struct Config {
   uint16_t rhHours = 6;    // ... for this long
   uint16_t rhClear = 80;   // cleared below this
 
+  // Status LED. Off, the healthy state is dark instead of breathing green - a
+  // cabin at night is darker than any brightness setting. Every other state
+  // still shows, and a short BOOT press brings the breathing back for a few
+  // seconds - see A-004 section 5.
+  bool ledBreathe = true;
+
   bool hasStation() const { return wifiSsid.length() > 0; }
   bool hasBroker() const { return mqttHost.length() > 0; }
 };

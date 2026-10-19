@@ -244,6 +244,11 @@ void handleRoot() {
   h += field("rh_warn", "Warn at or above, %RH", String(c.rhWarn), "number");
   h += field("rh_hours", "... for hours", String(c.rhHours), "number");
   h += field("rh_clear", "Cleared below, %RH", String(c.rhClear), "number");
+  h += F("</fieldset><fieldset><legend>Status LED</legend>");
+  h += checkbox("led_breathe", c.ledBreathe,
+                F("Breathe green while everything works. Off, the LED stays dark instead - "
+                  "faults and alarms still show, and a short press on BOOT shows the green "
+                  "for two breaths"));
   h += F("</fieldset><fieldset><legend>This access point</legend>");
   h += field("ap_pass", "BOOT-NETZ password", "", "password", "unchanged, min. 8 characters");
   h += F("</fieldset><button>Save and restart</button></form>");
@@ -292,6 +297,7 @@ void handleSave() {
   if (server.hasArg("rh_warn")) in.rhWarn = server.arg("rh_warn").toInt();
   if (server.hasArg("rh_hours")) in.rhHours = server.arg("rh_hours").toInt();
   if (server.hasArg("rh_clear")) in.rhClear = server.arg("rh_clear").toInt();
+  in.ledBreathe = server.hasArg("led_breathe");
 
   in.wifiPass = server.arg("wifi_pass");
   in.mqttPass = server.arg("mqtt_pass");

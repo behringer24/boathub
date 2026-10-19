@@ -111,6 +111,7 @@ Preferences namespace `boathub`. Keys stay within the 15-character limit.
 | `mqtt_tls` | TLS to the broker | off |
 | `smpl_secs` | measurement interval in seconds | 10 |
 | `pub_secs` | publish interval in seconds | 300 |
+| `led_breathe` | green breathing while everything works - section 5 | on |
 
 **TLS is a setting rather than a build option** because one firmware has to serve
 both a broker on the bench and a broker across the internet. Turning it on is a
@@ -176,7 +177,7 @@ being reachable, which is exactly the situation where you most want to know.
 | blue | slow single blink | nothing configured - the portal is waiting for you |
 | yellow | single blink, once a second | credentials known, not associated |
 | yellow | double blink | Wi-Fi up, broker not answering |
-| green | breathing, 3 s cycle | everything works, telemetry is flowing |
+| green | breathing, 3 s cycle | everything works, telemetry is flowing - dark instead with the breathing switched off |
 | red | twice a second | an alarm waiting to be acknowledged - frost or a warm fridge, [A-012](A-012-alarm-and-threshold-logic.md) |
 
 Two "not finished yet" states share yellow because at a glance the distinction that matters is
@@ -194,6 +195,20 @@ proves `loop()` is still running.** If the firmware hangs, the pattern freezes, 
 from across the cabin. A static indicator could not tell "healthy" from "crashed with the light
 left on".
 
+### Breathing switched off
+
+Low as it is, the green is too bright in a dark cabin at night, and no brightness setting fixes
+that: what disturbs is a light at all. The configuration page therefore has a checkbox, **Breathe
+green while everything works**, on by default. Off, the healthy state is **dark**. Nothing else
+changes - blue, yellow, red, magenta and white show exactly as in the table, because those are the
+states somebody has to see.
+
+The cost is the argument above: dark is also what a hung board and a board without power look
+like. So **a short press on BOOT shows two breaths of green** - rising, falling, a second dark,
+rising and falling again - counted from the press so the answer comes at once. A board that
+answers is healthy; one that stays dark is not, or has no power. The liveness proof is still
+there, only on request rather than all the time.
+
 Write the table on the inside of the enclosure lid, next to the wire colours. The
 [operating card](../operating-card.html) carries it too, with the buttons, the settings and the
 cable colours, on two pages to print and keep with the box.
@@ -206,7 +221,7 @@ means something else. What follows applies only after boot.
 | Press | Effect |
 |-------|--------|
 | short, under 1 s, while an alarm shows | acknowledge it - the LED returns to normal and an `ack` event goes out; the alarm itself stays raised until its cause clears ([A-012](A-012-alarm-and-threshold-logic.md)) |
-| short, otherwise | publish a telemetry message immediately |
+| short, otherwise | publish a telemetry message immediately - and, with the breathing switched off, show two breaths of green |
 | held for 8 s | put the access point password back to its MAC-derived default and restart |
 
 The short press is one idea rather than two: *I am here, and I am responding to what you are
@@ -245,6 +260,8 @@ a locker.
 - [ ] Wrong password: the board keeps retrying and the portal is still reachable
 - [ ] `GET /status` reports station address and RSSI
 - [ ] The LED is blue with nothing configured, yellow while connecting and green once telemetry flows
+- [ ] With **Breathe green** unticked, the LED is dark once telemetry flows, a short BOOT press
+  shows two breaths of green, and pulling the station network still shows yellow
 - [ ] The same page requested from the station side is refused with 403, and the refusal is logged
 
 ## 8. References

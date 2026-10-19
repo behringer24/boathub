@@ -1,5 +1,6 @@
 #include "status.h"
 
+#include "config.h"
 #include "net.h"
 #include "uplink.h"
 
@@ -18,9 +19,15 @@ const uint8_t LEVEL = 10;
 // protocol that blocks for about 30 us per update - no reason to run it faster.
 const uint32_t FRAME_MS = 20;
 
+// With the breathing switched off, how long a short press shows it: rising,
+// falling, a second dark, rising and falling again - two breaths.
+const uint32_t SHOW_MS = 5000;
+
 bool alarmOn = false;  // not "alarm": POSIX declares alarm() in unistd.h
 bool buttonHeld = false;
 bool buttonFired = false;
+bool showing = false;
+uint32_t shownAt = 0;
 uint32_t lastFrame = 0;
 
 // Only transmit when something actually changed.
@@ -88,6 +95,12 @@ void setButtonFired() {
   lastFrame = 0;  // paint immediately, do not wait for the next frame
 }
 
+void showBreathing() {
+  showing = true;
+  shownAt = millis();
+  lastFrame = 0;
+}
+
 void loop() {
   const uint32_t now = millis();
   if (now - lastFrame < FRAME_MS) return;
@@ -136,7 +149,19 @@ void loop() {
       // Everything works. Green breathing - calm rather than urgent, and
       // still moving, which is what proves the loop is alive rather than
       // merely powered.
-      write(0, breathe(now), 0);
+      if (config::get().ledBreathe) {
+        write(0, breathe(now), 0);
+        return;
+      }
+      // Switched off: dark, unless a short press asked. Counted from the
+      // press and started on the rising ramp, so the answer comes at once
+      // rather than after up to a second of the pause.
+      if (showing && now - shownAt < SHOW_MS) {
+        write(0, breathe(now - shownAt + 1000), 0);
+        return;
+      }
+      showing = false;
+      write(0, 0, 0);
       return;
   }
 }
