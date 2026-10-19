@@ -227,6 +227,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
   unique index, so a redelivery is turned away - and keeps each one whole in `payload`. A new
   **BoatHub - events** dashboard shows the alarms active now and every event in the range, and the
   sensor dashboard draws alarms, knocks and the board's own events as markers on every panel.
+- The green breathing of the status LED can be switched off, for a cabin where it is too bright at
+  night: **Breathe green while everything works** on the configuration portal, NVS key
+  `led_breathe`, on by default. Off, the healthy state is dark and every other state shows as
+  before. A short press on BOOT then shows two breaths of green, so a healthy board can still be
+  told from a hung one.
 - Heel, pitch and motion in the telemetry: `heel_deg` and `pitch_deg` with min, max and their
   standard deviation within the window, `motion_g` with min and max, and `knocks`, counted straight
   through the hold-off. The spread is there because the extremes are set by a single wake and say

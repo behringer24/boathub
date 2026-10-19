@@ -44,7 +44,7 @@
   h3 { font-size: 9.4pt; margin: 6px 0 2px; }
   p { margin: 3px 0; }
   table { width: 100%; border-collapse: collapse; margin: 2px 0 4px; }
-  th, td { text-align: left; vertical-align: top; padding: 2px 5px; border-bottom: 1px solid var(--line); }
+  th, td { text-align: left; vertical-align: top; padding: 1.5px 5px; border-bottom: 1px solid var(--line); }
   th { font-weight: 600; color: var(--muted); font-size: 8.4pt; }
   td:first-child { white-space: nowrap; }
   code, .k { font-family: Consolas, "Cascadia Mono", Menlo, monospace; font-size: 8.6pt; }
@@ -81,14 +81,14 @@
 matters as much as the colour.</p>
 <table>
   <tr><th>LED</th><th>Meaning</th><th>What to do</th></tr>
-  <tr><td><span class="dot" style="background:#2fae48"></span>green, breathing slowly</td><td>everything works: marina Wi-Fi, server, measurements going out</td><td>nothing</td></tr>
+  <tr><td><span class="dot" style="background:#2fae48"></span>green, breathing slowly</td><td>everything works: marina Wi-Fi, server, measurements going out</td><td>nothing. Too bright at night: untick <b>Breathe green</b> on the configuration page</td></tr>
   <tr><td><span class="dot" style="background:#e3b30f"></span>yellow, one blink a second</td><td>looking for the marina Wi-Fi</td><td>wait; if it stays, check network name and password on the configuration page</td></tr>
   <tr><td><span class="dot" style="background:#e3b30f"></span>yellow, double blink</td><td>Wi-Fi is up, the server does not answer</td><td>nothing urgent - measurements are stored and sent later</td></tr>
   <tr><td><span class="dot" style="background:#2a62d8"></span>blue, slow blink</td><td>no marina Wi-Fi set up yet; only <b>BOOT-NETZ</b> is there</td><td>open the configuration page</td></tr>
   <tr><td><span class="dot" style="background:#d62a2a"></span>red, fast blink</td><td>an alarm: frost, or the fridge too warm</td><td>short press on <b>BOOT</b> acknowledges it; it stays raised on the server until its cause clears</td></tr>
   <tr><td><span class="dot" style="background:#c23ad1"></span>magenta, fast</td><td>BOOT is being held - something is about to happen</td><td>let go to cancel</td></tr>
   <tr><td><span class="dot" style="background:#fff"></span>white, steady</td><td>the access point password has just been reset</td><td>the board restarts by itself</td></tr>
-  <tr><td><span class="dot" style="background:#222"></span>dark</td><td>no power - or the board is waiting for new firmware</td><td>check the supply; press <b>RST</b> once</td></tr>
+  <tr><td><span class="dot" style="background:#222"></span>dark</td><td>no power - or the board is waiting for new firmware. With <b>Breathe green</b> unticked, also: everything works</td><td>short press on <b>BOOT</b>: two breaths of green mean all is well. Otherwise check the supply; press <b>RST</b> once</td></tr>
 </table>
 <p><b>The board measures and stores whatever the LED shows.</b> Without Wi-Fi or server, every
 five-minute record goes to its own flash - about 57 days of them - and is sent, oldest first,
@@ -97,7 +97,7 @@ once the connection is back. A current reading always goes first.</p>
 <h2>The two buttons on the DevKit</h2>
 <table>
   <tr><th>Button</th><th>Press</th><th>Effect</th></tr>
-  <tr><td rowspan="3"><b>BOOT</b></td><td>short, under 1 s</td><td>sends a reading to the server <b>now</b> - only while the LED breathes green. While the LED flashes red, it acknowledges the alarm instead</td></tr>
+  <tr><td rowspan="3"><b>BOOT</b></td><td>short, under 1 s</td><td>sends a reading to the server <b>now</b> - only while everything works: LED breathing green, or dark with <b>Breathe green</b> unticked, when it then breathes twice. While the LED flashes red, it acknowledges the alarm instead</td></tr>
   <tr><td>1 to 8 s, then let go</td><td>nothing. The LED blinks magenta from 1 s on, so you can see it building</td></tr>
   <tr><td>held 8 s</td><td>resets the <b>BOOT-NETZ password</b> to its default, LED white, restart. Nothing else changes</td></tr>
   <tr><td><b>RST</b></td><td>short</td><td>restarts the board - the same as a power cycle for the ESP32</td></tr>
@@ -170,6 +170,7 @@ text.</p>
   <tr><td>Frost</td><td>3.0 &deg;C</td><td>10 min at the coldest of cabin, engine, bilge and battery bay</td></tr>
   <tr><td>Fridge too warm</td><td>10.0 &deg;C</td><td>30 min, armed by 60 min below 6.0 &deg;C - switched off, it alarms once</td></tr>
   <tr><td>Cabin humidity</td><td>85 %</td><td>6 h - a warning, no red light</td></tr>
+  <tr><td colspan="3"><b>Status LED</b> - <b>Breathe green</b>, on by default. Unticked, the LED stays dark while everything works</td></tr>
   <tr><td colspan="3"><b>This access point</b></td></tr>
   <tr><td>BOOT-NETZ password</td><td><code>boathub-</code>+MAC</td><td>at least 8 characters. Forgotten: hold BOOT for 8 s</td></tr>
 </table>

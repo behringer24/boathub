@@ -38,6 +38,9 @@ void shortPress() {
   }
   Serial.println("[button] publishing now");
   uplink::publishNow();
+  // With the breathing switched off a healthy board is dark, and so is a hung
+  // one. The press is the question; the answer is green.
+  status::showBreathing();
 }
 
 void longPress() {
