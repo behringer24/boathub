@@ -48,7 +48,7 @@ system - no battery measurement, no 12 V robustness - but a real, testable one.
 | 2 | Battery divider and its calibration factor | [B-001](B-001-power-supply.md), [B-002](B-002-main-board.md) |
 | 3 | Battery state machine and debouncing | [B-001](B-001-power-supply.md) |
 | 4 | Shore-power-loss alarm, gated so it stays quiet underway | [B-001](B-001-power-supply.md) |
-| 5 | Changeover from USB to 12 V - never both at once, and no USB at all while the DevKit sits in a board with the converter fitted | [B-001](B-001-power-supply.md) |
+| 5 | Changeover from USB to 12 V. The DevKit stays in its socket to be flashed, and USB and 12 V may be connected together - which relies on its IN-OUT and USB-OTG solder pads staying open | [B-001](B-001-power-supply.md) |
 | 6 | Bilge level 4-20 mA, optional | planned |
 
 ### Phase C - into the boat

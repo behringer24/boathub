@@ -146,7 +146,7 @@ of the part.
 | | Datasheet | This design |
 |---|---|---|
 | Input capacitance | 27 µF recommended at fast input slew rates and above 18 V in | C3 at 100 µF covers it several times over |
-| **Maximum output capacitance** | **not specified - there is no stated limit** | C4 at 470 µF stays |
+| **Maximum output capacitance** | **not specified - there is no stated limit** | C5 at 470 µF stays |
 | Minimum load | 0 % | nothing to add; it regulates into no load |
 | Switching frequency | 400 kHz | keeps the sense traces away from it, section 6 |
 | Output ripple | 50 mV peak to peak | below the ADS1115's own noise floor on a divided 12 V |
@@ -156,12 +156,18 @@ limit it, and an output bank above the limit makes the current limit trip at pow
 converter never starts - a fault that looks exactly like a dead part.
 
 **One warning from the datasheet is worth carrying into the build:** current flowing *backwards*
-into the output can damage the converter while it is unpowered, and the remedy is a blocking diode
-on the output. That is precisely the USB case - a DevKit fed from USB pushes 5 V onto the rail the
-converter drives, and it does so whether the 12 V side is switched on or not. The changeover rule in
-[A-002](A-002-bench-setup-usb.md) section 8 is therefore not tidiness. **Once U2 is fitted, the
-DevKit is never on USB while it sits in the board**: it comes out of its socket to be flashed. The
-reason is a line in the manufacturer's own document rather than caution.
+into the output can damage the converter while it is unpowered, and RECOM's remedy is a blocking
+diode in series with the output. A DevKit on USB is the obvious source of such a current - and the
+DevKit already carries that diode. Its 5V pin feeds its internal rail through one, so USB cannot
+push current out of the pin into the converter
+([A-001](A-001-devkit-and-carrier.md) section 5).
+
+That holds only while the DevKit's **IN-OUT** solder pad stays open, which makes the pad a safety
+item: it is checked by measurement before U2 is soldered ([B-002](B-002-main-board.md) section 9).
+**Do not add a second diode on the converter's output.** As a Schottky, the DevKit's own costs
+about 0.35 V and leaves its AMS1117 about 4.65 V, against the roughly 4.4 V it needs to hold
+3.3 V - B-002 section 9 measures it. A second diode would drop the regulator below that on every
+transmit burst.
 
 ### The negative side, and where it returns
 
@@ -389,9 +395,11 @@ every threshold in the table, so they must not be compiled in.
 ## 6. Safety
 
 - **12 V is not harmless.** Fuse at the source, supply disconnected while wiring.
-- **No USB while the DevKit sits in a board with U2 fitted**, whether the 12 V side is on or not.
-  USB, the 5 V pin and 3V3 are alternative supply paths, never parallel ones, and the converter is
-  damaged by being driven from its output while it is off. Flash with the DevKit out of its socket.
+- **The DevKit's IN-OUT and USB-OTG solder pads stay open.** The diodes those pads would bypass
+  are what keep USB and the converter from driving each other
+  ([A-001](A-001-devkit-and-carrier.md) section 5). With the pads open, USB and the 12 V side may
+  be connected at the same time, and the DevKit is flashed and debugged in its socket. Never feed
+  5 V into 3V3.
 - Reverse polarity blows the fuse by design - see above. Label the enclosure.
 - The 1 kΩ series resistor into A0 is a safety part, and the fault it guards against is one in the
   divider itself rather than a reversed supply. **Do not omit it, and do not hang it off the node

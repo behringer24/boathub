@@ -22,6 +22,7 @@ under this description vary, so check yours against the table below - section 6 
 | Antenna | **Both** a PCB antenna and a U.FL/IPEX socket, selected by a solder jumper. See section 4. |
 | Regulator | AMS1117-3.3 (SOT-223) |
 | USB | **Two** Type-C ports: one native ESP32-S3 USB/OTG on GPIO19/20, one USB-serial via **CH343P** - which socket is which is in section 5 |
+| Supply inputs | 5V pin and both USB sockets, **each through a diode of its own** - inputs only. Solder pads **IN-OUT** (component side) and **USB-OTG** (underside) ship open and stay open - section 5 |
 | Buttons | RST and BOOT |
 | LEDs | PWR, TX, RX, plus a **WS2812 RGB** LED |
 | Carrier | MRD076A "Terminal Adapter for ESP32-S3", 84.5 x 73.7 mm, all pins on screw terminals |
@@ -229,12 +230,42 @@ nothing, but it is the figure the budget should carry.
 For a permanent installation the PWR LED and the CH343P are wasted current and can be removed, but
 with shore power there is no reason to bother.
 
+### Every supply input has its own diode
+
+The 5V pin is not wired straight to USB. It feeds the DevKit's internal 5 V rail through a diode,
+so power flows into the board from the pin, but USB power never flows out of it. The two USB
+sockets work the same way, each through a diode of its own, so the DevKit puts no power out of
+them either. The three inputs act as one supply: whichever is highest carries the DevKit, and none
+can drive another.
+
+That is what lets the DevKit sit in the main board's socket on USB once the converter is fitted,
+with the 12 V side on or off. Nothing pushes current backwards into the converter's output, which
+RECOM warns can damage it while it is unpowered ([B-001](B-001-power-supply.md) section 3). With
+both connected, the converter's 5 V reaches the rail at about 4.65 V, below the 5 V a computer
+delivers, so the DevKit runs from USB and the converter idles.
+
+- **The IN-OUT solder pad stays open.** Bridging it shorts the diode out, and the 5V pin then
+  carries USB power to whatever is connected to it. The **USB-OTG** pad on the underside stays open
+  as well.
+- **A meter on the 5V pin reads nonsense while the DevKit runs on USB** - anything from under a
+  volt to about 3 V. That is the diode's leakage charging a pin with nothing on it, not a fault.
+  Give the pin a load to see what it does: with **1 kΩ from 5V to GND**, a few millivolts across
+  the resistor means the diode blocks, and about 5 V means the pin is joined straight to USB.
+- **The diode costs a few tenths of a volt on the way in.** A Schottky drops about 0.35 V, which
+  leaves the AMS1117 about 4.65 V from a 5.0 V feed, against the roughly 4.4 V it needs to hold
+  3.3 V. That is enough, and it is also why no further diode belongs in the 5 V path.
+  [B-002](B-002-main-board.md) section 9 measures it once the DevKit runs on 12 V.
+
 ### Flashing
 
 Use the **CH343P port** (the USB-serial one) for flashing; the native USB port occupies GPIO19/20.
-The guide's rule stands for both ports: **external 5 V off while USB is connected.** On the main
-board the converter counts as external 5 V even when its 12 V side is off, so there the DevKit comes
-out of its socket to be flashed ([B-001](B-001-power-supply.md)).
+The guide's rule - external 5 V off while USB is connected - is written for a DevKit whose 5V pin
+is wired straight to USB. On this one every supply input has its own diode (above), so on the main
+board USB and the 12 V side may be connected together, and the DevKit is flashed and debugged in
+its socket.
+
+One thing to know while debugging: with both connected the DevKit runs from USB. A weakness in the
+12 V path - a converter that sags on a transmit burst - does not show until USB is unplugged.
 
 **Which of the two sockets.** Hold the board with the module at the top and both USB-C sockets along
 the bottom edge: the **right-hand socket is the CH343P**, the left-hand one is the native ESP32-S3
@@ -258,6 +289,12 @@ stays silent for good.
 
 - [ ] Read the module silkscreen and confirm it says `ESP32-S3-N16R8`
 - [ ] Locate the U.FL socket and the antenna solder jumper, and record which position it ships in
+- [ ] IN-OUT (component side) and USB-OTG (underside) solder pads both open
+- [ ] **The 5V pin is an input only:** DevKit on USB, 1 kΩ from 5V to GND, a few millivolts at
+      most across it - section 5
+- [ ] **The USB sockets are inputs only:** DevKit fed through its 5V pin alone (on the main board:
+      12 V only), and a USB-powered device - a torch that charges over USB-C will do - plugged into
+      each socket in turn: it does not charge
 - [ ] **Check the carrier terminal order against section 3** - all 22 labels per block, `IO14`
       included. This confirms the silkscreen only; the continuity check below proves the routing
 - [ ] Blink and serial test over the CH343P port

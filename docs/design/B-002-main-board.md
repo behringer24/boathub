@@ -720,18 +720,30 @@ USB, and a bench supply on J9 may be connected at the same time.
       the ADS1115: it is the node the ADS1115 sees
 - [ ] **A current source on J12 reads back:** 4 mA gives 0.4 V at A1, 20 mA gives 2.0 V. This can
       be done long before the sender is bought, and it proves R22 and R15 together
+- [ ] **The DevKit's 5V pin is an input only.** J9 disconnected first, since U2's pad 1 carries
+      the supply. A 1 kΩ resistor pushed into U2's pads 2 and 3, DevKit on USB: a few millivolts
+      across it at most. Without the resistor the meter reads whatever the diode's leakage charges
+      C5 to, which proves nothing. About 5 V means USB reaches the converter's output: find out
+      why before U2 goes in ([A-001](A-001-devkit-and-carrier.md) section 5), and until then the
+      DevKit comes out of its socket whenever it is flashed
 
 ### U2 fitted, on a bench supply
 
-U2 goes in with the DevKit out of its socket, and from then on the DevKit is never on USB while it
-sits in the board ([B-001](B-001-power-supply.md)).
+U2 goes in with the DevKit out of its socket. Afterwards the DevKit stays in its socket to be
+flashed, and USB and the 12 V side may be connected together ([B-001](B-001-power-supply.md)).
 
 - [ ] DevKit out: 12.0 V in gives 5.0 V ±0.15 V at the socket's 5V pin
 - [ ] Supply swept 11 to 15 V: the 5 V rail holds
 - [ ] **Supply reversed, briefly:** the fuse blows. Intended behaviour from
       [B-001](B-001-power-supply.md), worth seeing once on the bench rather than in the boat
-- [ ] DevKit seated, 12 V only: boots and reaches the broker, and the A0 reading tracks the supply
-      linearly from 11 to 15 V
+- [ ] DevKit seated, 12 V only, current limit about 500 mA - a Wi-Fi burst draws over 200 mA at
+      12 V: boots and reaches the broker, and the A0 reading tracks the supply linearly from 11 to
+      15 V. Booting is also the proof that the 5V pin's diode conducts into the
+      DevKit - the half of it the check on USB cannot show
+- [ ] **The DevKit's regulator has its headroom.** DevKit on 12 V with Wi-Fi up: the AMS1117's
+      input - pin 3 of the SOT-223, the right-hand leg with the legs at the bottom - reads at least
+      4.4 V. Its difference to the 5V pin is the DevKit's diode; much more than half a volt means
+      it is not a Schottky, and the 3.3 V rail will sag on every transmit burst
 - [ ] RSSI within a few dB of the breadboard build - a worse figure means the antenna keepout
 - [ ] An hour at 13.6 V; nothing on the board more than hand-warm
 
