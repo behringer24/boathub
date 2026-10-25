@@ -11,7 +11,8 @@
   headers and footers, and keep it with the box.
 
   The design behind each point is in docs/design/: A-004 (Wi-Fi, portal, BOOT
-  button), A-007 (buffer), A-009 (IMU), A-010 (barometer), A-012 (alarms).
+  button), A-007 (buffer), A-009 (IMU), A-010 (barometer), A-012 (alarms),
+  B-001 (battery), B-003 (bilge level).
 -->
 <style>
   :root {
@@ -166,6 +167,7 @@ text.</p>
   <tr><td colspan="3"><b>Barometer</b> - the BME680 in the battery bay</td></tr>
   <tr><td>Pressure offset, Pa</td><td>0</td><td>correction against a nearby weather station, station minus board, both reduced to sea level. Under &plusmn;100 Pa normally; more than &plusmn;2000 is refused</td></tr>
   <tr><td>Gas heater</td><td><b>off</b></td><td><b>leave it off in the battery bay</b> - it heats a plate to 320 &deg;C where a failing charger can vent hydrogen</td></tr>
+  <tr><td colspan="3"><b>Battery and bilge</b> - divider factor 11.000: the multimeter at the battery over the A0 voltage shown. Bilge range 100 cm, the level at 20 mA; offset 0 mm, the sender's height above the floor</td></tr>
   <tr><td colspan="3"><b>Alarms</b> - each one can be switched off</td></tr>
   <tr><td>Frost</td><td>3.0 &deg;C</td><td>10 min at the coldest of cabin, engine, bilge and battery bay</td></tr>
   <tr><td>Fridge too warm</td><td>10.0 &deg;C</td><td>30 min, armed by 60 min below 6.0 &deg;C - switched off, it alarms once</td></tr>
@@ -206,6 +208,7 @@ sensor settles. Heel and pitch are not reported at all until this has been done 
   <span>Marina Wi-Fi</span><span></span>
   <span>Server, port</span><span></span>
   <span>Pressure offset</span><span></span>
+  <span>Battery factor</span><span></span>
   <span>Levelled on</span><span></span>
 </div>
 <p class="note" style="margin-top:8px">The default BOOT-NETZ password is <code>boathub-</code> and

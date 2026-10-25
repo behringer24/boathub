@@ -58,6 +58,17 @@ struct Config {
   bool bmeGas = false;
   int16_t bmePressureOffsetPa = 0;
 
+  // The battery divider's factor in thousandths: battery voltage over the
+  // voltage at A0. Nominally 11.000; the calibration against a multimeter
+  // replaces it - see B-001 section 7.
+  uint16_t batCalMilli = 11000;
+
+  // The bilge sender: its range, the level at 20 mA, and an offset added to
+  // every reading - the sensing face's height above the bilge floor, or a
+  // correction of its zero. See B-003.
+  uint16_t bilgeFullCm = 100;
+  int16_t bilgeOffsetMm = 0;
+
   // Alarms. Temperatures in tenths of a degree, so they keep their decimal
   // in an integer key. Each alarm can be switched off: a boat with no fridge
   // probe, or one laid up dry, should not live with an alarm it cannot use -

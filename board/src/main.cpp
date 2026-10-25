@@ -10,6 +10,7 @@
 #include <Arduino.h>
 
 #include "alarms.h"
+#include "analog.h"
 #include "barometer.h"
 #include "buffer.h"
 #include "button.h"
@@ -91,6 +92,7 @@ void setup() {
   ds18b20::begin();
   imu::begin();
   barometer::begin();
+  analog::begin();
   telemetry::begin();
   // After the buffer, which mounts the filesystem, and after telemetry, which
   // numbers the boot that every event carries. The boot event goes out once
@@ -113,6 +115,7 @@ void loop() {
   ds18b20::loop();
   imu::loop();
   barometer::loop();
+  analog::loop();
   telemetry::loop();
   watch::loop();
   alarms::loop();
@@ -163,12 +166,21 @@ void loop() {
       snprintf(bay, sizeof(bay), "%.1fhPa bay %.1fC %.0f%%", baro.pressureHpa, baro.tempC, baro.rh);
     }
 
-    Serial.printf("[status] wifi %s %s | broker %s | %s (%s) | %s | %s (%s) | %s (%s) | alarms %s | "
-                  "heap %lu\n",
+    // The battery whenever the converter answers; the bilge only with a
+    // sender on the loop, so "--" there is the normal state without one.
+    const analog::Battery bat = analog::latestBattery();
+    char battery[16] = "bat --";
+    if (bat.valid) snprintf(battery, sizeof(battery), "bat %.2fV", bat.volts);
+    const analog::Bilge level = analog::latestBilge();
+    char bilge[24] = "bilge --";
+    if (level.valid) snprintf(bilge, sizeof(bilge), "bilge %.1fcm", level.levelCm);
+
+    Serial.printf("[status] wifi %s %s | broker %s | %s (%s) | %s | %s (%s) | %s (%s) | %s %s (%s) | "
+                  "alarms %s | heap %lu\n",
                   net::stateName(), net::stationIp().c_str(), uplink::statusText(), cabin,
                   sht31::statusText(), probes, motion, imu::statusText(), bay,
-                  barometer::statusText(), alarms::raised().c_str(),
-                  (unsigned long)ESP.getFreeHeap());
+                  barometer::statusText(), battery, bilge, analog::statusText(),
+                  alarms::raised().c_str(), (unsigned long)ESP.getFreeHeap());
   }
 
   delay(1);  // hand the core back to FreeRTOS

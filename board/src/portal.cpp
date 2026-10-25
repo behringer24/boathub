@@ -5,6 +5,7 @@
 #include <WiFi.h>
 
 #include "alarms.h"
+#include "analog.h"
 #include "barometer.h"
 #include "config.h"
 #include "imu.h"
@@ -134,6 +135,33 @@ String barometerSummary() {
   return h;
 }
 
+// The converter: the battery with the voltage at A0 that a calibration divides
+// by, and the loop current, which says "no sender" as plainly as it gives a
+// level.
+String analogSummary() {
+  String h = "<p class=s>";
+  h += analog::statusText();
+  const analog::Battery b = analog::latestBattery();
+  if (b.valid) {
+    char buf[64];
+    snprintf(buf, sizeof(buf), " &middot; battery %.2f V, A0 %.4f V", b.volts, b.inputV);
+    h += buf;
+  }
+  float mA = 0.0f;
+  if (analog::loopCurrent(mA)) {
+    char buf[64];
+    const analog::Bilge l = analog::latestBilge();
+    if (l.valid) {
+      snprintf(buf, sizeof(buf), " &middot; bilge %.1f cm at %.2f mA", l.levelCm, mA);
+    } else {
+      snprintf(buf, sizeof(buf), " &middot; bilge: no sender, %.2f mA", mA);
+    }
+    h += buf;
+  }
+  h += "</p>";
+  return h;
+}
+
 String checkbox(const char *name, bool on, const __FlashStringHelper *label) {
   String h = "<label><input type=checkbox name=";
   h += name;
@@ -223,6 +251,14 @@ void handleRoot() {
   if (c.bmeGas) h += F(" checked");
   h += F("> Gas heater and gas measurement. Leave it off in the battery bay: it heats a plate "
          "to 320&nbsp;&deg;C where a failing charger can vent hydrogen.</label>");
+  h += F("</fieldset><fieldset><legend>Battery and bilge</legend>");
+  h += analogSummary();
+  h += field("bat_cal", "Battery divider factor: multimeter reading over the A0 voltage above",
+             String(c.batCalMilli / 1000.0f, 3), "number", "", "step=0.001");
+  h += field("bilge_fs", "Bilge sender range, cm (the level at 20 mA)", String(c.bilgeFullCm),
+             "number");
+  h += field("bilge_off", "Bilge offset, mm (the sender's height above the bilge floor)",
+             String(c.bilgeOffsetMm), "number", "", "step=1");
   h += F("</fieldset><fieldset><legend>Alarms</legend>");
   h += alarmSummary();
   h += checkbox("al_frost", c.alarmFrost,
@@ -284,6 +320,12 @@ void handleSave() {
   in.bmeGas = server.hasArg("bme_gas");
   long pressureOffset = in.bmePressureOffsetPa;
   if (server.hasArg("bme_p_off")) pressureOffset = server.arg("bme_p_off").toInt();
+  long batCal = in.batCalMilli;
+  if (server.hasArg("bat_cal")) batCal = lroundf(server.arg("bat_cal").toFloat() * 1000.0f);
+  long bilgeFull = in.bilgeFullCm;
+  if (server.hasArg("bilge_fs")) bilgeFull = server.arg("bilge_fs").toInt();
+  long bilgeOffset = in.bilgeOffsetMm;
+  if (server.hasArg("bilge_off")) bilgeOffset = server.arg("bilge_off").toInt();
 
   in.alarmFrost = server.hasArg("al_frost");
   if (server.hasArg("frost_c")) in.frostC10 = tenthsOf(server.arg("frost_c"));
@@ -331,6 +373,21 @@ void handleSave() {
     return;
   }
   in.bmePressureOffsetPa = (int16_t)pressureOffset;
+
+  // The divider is 100 k over 10 k in 0.1 % parts, and the converter's gain is
+  // within a percent or two. A factor far from 11 is not a calibration - it is
+  // a meter and an A0 voltage that were not read at the same moment.
+  if (batCal < 9000 || batCal > 13000) {
+    server.send(400, "text/html",
+                F("<!doctype html><meta charset=utf-8><p>A battery divider factor outside 9 to 13 "
+                  "is not a calibration of an 11:1 divider. Read the multimeter and the A0 voltage "
+                  "at the same moment and divide again. <a href=/>Back</a>"));
+    return;
+  }
+  in.batCalMilli = (uint16_t)batCal;
+  // Bilge senders come from 0-0.1 m to 0-10 m; the offset is a mounting height.
+  in.bilgeFullCm = (uint16_t)constrain(bilgeFull, 10L, 1000L);
+  in.bilgeOffsetMm = (int16_t)constrain(bilgeOffset, -500L, 500L);
 
   // Ranges are clamped, like every other number here.
   in.frostC10 = constrain(in.frostC10, -100, 100);
@@ -423,6 +480,8 @@ void handleStatus() {
   j += imu::statusText();
   j += "\",\"barometer\":\"";
   j += barometer::statusText();
+  j += "\",\"converter\":\"";
+  j += analog::statusText();
   j += "\",\"alarms\":\"";
   j += alarms::raised();
   j += "\",\"uptime_s\":";

@@ -158,6 +158,23 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ### Added
 
+- **Battery voltage** as `battery_v`, with its minimum and maximum over the window, from ADS1115
+  no. 1 at 0x48, input A0. Every sample interval converts A0 single-shot at ±2.048 V - fixed in
+  the new register-level driver `ads1115.cpp`, since the calibration factor holds at that gain
+  only - and multiplies by the divider factor `bat_cal`, nominally 11.000, set on the
+  configuration page beside the A0 voltage it divides. Every reading is sent while the converter
+  answers, 0 V included: a board on USB with the battery switched off reads 0 V, and that is
+  worth seeing. A converter that stops answering is looked for again every interval; the
+  readings drop out, the rest of the board carries on, and `sensor_lost` names `battery`.
+- **Bilge level** as `bilge_level_cm` from a 4-20 mA sender on J12, input A1, converted right
+  after the battery. Below 3.6 mA - no sender, a cut cable, no loop supply - **nothing is sent**,
+  so a boat without the sender never reports a dry bilge it has not measured. Above 20 mA reads as
+  full scale. The sender's range (`bilge_fs`, 100 cm) and an offset for its mounting height
+  (`bilge_off`, mm) are set on the configuration page, which shows the loop current beside the
+  level. A sender that disappears after delivering readings raises `sensor_lost` with
+  `bilge_level`.
+- The configuration page has a **Battery and bilge** section for the three values, and
+  `/status` names the converter's state. The serial status line shows both readings.
 - PlatformIO project for the ESP32-S3 N16R8 in `board/`. PlatformIO ships no board definition for
   this module, so the project builds on `esp32-s3-devkitc-1` - the N8 variant without PSRAM - with
   explicit overrides for 16 MB flash and octal PSRAM.

@@ -282,6 +282,23 @@ all.
 
 ## 4. Software
 
+### The measurement
+
+The module `analog` in `board/src/` reads the converter, through the register-level driver
+`ads1115`. Every sample interval it starts a single-shot conversion of A0 at **±2.048 V** and
+128 samples per second, collects it about 10 ms later, and then does the same for the bilge
+channel A1 ([B-003](B-003-bilge-level.md)). Nothing waits for a conversion, and the converter
+sleeps in between.
+
+The gain is a constant in the driver and nowhere else. The calibration factor absorbs the
+converter's gain error at that one setting, so a different gain would make it silently wrong.
+
+**Every reading goes into telemetry while the converter answers - 0 V included.** A board running
+on USB with the battery switched off at the isolator, or its supply fuse blown, reads 0 V, and that
+is worth seeing on the server. The window carries the mean with its minimum and maximum, so the
+dips described below show in the record without being smoothed away. Plausibility is the state
+machine's business, not the telemetry's: it ignores what is outside 5-18 V (section 5).
+
 ### What the voltage means under a charger
 
 With shore power connected the charger, not the battery, sets the voltage. State of charge is
@@ -377,7 +394,8 @@ reading becomes actionable - the moment you need to decide whether to start the 
 
 All thresholds belong in NVS/Preferences, not in constants: `v_charging_on` (13.1), `v_on_battery`
 (12.8), `v_low` (12.3), `v_critical` (12.0), the debounce windows, the **charging-history window**
-(6 h), and `v_calibration_factor` (nominal 11.0).
+(6 h), and the divider factor `bat_cal` (nominal 11.000, stored in thousandths and set on the
+configuration page).
 
 Battery chemistry is a configuration item too. Swapping the AGM bank for flooded or lithium moves
 every threshold in the table, so they must not be compiled in.
@@ -386,8 +404,8 @@ every threshold in the table, so they must not be compiled in.
 
 | Case | Detection | Reaction |
 |------|-----------|----------|
-| ADS1115 does not answer | I2C NACK | telemetry field absent, event once; sensors and network stay up (do not reset the ESP) |
-| Reading implausible (<5 V or >18 V) | range check | discard sample, do not feed the state machine |
+| ADS1115 does not answer | I2C NACK | telemetry field absent, `sensor_lost` with `battery` once; looked for again every interval; sensors and network stay up (do not reset the ESP) |
+| Reading implausible (<5 V or >18 V) | range check | sent in telemetry as measured - 0 V is a battery switched off while the board runs on USB - but never fed to the state machine |
 | Charger fails, shore power fine | `ON_BATTERY` while ambient conditions are normal | same alarm - from the boat's point of view they are the same event |
 | Fuse blown | total loss of power, server sees the last will | `boathub/<boat-id>/status = offline` after the keepalive expires |
 | DC/DC fails | same as above | last will |
@@ -439,11 +457,13 @@ every threshold in the table, so they must not be compiled in.
 
 ### Calibration
 
-1. Set the PGA to ±2.048 V. **Fix it before calibrating and never change it**.
-2. Measure the battery at the terminals with the multimeter.
-3. Read the raw ADC value.
-4. `v_calibration_factor = V_multimeter / V_adc_raw`, nominally 11.0.
-5. Store in NVS. Re-check after the first week and after any wiring change.
+1. The PGA is ±2.048 V, fixed in the driver. **It never changes after a calibration**.
+2. Open the configuration page. Its **Battery and bilge** section shows the battery and the
+   voltage at A0 it was computed from.
+3. Measure the battery at the terminals with the multimeter, at the moment the page is loaded.
+4. `bat_cal = V_multimeter / V_A0`, nominally 11.000. Enter it on the page with three decimals;
+   anything outside 9 to 13 is refused as a misreading rather than a calibration.
+5. Save. Re-check after the first week and after any wiring change.
 
 Calibrate with shore power **off**, so the reading is not sitting on a charger's ripple.
 

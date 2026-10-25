@@ -62,6 +62,11 @@ struct Aggregate {
   Channel bayRh;
   Channel bayGas;
 
+  // The ADS1115: the battery at A0, and the bilge level at A1 - only while a
+  // sender drives the loop. See B-001 and B-003.
+  Channel battery;
+  Channel bilgeLevel;
+
   // Further channels land here as the sensors arrive.
 };
 
