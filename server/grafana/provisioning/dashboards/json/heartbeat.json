@@ -4,7 +4,7 @@
   "tags": [
     "boathub"
   ],
-  "timezone": "utc",
+  "timezone": "browser",
   "schemaVersion": 39,
   "editable": true,
   "refresh": "30s",

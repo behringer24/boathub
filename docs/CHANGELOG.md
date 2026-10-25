@@ -18,6 +18,9 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ### Changed
 
+- The three dashboards show time in the **browser's time zone** instead of UTC, so a reading
+  taken at two in the afternoon on board shows as 14:00. The database still stores UTC.
+
 - The **Temperatures** panel on the sensor dashboard shows every temperature the boat measures:
   the cabin from the SHT31 and the battery bay from the BME680 beside the three probes. They
   share one axis, so a warm battery bay can be read against the cabin and the engine bay at a
