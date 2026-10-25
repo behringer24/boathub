@@ -102,6 +102,8 @@ telemetry uses:
 | `bay` | BME680 |
 | `imu` | LSM6DSOX |
 | `engine`, `bilge`, `fridge` | the three DS18B20 probes |
+| `battery` | ADS1115 A0, the battery divider ([B-001](B-001-power-supply.md)) |
+| `bilge_level` | ADS1115 A1, the 4-20 mA sender - fitted only once a sender has delivered a reading ([B-003](B-003-bilge-level.md)) |
 
 A sensor counts as lost when it **had** answered this boot and has then had no valid reading for
 **60 s**. That minute is counted from the moment its driver stopped offering a reading - each

@@ -77,6 +77,10 @@ void begin() {
   cfg.bmeGas = flag("bme_gas", false);
   cfg.bmePressureOffsetPa = i16("bme_p_off", 0);
 
+  cfg.batCalMilli = u16("bat_cal", 11000);
+  cfg.bilgeFullCm = u16("bilge_fs", 100);
+  cfg.bilgeOffsetMm = i16("bilge_off", 0);
+
   cfg.alarmFrost = flag("al_frost", true);
   cfg.frostC10 = i16("frost_c10", 30);
   cfg.frostMins = u16("frost_min", 10);
@@ -128,6 +132,9 @@ void save(const Config &incoming) {
   cfg.imuHoldoffSecs = incoming.imuHoldoffSecs;
   cfg.bmeGas = incoming.bmeGas;
   cfg.bmePressureOffsetPa = incoming.bmePressureOffsetPa;
+  cfg.batCalMilli = incoming.batCalMilli;
+  cfg.bilgeFullCm = incoming.bilgeFullCm;
+  cfg.bilgeOffsetMm = incoming.bilgeOffsetMm;
   cfg.alarmFrost = incoming.alarmFrost;
   cfg.frostC10 = incoming.frostC10;
   cfg.frostMins = incoming.frostMins;
@@ -173,6 +180,9 @@ void save(const Config &incoming) {
   prefs.putUShort("imu_hold", cfg.imuHoldoffSecs);
   prefs.putBool("bme_gas", cfg.bmeGas);
   prefs.putShort("bme_p_off", cfg.bmePressureOffsetPa);
+  prefs.putUShort("bat_cal", cfg.batCalMilli);
+  prefs.putUShort("bilge_fs", cfg.bilgeFullCm);
+  prefs.putShort("bilge_off", cfg.bilgeOffsetMm);
   prefs.putBool("al_frost", cfg.alarmFrost);
   prefs.putShort("frost_c10", cfg.frostC10);
   prefs.putUShort("frost_min", cfg.frostMins);

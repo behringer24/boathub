@@ -25,7 +25,19 @@ enum class Kind : uint8_t {
 };
 
 // Named by where they measure, the same prefixes the telemetry fields use.
-enum class Sensor : uint8_t { Cabin = 0, Bay, Imu, Engine, Bilge, Fridge, Count, None = 0xFF };
+// Bilge is the DS18B20 in the bilge water; BilgeLevel the 4-20 mA sender.
+enum class Sensor : uint8_t {
+  Cabin = 0,
+  Bay,
+  Imu,
+  Engine,
+  Bilge,
+  Fridge,
+  Battery,
+  BilgeLevel,
+  Count,
+  None = 0xFF
+};
 
 enum class Alarm : uint8_t { Frost = 0, FridgeWarm, Humidity, Count };
 

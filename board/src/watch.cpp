@@ -2,6 +2,7 @@
 
 #include <esp_system.h>
 
+#include "analog.h"
 #include "barometer.h"
 #include "ds18b20.h"
 #include "events.h"
@@ -38,6 +39,8 @@ bool fitted(Sensor s) {
     case Sensor::Engine: return ds18b20::present(ds18b20::Engine);
     case Sensor::Bilge: return ds18b20::present(ds18b20::Bilge);
     case Sensor::Fridge: return ds18b20::present(ds18b20::Fridge);
+    case Sensor::Battery: return analog::present();
+    case Sensor::BilgeLevel: return analog::bilgeFitted();
     default: return false;
   }
 }
@@ -50,6 +53,8 @@ bool valid(Sensor s) {
     case Sensor::Engine: return ds18b20::latest(ds18b20::Engine).valid;
     case Sensor::Bilge: return ds18b20::latest(ds18b20::Bilge).valid;
     case Sensor::Fridge: return ds18b20::latest(ds18b20::Fridge).valid;
+    case Sensor::Battery: return analog::latestBattery().valid;
+    case Sensor::BilgeLevel: return analog::latestBilge().valid;
     default: return false;
   }
 }

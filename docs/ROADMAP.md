@@ -21,6 +21,8 @@ to the self-hosted server.
 | SHT31-D on I2C | bus at 100 kHz, address 0x44 |
 | BME680 on I2C, address 0x76 | station pressure for the weather trend, plus the battery bay's air temperature and humidity. Register-level driver in forced mode, no Bosch BSEC; the gas heater stays off unless switched on in NVS, and the pressure offset against a nearby station lives there too, see [design/A-010-bme680-barometer-and-battery-bay.md](design/A-010-bme680-barometer-and-battery-bay.md) |
 | ADS1115 converters on I2C | fix the PGA once and never change it, or an existing calibration silently becomes wrong |
+| Battery voltage on ADS1115 A0 | sent whenever the converter answers, 0 V included; the divider factor lives in NVS and is set on the configuration page, see [design/B-001-power-supply.md](design/B-001-power-supply.md) |
+| Bilge level from a 4-20 mA sender on ADS1115 A1 | absent below 3.6 mA, so the field only exists once a sender is connected; range and offset in NVS, see [design/B-003-bilge-level.md](design/B-003-bilge-level.md) |
 | LSM6DSOX IMU on I2C, interrupt on GPIO2 | heel, pitch and motion in the aggregate, an event when something hits the boat. The filter's time constant, the axis mapping, the zero reference and the knock threshold live in NVS, see [design/A-009-imu-heel-and-motion.md](design/A-009-imu-heel-and-motion.md) |
 | SoftAP `BOOT-NETZ` plus a local configuration web UI | |
 | Station mode, credentials in NVS/Preferences | **no Wi-Fi or server passwords in source** |
@@ -133,6 +135,8 @@ The kinds are `boot`, `sensor_lost`, `sensor_back`, `knock`, `alarm` and `ack`; 
 - Every ADS1115 present answers at its address - 0x48 and 0x49 on the main board, all three of
   the pack on the breadboard
 - Battery voltage matches the multimeter after calibration
+- With no bilge sender connected no `bilge_level_cm` arrives; a current source on J12 reads back
+  as the level it stands for
 - `BOOT-NETZ` appears and a phone reaches the local web UI
 - Marina Wi-Fi connects, and reconnects after an outage
 - The server shows heartbeat and measurements from outside the marina

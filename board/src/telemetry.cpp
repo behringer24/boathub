@@ -5,6 +5,7 @@
 #include <sys/time.h>
 #include <time.h>
 
+#include "analog.h"
 #include "barometer.h"
 #include "buffer.h"
 #include "config.h"
@@ -134,6 +135,11 @@ void collectInto(telemetry::Aggregate &agg) {
 
   barometer::Reading bay;
   if (barometer::takeFresh(bay)) addBay(agg, bay);
+
+  analog::Battery battery;
+  if (analog::takeBattery(battery)) agg.battery.add(battery.volts);
+  analog::Bilge level;
+  if (analog::takeBilge(level)) agg.bilgeLevel.add(level.levelCm);
 }
 
 // The current state rather than a new measurement: a spot message must not
@@ -165,6 +171,11 @@ void snapshotInto(telemetry::Aggregate &agg) {
 
   const barometer::Reading bay = barometer::latest();
   if (bay.valid) addBay(agg, bay);
+
+  const analog::Battery battery = analog::latestBattery();
+  if (battery.valid) agg.battery.add(battery.volts);
+  const analog::Bilge level = analog::latestBilge();
+  if (level.valid) agg.bilgeLevel.add(level.levelCm);
 }
 
 // How many samples to claim for the window as a whole.
@@ -182,7 +193,8 @@ uint16_t countFor(const telemetry::Aggregate &agg) {
   const telemetry::Channel *channels[] = {&agg.cabinTemp, &agg.cabinRh,  &agg.engineTemp,
                                          &agg.bilgeTemp, &agg.fridgeTemp, &agg.heel,
                                          &agg.pitch,     &agg.motion,     &agg.pressure,
-                                         &agg.bayTemp,   &agg.bayRh,      &agg.bayGas};
+                                         &agg.bayTemp,   &agg.bayRh,      &agg.bayGas,
+                                         &agg.battery,   &agg.bilgeLevel};
   for (const telemetry::Channel *c : channels) {
     if (!c->has()) continue;
     if (!any || c->n < lowest) lowest = c->n;
@@ -317,6 +329,9 @@ void toRecord(const Aggregate &agg, buffer::Record &out) {
   store(out.ch[buffer::BayTempC], agg.bayTemp, 100.0f);
   store(out.ch[buffer::BayRh], agg.bayRh, 10.0f);
   store(out.ch[buffer::BayGasKohm], agg.bayGas, 10.0f);
+
+  store(out.ch[buffer::BatteryV], agg.battery, 1000.0f);
+  store(out.ch[buffer::BilgeLevelCm], agg.bilgeLevel, 10.0f);
 }
 
 uint16_t bootId() { return bootNumber; }

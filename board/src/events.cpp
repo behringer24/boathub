@@ -32,7 +32,8 @@ uint32_t nextSeq = 0;
 bool mounted = false;
 char state[40] = "not started";
 
-const char *SENSOR_NAMES[] = {"cabin", "bay", "imu", "engine", "bilge", "fridge"};
+const char *SENSOR_NAMES[] = {"cabin",  "bay",    "imu",     "engine",
+                              "bilge",  "fridge", "battery", "bilge_level"};
 const char *ALARM_NAMES[] = {"frost", "fridge_warm", "humidity"};
 
 void put16(uint8_t *p, uint16_t v) {

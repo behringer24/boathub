@@ -137,11 +137,13 @@ query with the AP's own address so that a phone offers the page by itself. Brows
 | `GET /` | the form, pre-filled with everything except passwords |
 | `POST /save` | validate, store in NVS, restart |
 | `POST /level` | the IMU's **Level now**: records the zero reference, restarts nothing - see [A-009](A-009-imu-heel-and-motion.md) |
-| `GET /status` | JSON: state, station address, RSSI, broker connection, IMU and barometer state, uptime |
+| `GET /status` | JSON: state, station address, RSSI, broker connection, IMU, barometer and converter state, uptime |
 
 The IMU's settings share the `boathub` namespace and the form; they are listed in
 [A-009](A-009-imu-heel-and-motion.md) section 8. So do the BME680's, in
-[A-010](A-010-bme680-barometer-and-battery-bay.md) section 8.
+[A-010](A-010-bme680-barometer-and-battery-bay.md) section 8, the battery divider factor in
+[B-001](B-001-power-supply.md) section 4, and the bilge sender's range and offset in
+[B-003](B-003-bilge-level.md) section 4.
 
 **Passwords are never sent back to the browser.** The form shows an empty field with a placeholder;
 an empty field on save means "keep what is stored", so the page can be used to change the SSID

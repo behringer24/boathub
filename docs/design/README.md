@@ -49,7 +49,7 @@ system - no battery measurement, no 12 V robustness - but a real, testable one.
 | 3 | Battery state machine and debouncing | [B-001](B-001-power-supply.md) |
 | 4 | Shore-power-loss alarm, gated so it stays quiet underway | [B-001](B-001-power-supply.md) |
 | 5 | Changeover from USB to 12 V. The DevKit stays in its socket to be flashed, and USB and 12 V may be connected together - which relies on its IN-OUT and USB-OTG solder pads staying open | [B-001](B-001-power-supply.md) |
-| 6 | Bilge level 4-20 mA, optional | planned |
+| 6 | Bilge level 4-20 mA, optional. The firmware reads it already; it reports nothing until a sender is connected | [B-003](B-003-bilge-level.md) |
 
 ### Phase C - into the boat
 
@@ -103,6 +103,7 @@ In reading order.
 | then | [A-012](A-012-alarm-and-threshold-logic.md) | Alarm and threshold logic |
 | last, on the bench | [B-001](B-001-power-supply.md) | Power supply and battery measurement |
 | with it | [B-002](B-002-main-board.md) | Main board: nets and build |
+| optional | [B-003](B-003-bilge-level.md) | Bilge level, 4-20 mA |
 | stage 2 | [D-001](D-001-seatalk-rx-stage.md) | SeaTalk1 RX stage |
 | then | [D-002](D-002-seatalk-decoding.md) | SeaTalk1 decoding |
 | last | [D-003](D-003-seatalk-tx-stage.md) | SeaTalk1 TX output stage |
@@ -153,10 +154,6 @@ They take the next free number in their phase when written.
 
 - ADS1115 channel allocation and value conditioning
 - Fault handling and watchdog: decoupling sensor and network failures
-
-**Phase B**
-
-- Bilge level 4-20 mA (optional)
 
 **Phase C**
 
