@@ -311,21 +311,24 @@ not the problem".
 
 ### The changeover itself
 
-When phase B is built, the transition needs care:
+When phase B is built, the transition is short:
 
-1. Flash the final firmware **over USB, with the DevKit out of the main board's socket**.
-2. Disconnect USB.
-3. Seat the DevKit, and only then connect the 12 V side.
+1. Flash the final firmware **over USB**.
+2. With everything switched off, seat the DevKit in the main board.
+3. Connect the 12 V side.
 
-**Never both at once.** USB, the 5 V pin and 3V3 are alternative supply paths, not parallel ones.
-This is the single rule most likely to be broken in a moment of impatience, and it is the one that
-costs a board.
+USB may stay connected through all of it. USB and the 5V pin each feed the DevKit through a diode
+of its own, so they can supply it at the same time and neither drives the other
+([A-001](A-001-devkit-and-carrier.md) section 5). On the main board the converter's output is wired
+to the 5V pin, and that pin's diode is what keeps a DevKit on USB from driving the converter
+backwards - which RECOM warns can damage it while it is unpowered ([B-001](B-001-power-supply.md)).
+The protection depends on the DevKit's IN-OUT solder pad staying open, and it is measured before U2
+is soldered: the board is first brought up on USB without the converter - see
+[B-002](B-002-main-board.md) section 9.
 
-On the main board the rule reaches further than it looks. The converter's output is wired to the
-5 V pin, so a DevKit on USB in a board with U2 fitted drives the converter backwards even with the
-12 V side switched off, and RECOM warns that this can damage it ([B-001](B-001-power-supply.md)).
-Before U2 is soldered there is no such path, which is why the board is first brought up on USB -
-see [B-002](B-002-main-board.md) section 9.
+**3V3 is never fed from outside.** It is the regulator's output, not an input with a diode in
+front of it, and 5 V there reaches the module directly. This is the rule most likely to be broken
+in a moment of impatience, and it is the one that costs a board.
 
 ## 9. References
 

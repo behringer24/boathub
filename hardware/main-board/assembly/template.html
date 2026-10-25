@@ -265,7 +265,7 @@ const STEPS = [
       { id: 'k-st', refs: ['J17', 'J9'], part: 'SeaTalk ground isolated', role: 'J17 left pole (Seatalk GND) to J9 −: no continuity while JP2 is open.', kind: 'check' },
     ] },
   { title: 'On USB, before U2', sub: 'DevKit on its own USB · U2 not fitted', solder: false,
-    note: 'Plug modules in and wire terminals with USB unplugged. Until U2 is soldered nothing joins the 12 V side to the 5 V rail, so a bench supply on J9 may be connected at the same time as USB. That stops being true the moment U2 is in.',
+    note: 'Plug modules in and wire terminals with USB unplugged. Until U2 is soldered nothing joins the 12 V side to the 5 V rail, so a bench supply on J9 may be connected at the same time as USB.',
     items: [
       { id: 'm-dk', refs: ['DEVKIT', 'J7', 'J11'], part: 'ESP32-S3 DevKit', role: 'Into J7 and J11.', kind: 'polar',
         dir: 'Antenna up', detail: 'The radio module faces WLAN MODULE UP, the two USB sockets point down over the hatched fields USB 1 and USB 2. Pin 3V3 sits top left in J7, GND top right in J11. Check that neither row is offset by a pin.', fail: 'Turned through 180°, 5 V lands on GND.' },
@@ -276,10 +276,11 @@ const STEPS = [
       { id: 'u-i2c', refs: ['J6', 'J2', 'J4'], part: 'I2C scan', role: 'pio run -d board -e i2cscan -t upload -t monitor. Both lines report their pull-ups; 0x44 (SHT3x) and 0x48 (ADS1115) answer, with the IMU fitted also 0x6A. 0x49 must not answer while J10 is empty.', kind: 'check' },
       { id: 'u-a0', refs: ['J9', 'C2'], part: 'Battery divider', role: 'pio run -d board -e adsread -t upload -t monitor, and a bench supply at 12.0 V on J9 (+ on the left, current limit about 100 mA). A0 reads 1.091 V ±10 mV and follows the supply when it is turned. If it is off, measure at C2, right lead against left: that is the node the ADS1115 sees, and it separates the divider from the ADS1115.', kind: 'check' },
       { id: 'u-a1', refs: ['J12'], part: 'Bilge channel', role: 'If a current source is at hand, on J12: 4 mA reads 0.4 V at A1, 20 mA reads 2.0 V. Without a sender A1 sits at 0, held there by R22.', kind: 'check' },
+      { id: 'u-5in', refs: ['U2'], part: '5V pin input only', role: 'Disconnect J9 first: U2’s square pad carries the supply. Push a 1 kΩ resistor into U2’s middle and right-hand holes and measure across it with the DevKit on USB: a few millivolts at most. Without the resistor the reading means nothing. About 5 V means USB reaches the converter’s output, so check the DevKit’s IN-OUT solder pad is open before U2 goes in.', kind: 'check' },
       { id: 'u-fw', refs: ['DEVKIT'], part: 'Firmware back', role: 'pio run -d board -e boathub -t upload -t monitor. The stored configuration survives.', kind: 'check' },
     ] },
   { title: 'DC/DC converter', sub: '1 part · direction matters', solder: true,
-    note: 'USB off and the DevKit out of its socket before U2 goes in. From here on the DevKit is never on USB while it sits in the board, not even with the 12 V side off: USB would push 5 V backwards into the converter’s output, and RECOM’s datasheet warns that this can damage it while it is unpowered. To flash, take the DevKit out.', warn: true,
+    note: 'USB off and the DevKit out of its socket before U2 goes in. Afterwards the DevKit stays in its socket to be flashed, and USB and the 12 V side may be connected together: the 5V pin check before this step showed that USB cannot push current backwards into the converter’s output, which RECOM’s datasheet warns can damage it while it is unpowered. If that check read about 5 V, take the DevKit out to flash.', warn: true,
     items: [
       { id: 'u2', refs: ['U2'], part: 'RECOM R-78K5.0-1.0', role: 'Turns 12 V into the 5 V for the DevKit. Bottom, left of centre.', kind: 'polar',
         dir: 'Dot down, on the left', detail: 'The face with the dot points to the bottom edge, the dot on the left. Pin 1 (+Vin) then sits in the square pad on the left and pin 3 (+5 V) on the right. The body stands over the area above the pins, as the outline in the silkscreen shows.', fail: 'Reversed, 12 V reaches the output and the converter is lost.' },
@@ -289,7 +290,7 @@ const STEPS = [
       { id: 'p-on', refs: ['J9'], part: '12.0 V on J9, no DevKit', role: 'Current limit about 100 mA. Without the DevKit only a few milliamps flow; if the supply shows more, switch off and look.', kind: 'check' },
       { id: 'p-5', refs: ['J7'], part: '5.0 V at the socket', role: 'J7 pin 21 to pin 22: 5.0 V ±0.15 V.', kind: 'check' },
       { id: 'p-sw', refs: ['U2'], part: '11 to 15 V', role: 'Turn the supply slowly across the range: the 5 V holds.', kind: 'check' },
-      { id: 'p-dk', refs: ['DEVKIT', 'J7', 'J11'], part: 'DevKit back in', role: 'With the supply off, seat the DevKit as before, antenna up. Switch on: it boots from 12 V and the status LED breathes green as it did on USB.', kind: 'check' },
+      { id: 'p-dk', refs: ['DEVKIT', 'J7', 'J11'], part: 'DevKit back in', role: 'With the supply off and the 5 V at the socket gone (C5 holds it for a while), seat the DevKit as before, antenna up. Raise the current limit to about 500 mA, so that it stays a guard against faults and never clips a Wi-Fi burst, which draws over 200 mA at 12 V for a few milliseconds. Switch on: it boots from 12 V and the status LED breathes green as it did on USB.', kind: 'check' },
       { id: 'p-next', refs: ['DEVKIT'], part: 'Next', role: 'The remaining checks with the converter fitted are in B-002 section 9; the calibration of the battery reading in B-001 section 7.', kind: 'check' },
     ] },
 ];
